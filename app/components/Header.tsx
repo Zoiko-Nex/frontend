@@ -8,7 +8,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
         {/* Logo */}
-      <Link href="/home">
+      <Link href="/">
         <Image
           src="/image/ZoikoNex_Logo_SVG-01 1.png"
           alt="ZoikoNex"
