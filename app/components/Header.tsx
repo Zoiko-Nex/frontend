@@ -8,16 +8,20 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
         {/* Logo */}
-      <Link href="/">
-        <Image
-          src="/image/ZoikoNex_Logo_SVG-01 1.png"
-          alt="ZoikoNex"
-          width={120}
-          height={40}
-          className="w-[120px] h-auto"
-        />
-      </Link>
+   <Link href="/home" className="flex items-center">
+         <Link href="/home" className="flex items-center shrink-0">
+  <Image
+    src="/image/ZoikoNex_Logo_Official/SVG/ZoikoNex_Logo_SVG.svg"
+    alt="ZoikoNex - Governed Telecom Monetization"
+    width={152}
+    height={48}
+    priority
+    className="h-auto w-[132px] sm:w-[152px]"
+  />
+</Link>
+        </Link>
 
+      
         {/* Navigation */}
         <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
         <Link href="/resources" className="flex items-center gap-1">
