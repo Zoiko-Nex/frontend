@@ -22,7 +22,7 @@ export default function LegacySystem() {
           <h2 className="mx-auto max-w-[760px] text-[38px] font-extrabold leading-[1.1] text-[#1C1D31]">
             The systems running global
             <br />
-            telecom were designed before theiPhone.
+            telecom were designed before the iPhone.
           </h2>
         </div>
 

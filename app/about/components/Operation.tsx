@@ -3,7 +3,7 @@ import { Anchor, BriefcaseBusiness, PhoneCall, Smartphone, UsersRound } from "lu
 const targets = [
   {
     title: "MVNOs & MVNEs",
-    desc: "Launch and scale virtual operations with full BSS capabilities built in from day one — no fragmented vendor ecosystem required.",
+    desc: "Launch and scale virtual operations with full BSS capabilities built in from day one - no fragmented vendor ecosystem required.",
     Icon: UsersRound,
   },
   {
@@ -32,7 +32,7 @@ function TargetCard({ item }: { item: (typeof targets)[number] }) {
   const Icon = item.Icon;
 
   return (
-    <div className="h-[213px] rounded-[16px] border border-[#DDE7F0] bg-white px-[28px] pt-[28px]">
+    <div className="min-h-[213px] rounded-[16px] border border-[#DDE7F0] bg-white px-[28px] pt-[28px] pb-[24px]">
       <div className="mb-[19px] flex h-[44px] w-[44px] items-center justify-center rounded-[11px] bg-[#EAF6FF] text-[#2B83C6]">
         <Icon size={22} strokeWidth={2.1} />
       </div>
@@ -52,12 +52,12 @@ export default function Operation() {
           <p className="mb-[12px] text-[11px] font-bold uppercase tracking-[3px] text-[#1778C8]">
             Who We Serve
           </p>
-          <h2 className="mx-auto max-w-[845px] text-[38px] font-extrabold leading-[1.1] text-[#1C1D31]">
+          <h2 className="mx-auto max-w-[845px] text-[30px] font-extrabold leading-[1.1] text-[#1C1D31] sm:text-[38px]">
             Built for operators and platforms
-            <br />
+            <br className="hidden sm:block" />
             that must move faster than legacy systems allow.
           </h2>
-          <p className="mt-[7px] text-[15px] leading-[1.6] text-[#56667B]">
+          <p className="mt-[7px] text-[14.5px] leading-[1.6] text-[#56667B] sm:text-[15px]">
             Especially suited to organizations that require global ambition with governed execution.
           </p>
         </div>
@@ -74,8 +74,8 @@ export default function Operation() {
           ))}
         </div>
 
-        <div className="mt-[18px] flex min-h-[103px] flex-col items-center justify-between gap-5 rounded-[16px] border border-[#D7E7D9] bg-[linear-gradient(110deg,#EEF8FF_0%,#F4FDE9_100%)] px-[36px] py-[24px] md:flex-row">
-          <p className="max-w-[775px] text-[19px] font-medium leading-[1.55] text-[#1C1D31]">
+        <div className="mt-[18px] flex min-h-[103px] flex-col items-center justify-between gap-5 rounded-[16px] border border-[#D7E7D9] bg-[linear-gradient(110deg,#EEF8FF_0%,#F4FDE9_100%)] px-[24px] py-[24px] md:flex-row md:px-[36px]">
+          <p className="max-w-[775px] text-center text-[16px] font-medium leading-[1.55] text-[#1C1D31] md:text-left md:text-[19px]">
             Especially suited to operators with <span className="text-[#1F7FD0]">global ambition</span> and the need for{" "}
             <span className="text-[#1F7FD0]">governed execution</span> across multiple markets and regulatory environments.
           </p>

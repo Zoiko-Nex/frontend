@@ -6,6 +6,7 @@ import EmbeddedControl from "./components/EmbeddedControl";
 import CompoundingAdvantage from "./components/CompoundingAdvantange";
 import ValueSection from "./components/ValueSection";
 import Operation from "./components/Operation";
+import Vision from "./components/Vision";
 import CTA from "./components/CTA";
 
 export default function AboutPage() {
@@ -19,6 +20,7 @@ export default function AboutPage() {
       <CompoundingAdvantage />
       <ValueSection />
       <Operation />
+      <Vision />
       <CTA />
     </>
   );
