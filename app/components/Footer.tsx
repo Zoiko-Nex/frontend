@@ -10,17 +10,15 @@ export default function Footer() {
       {/* Logo Section */}
       <div>
         <Image
-          src="/image/ZoikoNex_Logo_SVG-01 1.png"
-          alt="ZoikoNex"
+          src="/image/ZoikoNex_Logo_Official/SVG/ZoikoNex_Logo_SVG.svg"
+          alt="ZoikoNex - Governed Telecom Monetization"
           width={250}
           height={100}
-          
+          className="h-auto w-[220px]"
         />
 
         <p className="max-w-[256px] text-sm leading-6 text-white ">
-          The infrastructure layer for governed telecom monetization. Built
-          for operators who intend to scale globally and govern without
-          compromise.
+          The Infrastructure Layer for Telecom Monetization.
         </p>
 
         <div className="flex gap-3 mt-5">
@@ -135,7 +133,18 @@ export default function Footer() {
         <Link href="#">Acceptable Use</Link>
         <Link href="#">Security</Link>
         <Link href="#">Accessibility</Link>
+        <Link href="/trust/trust-center">Trust Center</Link>
+        <Link href="/trust/compliance">Compliance</Link>
       </div>
+    </div>
+
+    <div className="mt-8 space-y-3 text-center text-[11px] leading-5 text-white/65">
+      <p>
+        © 2026 ZoikoNex | ZoikoNex is an AI-powered telecom monetization, OSS/BSS and governed billing platform developed and operated by Zoiko Tech Inc., the technology arm of Zoiko Group Inc.
+      </p>
+      <p>
+        Headquarters: 1401 21st Street, Suite R, Sacramento, CA 95811, USA. | European Headquarters: 167-169 Great Portland Street, 5th Floor, London W1W 5PF, United Kingdom.
+      </p>
     </div>
   </div>
 </footer>
