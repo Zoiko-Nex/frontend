@@ -8,7 +8,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         
         {/* Logo */}
-  <Link href="/home" className="flex items-center shrink-0">
+  <Link href="/" className="flex items-center shrink-0">
     <Image
       src="/image/ZoikoNex_Logo_Official/SVG/ZoikoNex_Logo_SVG.svg"
       alt="ZoikoNex - Governed Telecom Monetization"
