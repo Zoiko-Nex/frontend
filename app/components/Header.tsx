@@ -22,11 +22,11 @@ export default function Header() {
 
                 {/* Navigation */}
                 <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
-                    <Link href="/resources" className="flex items-center gap-1">
+                    <Link href="/platform" className="flex items-center gap-1">
                         Platform
                         <ChevronDown size={14} />
                     </Link>
-                    <Link href="/resources" className="flex items-center gap-1">
+                    <Link href="/solutions" className="flex items-center gap-1">
                         Solutions
                         <ChevronDown size={14} />
                     </Link>
