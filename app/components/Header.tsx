@@ -3,9 +3,20 @@ import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 
 export default function Header() {
-    return (
-        <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b border-slate-200 shadow-sm">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+
+  return (
+    <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        
+        {/* Logo */}
+  <Link href="/" className="flex items-center shrink-0">
+    <Image
+      src="/image/ZoikoNex_Logo_Official/SVG/ZoikoNex_Logo_SVG.svg"
+      alt="ZoikoNex - Governed Telecom Monetization"
+      width={180}
+      height={50}
+    />
+  </Link>
 
                 {/* Logo */}
                 <Link href="/home" className="flex items-center shrink-0">
