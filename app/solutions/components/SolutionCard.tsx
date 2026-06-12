@@ -76,15 +76,15 @@ const bottomSolutions = [
 
 export default function EnterpriseGradeSolutions() {
   return (
-    <section className="bg-[#FCF8F9] py-10 px-15">
+    <section className="bg-[#FCF8F9] dark:bg-gray-900 py-10 px-15">
       <div className="mx-auto max-w-[1280px] px-4">
         {/* Heading */}
         <div className="text-center">
-          <h2 className="text-3xl font-medium text-[#1C1B1C]">
+          <h2 className="text-3xl font-medium text-[#1C1B1C] dark:text-white">
             Enterprise-Grade Solutions
           </h2>
 
-          <div className="mx-auto mt-4 h-[3px] w-12 bg-black" />
+          <div className="mx-auto mt-4 h-[3px] w-12 bg-black dark:bg-white" />
         </div>
 
         {/* Top Grid */}
@@ -92,7 +92,7 @@ export default function EnterpriseGradeSolutions() {
           {topSolutions.map((item) => (
             <div
               key={item.title}
-              className="border border-[#D8D8D8] bg-[#FCF8F9] p-8"
+              className="border border-[#D8D8D8] dark:border-gray-700 bg-[#FCF8F9] dark:bg-gray-800 p-8"
             >
               <div className="mb-6">
                 <img
@@ -102,7 +102,7 @@ export default function EnterpriseGradeSolutions() {
                 />
               </div>
 
-              <h3 className="text-base font-normal text-[#1C1B1C]">
+              <h3 className="text-base font-normal text-[#1C1B1C] dark:text-white">
                 {item.title}
               </h3>
 
@@ -110,7 +110,7 @@ export default function EnterpriseGradeSolutions() {
                 {item.features.map((feature) => (
                   <li
                     key={feature}
-                    className="flex gap-3 text-sm text-[#47464C]"
+                    className="flex gap-3 text-sm text-[#47464C] dark:text-gray-300"
                   >
                     <span className="mt-[2px] text-[#476800]">•</span>
                     <span>{feature}</span>
@@ -118,7 +118,7 @@ export default function EnterpriseGradeSolutions() {
                 ))}
               </ul>
 
-              <button className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C]">
+              <button className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C] dark:text-white">
                 Explore Solution
                 <span className="text-xl">→</span>
               </button>
@@ -134,13 +134,13 @@ export default function EnterpriseGradeSolutions() {
             return (
               <div
                 key={item.title}
-                className="border border-[#D8D8D8] bg-[#FCF8F9] p-8 lg:col-span-3"
+                className="border border-[#D8D8D8] dark:border-gray-700 bg-[#FCF8F9] dark:bg-gray-800 p-8 lg:col-span-3"
               >
                 <div className="mb-6">
-                  <Icon className="h-10 w-10 text-black" />
+                  <Icon className="h-10 w-10 text-black dark:text-white" />
                 </div>
 
-                <h3 className="text-base text-[#1C1B1C]">
+                <h3 className="text-base text-[#1C1B1C] dark:text-white">
                   {item.title}
                 </h3>
 
@@ -148,7 +148,7 @@ export default function EnterpriseGradeSolutions() {
                   {item.features.map((feature) => (
                     <li
                       key={feature}
-                      className="flex gap-3 text-sm text-[#47464C]"
+                      className="flex gap-3 text-sm text-[#47464C] dark:text-gray-300"
                     >
                       <span className="mt-[2px] text-[#476800]">•</span>
                       <span>{feature}</span>
@@ -156,7 +156,7 @@ export default function EnterpriseGradeSolutions() {
                   ))}
                 </ul>
 
-                <button className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C]">
+                <button className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C] dark:text-white">
                   Explore Solution
                   <span className="text-xl">→</span>
                 </button>
@@ -165,36 +165,40 @@ export default function EnterpriseGradeSolutions() {
           })}
 
           {/* Global Jurisdiction Billing */}
-          <div className="border border-[#D8D8D8] bg-[#FCF8F9] p-8 lg:col-span-6">
+          <div className="border border-[#D8D8D8] dark:border-gray-700 bg-[#FCF8F9] dark:bg-gray-800 p-8 lg:col-span-6">
             <div className="grid gap-8 md:grid-cols-2">
               <div>
                 <div className="mb-6">
-                <Globe size={30} strokeWidth={2} />
+                  <Globe
+                    size={30}
+                    strokeWidth={2}
+                    className="text-black dark:text-white"
+                  />
                 </div>
 
-                <h3 className="text-[18px] font-medium text-[#1C1B1C]">
+                <h3 className="text-[18px] font-medium text-[#1C1B1C] dark:text-white">
                   Global Jurisdiction Billing
                 </h3>
 
-                <p className="mt-4 max-w-[320px] text-base leading-7 text-[#47464C]">
+                <p className="mt-4 max-w-[320px] text-base leading-7 text-[#47464C] dark:text-gray-300">
                   Solve complex tax and regulatory hurdles for global
                   cross-border connectivity.
                 </p>
               </div>
 
-              <div className="border-l border-[#D8D8D8] pl-8">
+              <div className="border-l border-[#D8D8D8] dark:border-gray-700 pl-8">
                 <ul className="space-y-5">
-                  <li className="flex gap-3 text-[#47464C]">
+                  <li className="flex gap-3 text-[#47464C] dark:text-gray-300">
                     <span className="text-[#476800]">•</span>
                     Multi-Currency Ledger
                   </li>
 
-                  <li className="flex gap-3 text-[#47464C]">
+                  <li className="flex gap-3 text-[#47464C] dark:text-gray-300">
                     <span className="text-[#476800]">•</span>
                     Local Tax Automation
                   </li>
 
-                  <li className="flex gap-3 text-[#47464C]">
+                  <li className="flex gap-3 text-[#47464C] dark:text-gray-300">
                     <span className="text-[#476800]">•</span>
                     Sovereign Data Residency
                   </li>
