@@ -10,14 +10,37 @@ export default function Header() {
        
   <Link href="/" className="flex items-center shrink-0">
     <Image
-      src="/image/ZoikoNex_Logo_Official/SVG/ZoikoNex_Logo_SVG.svg"
+      src="/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png"
       alt="ZoikoNex - Governed Telecom Monetization"
       width={180}
       height={50}
     />
   </Link>
 
+<<<<<<< Updated upstream
                 
+=======
+      
+        {/* Navigation */}
+        <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
+        <Link href="/resources" className="flex items-center gap-1">
+          Platform
+          <ChevronDown size={14} />
+        </Link>          
+        <Link href="/solutions" className="flex items-center gap-1">
+          Solutions
+          <ChevronDown size={14} />
+        </Link>          
+          <Link href="#">Operators</Link>
+          <Link href="#">Deployment</Link>
+          <Link href="#">Trust</Link>
+          <Link href="/resources" className="flex items-center gap-1">
+          Resources
+          <ChevronDown size={14} />
+        </Link>
+          <Link href="#">Company</Link>
+        </nav>
+>>>>>>> Stashed changes
 
 
                 {/* Navigation */}
