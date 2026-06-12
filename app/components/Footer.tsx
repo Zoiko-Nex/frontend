@@ -12,7 +12,7 @@ export default function Footer() {
           {/* Logo Section - full width on mobile */}
           <div>
             <Image
-              src="/image/ZoikoNex_Logo_SVG-01 1.png"
+              src="/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png"
               alt="ZoikoNex"
               width={250}
               height={100}

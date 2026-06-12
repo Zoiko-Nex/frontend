@@ -10,7 +10,7 @@ export default function Header() {
        
   <Link href="/" className="flex items-center shrink-0">
     <Image
-      src="/image/ZoikoNex_Logo_Official/SVG/ZoikoNex_Logo_SVG.svg"
+      src="/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png"
       alt="ZoikoNex - Governed Telecom Monetization"
       width={180}
       height={50}
