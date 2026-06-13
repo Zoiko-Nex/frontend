@@ -1,8 +1,31 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 
+const solutionPages = [
+  {
+    name: "MVNO Launch",
+    href: "/mvnolaunch",
+  },
+  {
+    name: "Network API",
+    href: "/networkapi",
+  },
+  {
+    name: "MNO Modernization",
+    href: "/mnomoderinization1",
+  },
+  {
+    name: "MNO Modernization",
+    href: "/mnomoderinization2",
+  },
+];
+
 export default function Header() {
+     const [open, setOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b border-slate-200 shadow-sm">
@@ -17,19 +40,64 @@ export default function Header() {
     />
   </Link>
 
-                
-
-
                 {/* Navigation */}
                 <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
                     <Link href="/platform" className="flex items-center gap-1">
                         Platform
                         <ChevronDown size={14} />
                     </Link>
-                    <Link href="/solutions" className="flex items-center gap-1">
-                        Solutions
-                        <ChevronDown size={14} />
-                    </Link>
+                   
+
+<div className="relative flex items-center gap-1">
+      {/* Solutions Page */}
+      <Link
+        href="/solutions"
+        className="text-sm font-medium text-slate-600 hover:text-sky-600"
+      >
+        Solutions
+      </Link>
+
+      {/* Arrow */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-1"
+      >
+        <ChevronDown
+          size={14}
+          className={`transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          className="
+            absolute top-full left-0 mt-2
+            w-56 bg-white
+            border border-slate-200
+            rounded-lg shadow-lg
+            z-50
+          "
+        >
+          {solutionPages.map((page) => (
+            <Link
+              key={page.href}
+              href={page.href}
+              className="
+                block px-4 py-3
+                text-sm text-slate-700
+                hover:bg-slate-50
+              "
+              onClick={() => setOpen(false)}
+            >
+              {page.name}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
                     <Link href="#">Operators</Link>
                     <Link href="#">Deployment</Link>
                     <Link href="#">Trust</Link>
