@@ -1,108 +1,50 @@
 export default function RAHero() {
   return (
-    <section style={{ backgroundColor: "#ffffff", padding: "5rem 0 5rem" }}>
+    <section className="bg-white py-20">
       <div className="max-w-7xl mx-auto px-6">
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "5rem",
-          alignItems: "center",
-        }}>
+        <div className="grid grid-cols-2 gap-20 items-center">
 
           {/* ── Left column ── */}
           <div>
             {/* Badge */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <span style={{
-                display: "inline-block",
-                border: "1.5px solid #2D7DB3",
-                color: "#2D7DB3",
-                fontSize: "0.65rem",
-                fontWeight: 600,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                padding: "0.3rem 0.75rem",
-                borderRadius: "4px",
-              }}>
+            <div className="mb-6">
+              <span className="inline-block border-[1.5px] border-[#2D7DB3] text-[#2D7DB3] text-[0.65rem] font-semibold tracking-[0.12em] uppercase px-3 py-1 rounded">
                 Revenue Assurance V4.0
               </span>
             </div>
 
             {/* Heading */}
-            <h1 style={{
-              color: "#0A0A0A",
-              fontWeight: 800,
-              fontSize: "clamp(2.4rem, 4.5vw, 3.5rem)",
-              lineHeight: 1.1,
-              marginBottom: "1.25rem",
-            }}>
+            <h1
+              className="text-[#0A0A0A] font-extrabold leading-[1.1] mb-5"
+              style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.5rem)" }}
+            >
               Zero Leakage.<br />Total Assurance.
             </h1>
 
             {/* Body */}
-            <p style={{
-              color: "#5E6B7A",
-              fontSize: "0.95rem",
-              lineHeight: 1.8,
-              marginBottom: "2.25rem",
-              maxWidth: "32rem",
-            }}>
+            <p className="text-[#5E6B7A] text-[0.95rem] leading-[1.8] mb-9 max-w-[32rem]">
               Detect and recover revenue gaps across usage, rating, billing, and
               settlement with evidence-grade precision. Our BSS-native engine
               ensures no bit goes unbilled.
             </p>
 
             {/* Buttons */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.85rem" }}>
-              <button style={{
-                backgroundColor: "#1F6FA3",
-                color: "#ffffff",
-                padding: "0.8rem 1.6rem",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}>
+            <div className="flex flex-wrap gap-3.5">
+              <button className="bg-[#1F6FA3] text-white px-6 py-3 font-semibold text-sm border-none rounded cursor-pointer">
                 Assure Your Revenue
               </button>
-              <button style={{
-                backgroundColor: "transparent",
-                border: "1.5px solid #1A2533",
-                color: "#1A2533",
-                padding: "0.8rem 1.6rem",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}>
+              <button className="bg-transparent border-[1.5px] border-[#1A2533] text-[#1A2533] px-6 py-3 font-semibold text-sm rounded cursor-pointer">
                 Request a Technical Audit
               </button>
             </div>
           </div>
 
           {/* ── Right column — monitoring card ── */}
-          <div style={{
-            backgroundColor: "#F7F9FC",
-            border: "1px solid #DDE4EE",
-            borderRadius: "14px",
-            padding: "1.75rem",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-          }}>
+          <div className="bg-[#F7F9FC] border border-[#DDE4EE] rounded-[14px] p-7" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.07)" }}>
 
             {/* Card header */}
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "1.5rem",
-            }}>
-              <span style={{
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "#3A4556",
-                letterSpacing: "0.02em",
-              }}>
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-[0.8rem] font-semibold text-[#3A4556] tracking-[0.02em]">
                 Live Leakage Monitoring
               </span>
               {/* Signal/wifi icon */}
@@ -115,77 +57,43 @@ export default function RAHero() {
             </div>
 
             {/* CDR Validation row */}
-            <div style={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #E8EDF4",
-              borderRadius: "8px",
-              padding: "1rem 1.25rem",
-              marginBottom: "1.25rem",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+            <div className="bg-white border border-[#E8EDF4] rounded-lg px-5 py-4 mb-5">
+              <div className="flex items-center gap-3.5">
                 {/* Icon */}
-                <div style={{
-                  width: "34px",
-                  height: "34px",
-                  borderRadius: "7px",
-                  backgroundColor: "#EFF6FF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}>
+                <div className="w-[34px] h-[34px] rounded-[7px] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <rect x="1" y="2" width="14" height="12" rx="2" stroke="#2D7DB3" strokeWidth="1.3" />
                     <path d="M4 6h8M4 9h5" stroke="#2D7DB3" strokeWidth="1.3" strokeLinecap="round" />
                   </svg>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.45rem" }}>
-                    <span style={{ fontSize: "0.78rem", color: "#4B5563", fontWeight: 500 }}>
+                <div className="flex-1">
+                  <div className="flex justify-between mb-[0.45rem]">
+                    <span className="text-[0.78rem] text-[#4B5563] font-medium">
                       CDR Validation: 99.999%
                     </span>
                   </div>
                   {/* Progress bar */}
-                  <div style={{ height: "5px", backgroundColor: "#E5EAF0", borderRadius: "99px", overflow: "hidden" }}>
-                    <div style={{
-                      height: "100%",
-                      width: "99.999%",
-                      backgroundColor: "#2D7DB3",
-                      borderRadius: "99px",
-                    }} />
+                  <div className="h-[5px] bg-[#E5EAF0] rounded-full overflow-hidden">
+                    <div className="h-full w-[99.999%] bg-[#2D7DB3] rounded-full" />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Stats row */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1rem",
-            }}>
-              <div style={{
-                backgroundColor: "#ffffff",
-                border: "1px solid #E8EDF4",
-                borderRadius: "8px",
-                padding: "1rem 1.25rem",
-              }}>
-                <p style={{ fontSize: "0.68rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white border border-[#E8EDF4] rounded-lg px-5 py-4">
+                <p className="text-[0.68rem] text-[#94A3B8] uppercase tracking-[0.06em] mb-1.5">
                   Recovery
                 </p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#0A0A0A" }}>$4.2M</p>
+                <p className="text-2xl font-extrabold text-[#0A0A0A]">$4.2M</p>
               </div>
-              <div style={{
-                backgroundColor: "#ffffff",
-                border: "1px solid #E8EDF4",
-                borderRadius: "8px",
-                padding: "1rem 1.25rem",
-              }}>
-                <p style={{ fontSize: "0.68rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
+              <div className="bg-white border border-[#E8EDF4] rounded-lg px-5 py-4">
+                <p className="text-[0.68rem] text-[#94A3B8] uppercase tracking-[0.06em] mb-1.5">
                   Risk Score
                 </p>
-                <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#2D7DB3" }}>L1</p>
+                <p className="text-2xl font-extrabold text-[#2D7DB3]">L1</p>
               </div>
             </div>
 

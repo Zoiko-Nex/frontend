@@ -7,29 +7,21 @@ const stats = [
 
 export default function RAStats() {
   return (
-    <section style={{ backgroundColor: "#ffffff", padding: "4.5rem 0", borderBottom: "1px solid #EBEBEB" }}>
+    <section className="bg-white py-[4.5rem] border-b border-[#EBEBEB]">
       <div className="max-w-7xl mx-auto px-6">
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "2rem",
-        }}
-          className="grid-cols-2 sm:grid-cols-4"
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
           {stats.map(({ value, label, green }) => (
-            <div key={label} style={{ textAlign: "left" }}>
-              <p style={{
-                fontSize: "clamp(2rem, 4vw, 2.75rem)",
-                fontWeight: 800,
-                color: green ? "#5A8A1A" : "#111111",
-                lineHeight: 1,
-                marginBottom: "0.6rem",
-              }}>
+            <div key={label} className="text-left">
+              <p
+                className="font-extrabold leading-none mb-2.5"
+                style={{
+                  fontSize: "clamp(2rem, 4vw, 2.75rem)",
+                  color: green ? "#5A8A1A" : "#111111",
+                }}
+              >
                 {value}
               </p>
-              <p style={{ fontSize: "0.78rem", color: "#6B7280", letterSpacing: "0.04em" }}>
-                {label}
-              </p>
+              <p className="text-[0.78rem] text-[#6B7280] tracking-[0.04em]">{label}</p>
             </div>
           ))}
         </div>
