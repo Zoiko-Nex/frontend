@@ -2,51 +2,24 @@
 
 export default function SecureFoundationCTA() {
   return (
-    <section
-      style={{
-        backgroundColor: "#f0f3f7",
-        padding: "6rem 1.5rem",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "48rem",
-          margin: "0 auto",
-          textAlign: "center",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
+    <section className="bg-[#f0f3f7] py-24 px-6">
+      <div className="max-w-3xl mx-auto text-center flex flex-col items-center">
         {/* Heading */}
         <h2
-          style={{
-            color: "#2B7EC1",
-            fontWeight: 700,
-            fontSize: "clamp(1.8rem, 3.5vw, 2.5rem)",
-            lineHeight: 1.25,
-            marginBottom: "1.25rem",
-          }}
+          className="text-[#2B7EC1] font-bold leading-[1.25] mb-5"
+          style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.5rem)" }}
         >
           Secure the Foundation of Your Fleet.
         </h2>
 
         {/* Subtext */}
-        <p
-          style={{
-            color: "#64748b",
-            fontSize: "1rem",
-            lineHeight: 1.8,
-            maxWidth: "36rem",
-            marginBottom: "2.5rem",
-          }}
-        >
+        <p className="text-slate-500 text-base leading-[1.8] max-w-[36rem] mb-10">
           Join the world&apos;s leading connectivity providers using ZoikoNex to orchestrate
           and monetize global IoT infrastructure.
         </p>
 
         {/* CTA Buttons */}
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
+        <div className="flex gap-4 flex-wrap justify-center">
           <button
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#153d60";
@@ -54,16 +27,9 @@ export default function SecureFoundationCTA() {
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1a4e7a";
             }}
+            className="px-8 py-3.5 text-white text-[0.9rem] font-semibold border-none rounded-md cursor-pointer transition-colors duration-200"
             style={{
-              padding: "0.85rem 2rem",
               backgroundColor: "#1a4e7a",
-              color: "#ffffff",
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "background-color 0.2s ease",
               boxShadow: "0 2px 8px rgba(26,78,122,0.3)",
             }}
           >
@@ -76,17 +42,7 @@ export default function SecureFoundationCTA() {
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#ffffff";
             }}
-            style={{
-              padding: "0.85rem 2rem",
-              backgroundColor: "#ffffff",
-              color: "#1a4e7a",
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              border: "1px solid #cbd5e1",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "background-color 0.2s ease",
-            }}
+            className="px-8 py-3.5 bg-white text-[#1a4e7a] text-[0.9rem] font-semibold border border-slate-300 rounded-md cursor-pointer transition-colors duration-200"
           >
             Contact Sales Engineering
           </button>

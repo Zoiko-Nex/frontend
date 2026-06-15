@@ -18,96 +18,64 @@ export default function MnoHero2() {
   return (
     <section
       ref={ref}
-      style={{
-        background: "linear-gradient(135deg, #0B1120 0%, #0D1A30 60%, #0A1525 100%)",
-        padding: "7rem 0 5rem",
-        overflow: "hidden",
-        position: "relative",
-      }}
+      className="relative overflow-hidden py-28 pb-20"
+      style={{ background: "linear-gradient(135deg, #0B1120 0%, #0D1A30 60%, #0A1525 100%)" }}
     >
       {/* Background grid */}
-      <div style={{
-        position: "absolute", inset: 0,
-        backgroundImage: "linear-gradient(rgba(49,130,183,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(49,130,183,0.04) 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-        pointerEvents: "none",
-      }} />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "linear-gradient(rgba(49,130,183,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(49,130,183,0.04) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
 
       <div className="max-w-7xl mx-auto px-6">
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "4rem",
-          alignItems: "center",
-        }}>
+        <div className="grid grid-cols-2 gap-16 items-center">
           {/* LEFT */}
-          <div style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(40px)",
-            transition: "opacity 0.8s ease, transform 0.8s ease",
-          }}>
+          <div
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(40px)",
+              transition: "opacity 0.8s ease, transform 0.8s ease",
+            }}
+          >
             {/* Eyebrow badge */}
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              border: "1px solid rgba(200,242,82,0.3)",
-              borderRadius: "2px",
-              padding: "0.3rem 0.9rem",
-              marginBottom: "2rem",
-            }}>
-              <span style={{
-                fontSize: "0.6rem",
-                letterSpacing: "0.25em",
-                color: "#C8F252",
-                textTransform: "uppercase",
-                fontWeight: 600,
-              }}>
+            <div
+              className="inline-flex items-center gap-2 rounded-sm px-3.5 py-1.5 mb-8"
+              style={{ border: "1px solid rgba(200,242,82,0.3)" }}
+            >
+              <span className="text-[0.6rem] tracking-[0.25em] text-[#C8F252] uppercase font-semibold">
                 GLOBAL TIER-1 STANDARD
               </span>
             </div>
 
-            <h1 style={{
-              color: "#ffffff",
-              fontWeight: 800,
-              fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)",
-              lineHeight: 1.1,
-              marginBottom: "0.1rem",
-            }}>
+            <h1
+              className="text-white font-extrabold leading-[1.1] mb-0.5"
+              style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)" }}
+            >
               Phased BSS
             </h1>
-            <h1 style={{
-              color: "#ffffff",
-              fontWeight: 800,
-              fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)",
-              lineHeight: 1.1,
-              marginBottom: "0.1rem",
-            }}>
+            <h1
+              className="text-white font-extrabold leading-[1.1] mb-0.5"
+              style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)" }}
+            >
               Modernization for
             </h1>
-            <h1 style={{
-              color: "#C8F252",
-              fontWeight: 800,
-              fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)",
-              lineHeight: 1.1,
-              marginBottom: "2.5rem",
-            }}>
+            <h1
+              className="text-[#C8F252] font-extrabold leading-[1.1] mb-10"
+              style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)" }}
+            >
               Tier-1 Operators.
             </h1>
 
-            <p style={{
-              color: "#8F99A8",
-              fontSize: "1rem",
-              lineHeight: 1.85,
-              maxWidth: "34rem",
-              marginBottom: "2.5rem",
-            }}>
+            <p className="text-[#8F99A8] text-base leading-[1.85] max-w-[34rem] mb-10">
               De-risk your legacy transformation with a domain-by-domain
               migration pathway that ensures zero service disruption and
               absolute sovereign control.
             </p>
 
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <div className="flex gap-4 flex-wrap">
               <button
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3182B7";
@@ -115,18 +83,8 @@ export default function MnoHero2() {
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D9AE3";
                 }}
-                style={{
-                  backgroundColor: "#2D9AE3",
-                  color: "#ffffff",
-                  border: "2px solid #2D9AE3",
-                  padding: "0.95rem 2rem",
-                  fontWeight: 700,
-                  fontSize: "0.9rem",
-                  cursor: "pointer",
-                  borderRadius: "2px",
-                  letterSpacing: "0.02em",
-                  transition: "all 0.2s ease",
-                }}
+                className="px-8 py-[0.95rem] text-white font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
+                style={{ backgroundColor: "#2D9AE3", border: "2px solid #2D9AE3" }}
               >
                 Request a Demo
               </button>
@@ -137,18 +95,8 @@ export default function MnoHero2() {
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
                 }}
-                style={{
-                  backgroundColor: "transparent",
-                  color: "#ffffff",
-                  border: "2px solid rgba(255,255,255,0.4)",
-                  padding: "0.95rem 2rem",
-                  fontWeight: 700,
-                  fontSize: "0.9rem",
-                  cursor: "pointer",
-                  borderRadius: "2px",
-                  letterSpacing: "0.02em",
-                  transition: "all 0.2s ease",
-                }}
+                className="bg-transparent text-white px-8 py-[0.95rem] font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
+                style={{ border: "2px solid rgba(255,255,255,0.4)" }}
               >
                 Download Modernization Whitepaper
               </button>
@@ -156,73 +104,60 @@ export default function MnoHero2() {
           </div>
 
           {/* RIGHT — Dashboard image */}
-          <div style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateX(0)" : "translateX(40px)",
-            transition: "opacity 0.9s ease 0.2s, transform 0.9s ease 0.2s",
-          }}>
-            <div style={{
-              background: "rgba(8,16,32,0.95)",
-              border: "1px solid rgba(49,130,183,0.2)",
-              borderRadius: "12px",
-              overflow: "hidden",
-              boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset",
-            }}>
+          <div
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateX(0)" : "translateX(40px)",
+              transition: "opacity 0.9s ease 0.2s, transform 0.9s ease 0.2s",
+            }}
+          >
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(8,16,32,0.95)",
+                border: "1px solid rgba(49,130,183,0.2)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset",
+              }}
+            >
               {/* Fake browser bar */}
-              <div style={{
-                backgroundColor: "#0D1826",
-                padding: "0.6rem 1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-              }}>
+              <div
+                className="px-4 py-2.5 flex items-center gap-1.5"
+                style={{
+                  backgroundColor: "#0D1826",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
                 {["#D73434", "#E8A020", "#2D9F6E"].map((c, i) => (
-                  <div key={i} style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: c }} />
+                  <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
                 ))}
-                <div style={{
-                  flex: 1,
-                  marginLeft: "0.75rem",
-                  background: "rgba(255,255,255,0.04)",
-                  borderRadius: "3px",
-                  height: "18px",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                }} />
+                <div
+                  className="flex-1 ml-3 h-[18px] rounded-sm"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                />
               </div>
 
               {/* Dashboard image */}
-              <div style={{ position: "relative" }}>
+              <div className="relative">
                 <Image
                   src="/mno2.png"
                   alt="Real-time BSS Migration Monitoring Dashboard"
                   width={620}
                   height={380}
-                  style={{ width: "100%", height: "340px", objectFit: "cover", display: "block" }}
+                  className="w-full block object-cover"
+                  style={{ height: "340px" }}
                 />
                 {/* Caption overlay */}
-                <div style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background: "linear-gradient(to top, rgba(8,16,32,0.95) 0%, transparent 100%)",
-                  padding: "2rem 1.5rem 1.25rem",
-                }}>
-                  <p style={{
-                    color: "#C8F252",
-                    fontSize: "0.55rem",
-                    letterSpacing: "0.25em",
-                    textTransform: "uppercase",
-                    fontWeight: 600,
-                    marginBottom: "0.4rem",
-                  }}>
+                <div
+                  className="absolute bottom-0 left-0 right-0 px-6 pt-8 pb-5"
+                  style={{ background: "linear-gradient(to top, rgba(8,16,32,0.95) 0%, transparent 100%)" }}
+                >
+                  <p className="text-[#C8F252] text-[0.55rem] tracking-[0.25em] uppercase font-semibold mb-1.5">
                     CORE SYSTEM VISUALIZATION
                   </p>
-                  <p style={{
-                    color: "#ffffff",
-                    fontWeight: 700,
-                    fontSize: "1.1rem",
-                  }}>
+                  <p className="text-white font-bold text-[1.1rem]">
                     Real-time Migration Monitoring
                   </p>
                 </div>

@@ -78,58 +78,45 @@ export default function CoreInfraModules() {
   }, []);
 
   return (
-    <section
-      ref={ref}
-      style={{ backgroundColor: "#ffffff", padding: "6rem 0" }}
-    >
+    <section ref={ref} className="bg-white py-24">
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
-        <div style={{
-          textAlign: "center",
-          marginBottom: "4rem",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(30px)",
-          transition: "opacity 0.7s ease, transform 0.7s ease",
-        }}>
-          <h2 style={{
-            color: "#111111",
-            fontSize: "clamp(2rem, 4vw, 3rem)",
-            fontWeight: 700,
-            marginBottom: "1rem",
-            letterSpacing: "-0.02em",
-          }}>
+        <div
+          className="text-center mb-16"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(30px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+          }}
+        >
+          <h2
+            className="text-[#111111] font-bold mb-4"
+            style={{ fontSize: "clamp(2rem, 4vw, 3rem)", letterSpacing: "-0.02em" }}
+          >
             Core Infrastructure Modules
           </h2>
-          <p style={{ color: "#5E6775", fontSize: "1.05rem", maxWidth: "42rem", margin: "0 auto" }}>
+          <p className="text-[#5E6775] text-[1.05rem] max-w-[42rem] mx-auto">
             Modular, high-density components built for the scale and security of sovereign
             MVNE operators.
           </p>
         </div>
 
-        {/* Grid — Row 1: 2 cols (wide + normal) */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1rem",
-          marginBottom: "1rem",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(40px)",
-          transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
-        }}>
+        {/* Grid — Row 1: 2 cols */}
+        <div
+          className="grid grid-cols-2 gap-4 mb-4"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(40px)",
+            transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
+          }}
+        >
           {/* Multi-tenant card */}
-          <div style={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: "12px",
-            padding: "2.25rem",
-            backgroundColor: "#FAFAFA",
-            position: "relative",
-            overflow: "hidden",
-          }}>
+          <div
+            className="border rounded-xl p-9 bg-[#FAFAFA] relative overflow-hidden"
+            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+          >
             {/* Faint hierarchy visual bg */}
-            <div style={{
-              position: "absolute", top: "1rem", right: "1rem",
-              opacity: 0.06,
-            }}>
+            <div className="absolute top-4 right-4 opacity-[0.06]">
               <svg width="120" height="100" viewBox="0 0 120 100" fill="none">
                 <rect x="45" y="5" width="30" height="20" rx="3" fill="#111" />
                 <rect x="5" y="50" width="30" height="20" rx="3" fill="#111" />
@@ -141,33 +128,26 @@ export default function CoreInfraModules() {
               </svg>
             </div>
 
-            <div style={{ marginBottom: "1.25rem" }}>{modules[0].icon}</div>
-            <h3 style={{ color: "#111111", fontSize: "1.4rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+            <div className="mb-5">{modules[0].icon}</div>
+            <h3 className="text-[#111111] text-[1.4rem] font-bold mb-3">
               {modules[0].title}
             </h3>
-            <p style={{ color: "#5E6775", fontSize: "0.9rem", lineHeight: 1.75, marginBottom: "1.5rem" }}>
+            <p className="text-[#5E6775] text-[0.9rem] leading-7 mb-6">
               {modules[0].desc}
             </p>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <div className="flex gap-2 flex-wrap">
               {modules[0].tags?.map((tag, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <span style={{
-                    backgroundColor: tag.color,
-                    color: tag.textColor,
-                    fontSize: "0.65rem",
-                    fontWeight: 700,
-                    padding: "0.2rem 0.4rem",
-                    borderRadius: "3px",
-                  }}>
+                <div key={i} className="flex items-center gap-1.5">
+                  <span
+                    className="text-[0.65rem] font-bold px-1.5 py-0.5 rounded-sm"
+                    style={{ backgroundColor: tag.color, color: tag.textColor }}
+                  >
                     {tag.label}
                   </span>
-                  <span style={{
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    borderRadius: "4px",
-                    padding: "0.2rem 0.7rem",
-                    fontSize: "0.75rem",
-                    color: "#374151",
-                  }}>
+                  <span
+                    className="border rounded px-2.5 py-0.5 text-[0.75rem] text-[#374151]"
+                    style={{ border: "1px solid rgba(0,0,0,0.12)" }}
+                  >
                     {tag.text}
                   </span>
                 </div>
@@ -176,27 +156,25 @@ export default function CoreInfraModules() {
           </div>
 
           {/* Brand Isolation card */}
-          <div style={{
-            border: "1px solid rgba(255,255,255,0.05)",
-            borderRadius: "12px",
-            padding: "2.25rem",
-            backgroundColor: "#0F1C2E",
-          }}>
-            <div style={{ marginBottom: "1.25rem" }}>{modules[1].icon}</div>
-            <h3 style={{ color: "#ffffff", fontSize: "1.4rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+          <div
+            className="rounded-xl p-9 bg-[#0F1C2E]"
+            style={{ border: "1px solid rgba(255,255,255,0.05)" }}
+          >
+            <div className="mb-5">{modules[1].icon}</div>
+            <h3 className="text-white text-[1.4rem] font-bold mb-3">
               {modules[1].title}
             </h3>
-            <p style={{ color: "#7B8FA6", fontSize: "0.9rem", lineHeight: 1.75, marginBottom: "1.5rem" }}>
+            <p className="text-[#7B8FA6] text-[0.9rem] leading-7 mb-6">
               {modules[1].desc}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <div className="flex flex-col gap-2.5">
               {modules[1].checks?.map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div key={i} className="flex items-center gap-2.5">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <circle cx="8" cy="8" r="7" stroke="#2D9F6E" strokeWidth="1.2" />
                     <path d="M4.5 8.5l2.5 2 4-4" stroke="#2D9F6E" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span style={{ color: "#93A0B4", fontSize: "0.85rem" }}>{item}</span>
+                  <span className="text-[#93A0B4] text-[0.85rem]">{item}</span>
                 </div>
               ))}
             </div>
@@ -204,66 +182,56 @@ export default function CoreInfraModules() {
         </div>
 
         {/* Grid — Row 2: 3 cols */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: "1rem",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(40px)",
-          transition: "opacity 0.8s ease 0.35s, transform 0.8s ease 0.35s",
-        }}>
+        <div
+          className="grid grid-cols-3 gap-4"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(40px)",
+            transition: "opacity 0.8s ease 0.35s, transform 0.8s ease 0.35s",
+          }}
+        >
           {/* Wholesale Settlement */}
-          <div style={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: "12px",
-            padding: "2.25rem",
-            backgroundColor: "#FAFAFA",
-          }}>
-            <div style={{ marginBottom: "1.25rem" }}>{modules[2].icon}</div>
-            <h3 style={{ color: "#111111", fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+          <div
+            className="rounded-xl p-9 bg-[#FAFAFA]"
+            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+          >
+            <div className="mb-5">{modules[2].icon}</div>
+            <h3 className="text-[#111111] text-[1.25rem] font-bold mb-3">
               {modules[2].title}
             </h3>
-            <p style={{ color: "#5E6775", fontSize: "0.88rem", lineHeight: 1.75 }}>
+            <p className="text-[#5E6775] text-[0.88rem] leading-7">
               {modules[2].desc}
             </p>
           </div>
 
           {/* Partner Portals */}
-          <div style={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: "12px",
-            padding: "2.25rem",
-            backgroundColor: "#FAFAFA",
-          }}>
-            <div style={{ marginBottom: "1.25rem" }}>{modules[3].icon}</div>
-            <h3 style={{ color: "#111111", fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+          <div
+            className="rounded-xl p-9 bg-[#FAFAFA]"
+            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+          >
+            <div className="mb-5">{modules[3].icon}</div>
+            <h3 className="text-[#111111] text-[1.25rem] font-bold mb-3">
               {modules[3].title}
             </h3>
-            <p style={{ color: "#5E6775", fontSize: "0.88rem", lineHeight: 1.75 }}>
+            <p className="text-[#5E6775] text-[0.88rem] leading-7">
               {modules[3].desc}
             </p>
           </div>
 
           {/* Visual placeholder card */}
-          <div style={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: "12px",
-            padding: "2rem",
-            backgroundColor: "#F4F4F4",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.65rem",
-            justifyContent: "center",
-          }}>
+          <div
+            className="rounded-xl p-8 bg-[#F4F4F4] flex flex-col gap-2.5 justify-center"
+            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+          >
             {/* Fake UI rows */}
-            <div style={{ height: "10px", backgroundColor: "#D1D5DB", borderRadius: "4px", width: "80%" }} />
-            <div style={{ height: "10px", backgroundColor: "#D1D5DB", borderRadius: "4px", width: "60%" }} />
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <div style={{ height: "28px", backgroundColor: "#C8F252", borderRadius: "4px", width: "40%" }} />
-              <div style={{ height: "28px", backgroundColor: "#D1D5DB", borderRadius: "4px", flex: 1 }} />
+            <div className="h-2.5 bg-[#D1D5DB] rounded w-4/5" />
+            <div className="h-2.5 bg-[#D1D5DB] rounded w-3/5" />
+            <div className="flex gap-2">
+              <div className="h-7 bg-[#C8F252] rounded w-2/5" />
+              <div className="h-7 bg-[#D1D5DB] rounded flex-1" />
             </div>
-            <div style={{ height: "10px", backgroundColor: "#D1D5DB", borderRadius: "4px", width: "90%" }} />
-            <div style={{ height: "10px", backgroundColor: "#E5E7EB", borderRadius: "4px", width: "70%" }} />
+            <div className="h-2.5 bg-[#D1D5DB] rounded w-11/12" />
+            <div className="h-2.5 bg-[#E5E7EB] rounded w-[70%]" />
           </div>
         </div>
       </div>

@@ -60,82 +60,55 @@ export default function ModernizationPillars() {
   }, []);
 
   return (
-    <section
-      ref={ref}
-      style={{
-        backgroundColor: "#0D1525",
-        padding: "6rem 0",
-      }}
-    >
+    <section ref={ref} className="bg-[#0D1525] py-24">
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
-        <div style={{
-          marginBottom: "3.5rem",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(30px)",
-          transition: "opacity 0.7s ease, transform 0.7s ease",
-        }}>
-          <h2 style={{
-            color: "#ffffff",
-            fontSize: "clamp(1.8rem, 3.5vw, 2.75rem)",
-            fontWeight: 700,
-            marginBottom: "1rem",
-            letterSpacing: "-0.02em",
-          }}>
+        <div
+          className="mb-14"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(30px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+          }}
+        >
+          <h2
+            className="text-white font-bold mb-4"
+            style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.75rem)", letterSpacing: "-0.02em" }}
+          >
             Modernization Pillars
           </h2>
-          <p style={{
-            color: "#7B8FA6",
-            fontSize: "1rem",
-            maxWidth: "38rem",
-            lineHeight: 1.75,
-          }}>
+          <p className="text-[#7B8FA6] text-base max-w-[38rem] leading-7">
             Engineer out the complexity of legacy architecture with four critical technological safeguards.
           </p>
         </div>
 
         {/* Cards grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "1rem",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(40px)",
-          transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
-        }}>
+        <div
+          className="grid grid-cols-4 gap-4"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(40px)",
+            transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
+          }}
+        >
           {pillars.map((pillar, i) => (
             <div
               key={i}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
+              className="rounded-[10px] p-8 cursor-default transition-all duration-[250ms]"
               style={{
                 border: hovered === i
                   ? "1px solid rgba(200,242,82,0.25)"
                   : "1px solid rgba(0,0,0,0.08)",
-                borderRadius: "10px",
-                padding: "2rem",
-                background: hovered === i
-                  ? "#0F1C2E"
-                  : "#101828",
-                transition: "all 0.25s ease",
-                cursor: "default",
+                background: hovered === i ? "#0F1C2E" : "#101828",
               }}
             >
-              <div style={{ marginBottom: "1.25rem" }}>{pillar.icon}</div>
-              <h3 style={{
-                color: "#ffffff",
-                fontSize: "1.05rem",
-                fontWeight: 700,
-                marginBottom: "0.85rem",
-                lineHeight: 1.35,
-              }}>
+              <div className="mb-5">{pillar.icon}</div>
+              <h3 className="text-white text-[1.05rem] font-bold mb-3.5 leading-[1.35]">
                 {pillar.title}
               </h3>
-              <p style={{
-                color: "#7B8FA6",
-                fontSize: "0.88rem",
-                lineHeight: 1.8,
-              }}>
+              <p className="text-[#7B8FA6] text-[0.88rem] leading-[1.8]">
                 {pillar.desc}
               </p>
             </div>

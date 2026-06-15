@@ -44,115 +44,73 @@ export default function MigrationStrategy() {
   return (
     <section
       ref={ref}
-      style={{
-        background: "linear-gradient(180deg, #0D1525 0%, #0A1020 100%)",
-        padding: "6rem 0",
-        position: "relative",
-      }}
+      className="relative py-24"
+      style={{ background: "linear-gradient(180deg, #0D1525 0%, #0A1020 100%)" }}
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Eyebrow + heading */}
-        <div style={{
-          textAlign: "center",
-          marginBottom: "4rem",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(20px)",
-          transition: "opacity 0.6s ease, transform 0.6s ease",
-        }}>
-          <p style={{
-            color: "#C8F252",
-            fontSize: "0.6rem",
-            letterSpacing: "0.3em",
-            textTransform: "uppercase",
-            fontWeight: 700,
-            marginBottom: "1.25rem",
-          }}>
+        <div
+          className="text-center mb-16"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}
+        >
+          <p className="text-[#C8F252] text-[0.6rem] tracking-[0.3em] uppercase font-bold mb-5">
             THE STRATEGY
           </p>
-          <h2 style={{
-            color: "#ffffff",
-            fontWeight: 800,
-            fontSize: "clamp(1.8rem, 3.5vw, 2.75rem)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.2,
-          }}>
+          <h2
+            className="text-white font-extrabold leading-[1.2]"
+            style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.75rem)", letterSpacing: "-0.02em" }}
+          >
             The Modernization Roadmap
           </h2>
         </div>
 
         {/* Timeline container */}
-        <div style={{ position: "relative", maxWidth: "900px", margin: "0 auto" }}>
+        <div className="relative max-w-[900px] mx-auto">
           {/* Center vertical line */}
-          <div style={{
-            position: "absolute",
-            left: "50%",
-            top: 0,
-            bottom: 0,
-            width: "1px",
-            backgroundColor: "#C8F252",
-            transform: "translateX(-50%)",
-            opacity: 0.4,
-          }} />
+          <div
+            className="absolute left-1/2 top-0 bottom-0 w-px opacity-40"
+            style={{ backgroundColor: "#C8F252", transform: "translateX(-50%)" }}
+          />
 
           {steps.map((step, i) => (
             <div
               key={i}
+              className="relative mb-12"
               style={{
                 display: "flex",
                 justifyContent: step.side === "left" ? "flex-start" : "flex-end",
                 alignItems: "center",
-                marginBottom: "3rem",
-                position: "relative",
                 opacity: visible ? 1 : 0,
                 transform: visible ? "translateY(0)" : "translateY(30px)",
                 transition: `opacity 0.7s ease ${0.1 * i}s, transform 0.7s ease ${0.1 * i}s`,
               }}
             >
               {/* Card */}
-              <div style={{
-                width: "calc(50% - 3rem)",
-                background: "#101C2E",
-                borderRadius: "8px",
-                padding: "1.75rem",
-                border: "1px solid rgba(255,255,255,0.05)",
-              }}>
-                <h3 style={{
-                  color: "#C8F252",
-                  fontSize: "1.05rem",
-                  fontWeight: 700,
-                  marginBottom: "0.75rem",
-                  textAlign: "left",
-                }}>
+              <div
+                className="rounded-lg p-7"
+                style={{
+                  width: "calc(50% - 3rem)",
+                  background: "#101C2E",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <h3 className="text-[#C8F252] text-[1.05rem] font-bold mb-3 text-left">
                   {step.title}
                 </h3>
-                <p style={{
-                  color: "#8F99A8",
-                  fontSize: "0.88rem",
-                  lineHeight: 1.75,
-                  textAlign: "left",
-                }}>
+                <p className="text-[#8F99A8] text-[0.88rem] leading-7 text-left">
                   {step.desc}
                 </p>
               </div>
 
               {/* Center number bubble */}
-              <div style={{
-                position: "absolute",
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: "36px",
-                height: "36px",
-                backgroundColor: "#C8F252",
-                borderRadius: "6px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 800,
-                fontSize: "0.9rem",
-                color: "#0C1628",
-                zIndex: 10,
-                flexShrink: 0,
-              }}>
+              <div
+                className="absolute left-1/2 w-9 h-9 bg-[#C8F252] rounded-md flex items-center justify-center font-extrabold text-[0.9rem] text-[#0C1628] z-10 flex-shrink-0"
+                style={{ transform: "translateX(-50%)" }}
+              >
                 {step.num}
               </div>
             </div>

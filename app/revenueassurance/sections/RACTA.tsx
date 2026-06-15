@@ -1,53 +1,29 @@
 export default function RACTA() {
   return (
-    <section style={{ backgroundColor: "#10101D", padding: "7rem 0" }}>
-      <div className="max-w-5xl mx-auto px-6" style={{ textAlign: "center" }}>
+    <section className="bg-[#10101D] py-28">
+      <div className="max-w-5xl mx-auto px-6 text-center">
 
-        <h2 style={{
-          color: "#ffffff",
-          fontWeight: 800,
-          fontSize: "clamp(2rem, 4vw, 3rem)",
-          lineHeight: 1.15,
-          marginBottom: "1.25rem",
-        }}>
+        <h2
+          className="text-white font-extrabold leading-[1.15] mb-5"
+          style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}
+        >
           Ready to seal your revenue leaks?
         </h2>
 
-        <p style={{
-          color: "#6B7280",
-          fontSize: "0.95rem",
-          lineHeight: 1.75,
-          maxWidth: "36rem",
-          margin: "0 auto 2.75rem",
-        }}>
+        <p className="text-[#6B7280] text-[0.95rem] leading-7 max-w-[36rem] mx-auto mb-11">
           Deploy our lightweight audit engine in your environment and get a comprehensive leakage
           report within 72 hours.
         </p>
 
-        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "1rem" }}>
-          <button style={{
-            backgroundColor: "#2D7DB3",
-            color: "#ffffff",
-            padding: "0.9rem 2rem",
-            fontWeight: 600,
-            fontSize: "0.9rem",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}>
+        <div className="flex justify-center flex-wrap gap-4">
+          <button className="bg-[#2D7DB3] text-white px-8 py-3.5 font-semibold text-[0.9rem] border-none rounded cursor-pointer">
             Assure Your Revenue
           </button>
 
-          <button style={{
-            backgroundColor: "transparent",
-            border: "1.5px solid #3A4456",
-            color: "#ffffff",
-            padding: "0.9rem 2rem",
-            fontWeight: 600,
-            fontSize: "0.9rem",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}>
+          <button
+            className="bg-transparent text-white px-8 py-3.5 font-semibold text-[0.9rem] rounded cursor-pointer"
+            style={{ border: "1.5px solid #3A4456" }}
+          >
             Talk to an Auditor
           </button>
         </div>
