@@ -1,15 +1,17 @@
 "use client";
-
+import Link from "next/link";
 import {
   Network,
   ShieldCheck,
   Globe,
 } from "lucide-react";
 
+
 const topSolutions = [
   {
     title: "MVNO Launch",
     icon: "/image/solutionpage/MVNO Rocket.png",
+    href: "/mvnolaunch",
     features: [
       "Real-time Rating Engine",
       "Digital Onboarding/KYC",
@@ -21,6 +23,7 @@ const topSolutions = [
   {
     title: "MVNE & Multi-Brand",
     icon: "/image/solutionpage/Data Hub.png",
+    href: "/your-link-here",
     features: [
       "Multi-Tenant Infrastructure",
       "Brand-Specific Currencies",
@@ -32,6 +35,7 @@ const topSolutions = [
   {
     title: "MNO Modernization",
     icon: "/image/solutionpage/Fiber Optics.png",
+    href: "/your-link-here",
     features: [
       "API-First Wrappers",
       "Shadow Billing Sync",
@@ -43,6 +47,7 @@ const topSolutions = [
   {
     title: "eSIM & IoT",
     icon: "/image/solutionpage/Hardware Circuit.png",
+    href: "/esim-and-iot",
     features: [
       "Remote SIM Provisioning",
       "SM-DP+ Integration",
@@ -57,6 +62,7 @@ const bottomSolutions = [
   {
     title: "Network API",
     icon: Network,
+    href: "/networkapi",
     features: [
       "CAMARA Compliance",
       "API Usage Monetization",
@@ -66,6 +72,7 @@ const bottomSolutions = [
   {
     title: "Revenue Assurance",
     icon: ShieldCheck,
+    href: "/revenueassurance",
     features: [
       "CDR Reconciliation",
       "Fraud Detection ML",
@@ -73,7 +80,6 @@ const bottomSolutions = [
     ],
   },
 ];
-
 export default function EnterpriseGradeSolutions() {
   return (
     <section className="bg-[#FCF8F9] dark:bg-gray-900 py-10 px-15">
@@ -118,10 +124,13 @@ export default function EnterpriseGradeSolutions() {
                 ))}
               </ul>
 
-              <button className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C] dark:text-white">
-                Explore Solution
-                <span className="text-xl">→</span>
-              </button>
+<Link
+  href={item.href}
+  className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C] dark:text-white"
+>
+  Explore Solution
+  <span className="text-xl">→</span>
+</Link>
             </div>
           ))}
         </div>
@@ -156,10 +165,13 @@ export default function EnterpriseGradeSolutions() {
                   ))}
                 </ul>
 
-                <button className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C] dark:text-white">
-                  Explore Solution
-                  <span className="text-xl">→</span>
-                </button>
+  <Link
+  href={item.href}
+  className="mt-8 inline-flex items-center gap-2 text-[15px] text-[#1C1B1C] dark:text-white"
+>
+  Explore Solution
+  <span className="text-xl">→</span>
+</Link>
               </div>
             );
           })}
