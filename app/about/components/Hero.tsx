@@ -1,4 +1,5 @@
 import { Database, Monitor, Plus, Shield } from "lucide-react";
+import Link from "next/link";
 
 const rows = [
   {
@@ -58,9 +59,11 @@ export default function Hero() {
               <button className="rounded-lg bg-[#8CC63F] px-6 py-3 text-[13px] font-semibold text-[#0B1633]">
                 View the Platform <span aria-hidden="true">-&gt;</span>
               </button>
+              <Link href="/request-a-demo">
               <button className="rounded-lg border border-white/30 px-6 py-3 text-[13px] font-semibold text-white">
                 Request a Demo
               </button>
+              </Link>
             </div>
           </div>
 

@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 export default function SovereignMonetizationHero() {
+
   return (
     <section className="bg-gray-50 dark:bg-gray-900">
       <div className="max-w-[1440px] mx-auto">
@@ -33,7 +36,7 @@ export default function SovereignMonetizationHero() {
 
             {/* CTA */}
             <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <button
+              <Link href="/request-a-demo"
                 className="
                   inline-flex items-center justify-center
                   px-8 py-4
@@ -44,9 +47,9 @@ export default function SovereignMonetizationHero() {
                 "
               >
                 Request a Demo
-              </button>
+              </Link>
 
-              <button
+              <Link href="/technical-architecture"
                 className="
                   inline-flex items-center justify-center
                   px-8 py-4
@@ -57,7 +60,7 @@ export default function SovereignMonetizationHero() {
                 "
               >
                 Start Your Technical Evaluation
-              </button>
+              </Link>
             </div>
           </div>
         </div>

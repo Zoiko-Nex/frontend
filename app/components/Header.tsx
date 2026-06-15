@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronDown } from "lucide-react";
@@ -32,23 +32,6 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -73,11 +56,13 @@ export default function Header() {
           </Link>
 
           {/* Solutions Mega Menu */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setOpen(!open)}
-              className="flex items-center gap-1 hover:text-sky-600"
-            >
+          <div
+            className="relative"
+            ref={dropdownRef}
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+          >
+            <button className="flex items-center gap-1 hover:text-sky-600">
               Solutions
 
               <ChevronDown
@@ -179,14 +164,18 @@ export default function Header() {
 
         {/* Buttons */}
         <div className="flex items-center gap-3">
-          <button className="px-3 py-2 bg-white text-black rounded-xl text-sm font-semibold shadow-md border">
+          <Link
+            href="/platform-architecture"
+            className="px-3 py-2 bg-white text-black rounded-xl text-sm font-semibold shadow-md border"
+          >
             View Platform Architecture
-          </button>
+          </Link>
 
-          <Link href="/request-a-demo">
-          <button className="px-5 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold shadow-md">
+          <Link
+            href="/request-a-demo"
+            className="px-5 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold shadow-md"
+          >
             Request a Demo
-          </button>
           </Link>
         </div>
       </div>
