@@ -63,7 +63,7 @@ export default function MnoHero() {
         pointerEvents: "none",
       }} />
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-10">
         <div style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -101,7 +101,7 @@ export default function MnoHero() {
 
             <h1 style={{
               color: "#ffffff",
-              fontWeight: 800,
+              fontWeight: 500,
               fontSize: "clamp(2.8rem, 5vw, 4.5rem)",
               lineHeight: 1.08,
               marginBottom: "0.25rem",
@@ -110,7 +110,7 @@ export default function MnoHero() {
             </h1>
             <h1 style={{
               color: "#C8F252",
-              fontWeight: 800,
+              fontWeight: 500,
               fontSize: "clamp(2.8rem, 5vw, 4.5rem)",
               lineHeight: 1.08,
               marginBottom: "2rem",
