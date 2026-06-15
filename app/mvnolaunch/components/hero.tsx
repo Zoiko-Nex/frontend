@@ -101,7 +101,7 @@ export default function MVNOLaunchHero() {
           </div>
 
           {/* Right Content */}
-          <div className="relative">
+          <div className="relative ">
             {/* Dashboard Card */}
             <div
               className="
@@ -114,10 +114,10 @@ export default function MVNOLaunchHero() {
               "
             >
               <Image
-                src="/image/mvno/dashboard.png"
+                src="/image/mvno-launch/mvnodashboard.png"
                 alt="MVNO Dashboard"
-                width={600}
-                height={500}
+                width={400}
+                height={400}
                 className="w-full h-auto"
               />
             </div>

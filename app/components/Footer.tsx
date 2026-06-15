@@ -59,12 +59,12 @@ export default function Footer() {
                   Solutions
                 </h3>
                 <ul className="space-y-[10px] text-xs leading-5">
-                  <li><Link href="/solutions/mvno-launch">MVNO Launch</Link></li>
+                  <li><Link href="/mvnolaunch">MVNO Launch</Link></li>
                   <li><Link href="/solutions/mvne-multi-brand">MVNE & Multi-Brand</Link></li>
                   <li><Link href="/solutions/mno-modernization">MNO Modernization</Link></li>
-                  <li><Link href="/solutions/esim-iot">eSIM & IoT</Link></li>
+                  <li><Link href="/esim-and-iot">eSIM & IoT</Link></li>
                   <li><Link href="/solutions/enterprise-b2b">Enterprise & B2B</Link></li>
-                  <li><Link href="/solutions/network-api">Network API</Link></li>
+                  <li><Link href="/networkapi">Network API</Link></li>
                 </ul>
               </div>
 
