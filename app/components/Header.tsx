@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 
 const solutionPages = [
@@ -31,6 +32,11 @@ const solutionPages = [
 export default function Header() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  const isActive = (path: string) => {
+    return pathname === path ? "text-sky-600" : "hover:text-sky-600";
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
@@ -49,7 +55,7 @@ export default function Header() {
         <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
           <Link
             href="/platform"
-            className="flex items-center gap-1 hover:text-sky-600"
+            className={`flex items-center gap-1 ${isActive("/platform")}`}
           >
             Platform
             <ChevronDown size={14} />
@@ -62,7 +68,7 @@ export default function Header() {
             onMouseEnter={() => setOpen(true)}
             onMouseLeave={() => setOpen(false)}
           >
-            <button className="flex items-center gap-1 hover:text-sky-600">
+            <button className={`flex items-center gap-1 ${pathname.startsWith("/solutions") || pathname.startsWith("/mvno") || pathname.startsWith("/mno") || pathname.startsWith("/network") ? "text-sky-600" : "hover:text-sky-600"}`}>
               Solutions
 
               <ChevronDown
@@ -137,27 +143,27 @@ export default function Header() {
             )}
           </div>
 
-          <Link href="#" className="hover:text-sky-600">
+          <Link href="/operators" className={isActive("/operators")}>
             Operators
           </Link>
 
-          <Link href="#" className="hover:text-sky-600">
+          <Link href="/deployment" className={isActive("/deployment")}>
             Deployment
           </Link>
 
-          <Link href="#" className="hover:text-sky-600">
+          <Link href="/trust" className={isActive("/trust")}>
             Trust
           </Link>
 
           <Link
             href="/resources"
-            className="flex items-center gap-1 hover:text-sky-600"
+            className={`flex items-center gap-1 ${isActive("/resources")}`}
           >
             Resources
             <ChevronDown size={14} />
           </Link>
 
-          <Link href="#" className="hover:text-sky-600">
+          <Link href="/company" className={isActive("/company")}>
             Company
           </Link>
         </nav>
