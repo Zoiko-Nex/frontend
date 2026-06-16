@@ -38,8 +38,11 @@ export default function ESIMHero() {
   return (
     <section
       ref={sectionRef}
-      className="relative overflow-hidden py-20 pt-20"
-      style={{ background: "linear-gradient(135deg, #e8f0f7 0%, #f0f4f8 40%, #e4eef8 100%)" }}
+      className="relative overflow-hidden py-16"
+      style={{
+        background:
+          "linear-gradient(180deg,#F6F7F9 0%,#F4F6F8 100%)"
+      }}
     >
       {/* Subtle grid background */}
       <div
@@ -52,34 +55,63 @@ export default function ESIMHero() {
       />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
-        <div className="grid grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-20 items-center">
           {/* LEFT */}
           <div>
             {/* Badge */}
-            <div className="inline-flex items-center px-4 py-1.5 rounded-full border mb-6"
-              style={{ border: "1px solid rgba(43,126,193,0.45)", backgroundColor: "rgba(43,126,193,0.1)" }}>
-              <span className="text-[0.6rem] tracking-[0.22em] font-mono font-semibold uppercase text-[#2B7EC1]">
+            <div
+              className="inline-flex items-center rounded-full px-4 py-2 mb-7"
+              style={{
+                background: "#DDEBF3",
+              }}
+            >
+              <span
+                className="uppercase font-semibold"
+                style={{
+                  color: "#2A78A1",
+                  fontFamily: "JetBrains Mono",
+                  fontSize: "12px",
+                  letterSpacing: "1.2px",
+                  lineHeight: "12px",
+                }}
+              >
                 Enterprise Connectivity
               </span>
             </div>
 
             {/* Heading */}
-            <h1 className="text-[#0f1a2e] font-extrabold leading-[1.1] mb-5"
-              style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.5rem)" }}>
+            <h1
+              className="text-[#0B0B0B] font-bold mb-8"
+              style={{
+                fontSize: "64px",
+                lineHeight: "66px",
+                maxWidth: "584px",
+                letterSpacing: "-2px",
+              }}
+            >
               Monetize the
               <br />
               Connected Future.
             </h1>
 
             {/* Description */}
-            <p className="text-slate-500 text-base leading-7 max-w-[30rem] mb-8">
+            <p
+              className="mb-10"
+              style={{
+                maxWidth: "530px",
+                color: "#5D6778",
+                fontSize: "18px",
+                lineHeight: "29px",
+                fontWeight: 400,
+              }}
+            >
               Precision billing and lifecycle management for millions of eSIM
               profiles and global IoT fleets. Secure, sovereign control for
               infrastructure-grade reliability.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex gap-3.5 flex-wrap">
+            <div className="flex items-center gap-5">
               <button
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#153d60";
@@ -112,10 +144,11 @@ export default function ESIMHero() {
           {/* RIGHT — Image Card */}
           <div className="relative">
             <div
-              className="rounded-[14px] overflow-hidden bg-white"
+
+              className="relative bg-white rounded-2xl p-4"
               style={{
-                border: "1px solid rgba(255,255,255,0.9)",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08)",
+                boxShadow:
+                  "0 12px 40px rgba(0,0,0,.12)",
               }}
             >
               <Image
