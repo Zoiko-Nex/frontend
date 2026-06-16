@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -112,21 +113,23 @@ export default function ESIMHero() {
 
             {/* CTA Buttons */}
             <div className="flex items-center gap-5">
-              <button
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#153d60";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1a4e7a";
-                }}
-                className="px-7 py-3 text-white text-sm font-semibold border-none rounded cursor-pointer transition-colors duration-200"
-                style={{
-                  backgroundColor: "#1a4e7a",
-                  boxShadow: "0 2px 8px rgba(26,78,122,0.35)",
-                }}
-              >
-                Request a Demo
-              </button>
+              <Link href="/request-a-demo">
+                <button
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#153d60";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1a4e7a";
+                  }}
+                  className="px-7 py-3 text-white text-sm font-semibold border-none rounded cursor-pointer transition-colors duration-200"
+                  style={{
+                    backgroundColor: "#1a4e7a",
+                    boxShadow: "0 2px 8px rgba(26,78,122,0.35)",
+                  }}
+                >
+                  Request a Demo
+                </button>
+              </Link>
               <button
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f8fafc";

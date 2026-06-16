@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function CTA() {
   return (
     <section className="bg-[#173656] py-[36px] font-['Plus_Jakarta_Sans',sans-serif]">
@@ -13,9 +14,11 @@ export default function CTA() {
         </h2>
 
         <div className="mt-[20px] flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-[22px]">
-          <button className="h-[50px] w-full rounded-[10px] bg-[#69C62A] px-8 text-[15px] font-semibold text-white shadow-[0_12px_26px_rgba(105,198,42,0.28)] transition hover:bg-[#5dbb22] sm:w-[240px]">
-            Request a Demo <span aria-hidden="true">-&gt;</span>
-          </button>
+          <Link href="/request-a-demo">
+            <button className="h-[50px] w-full rounded-[10px] bg-[#69C62A] px-8 text-[15px] font-semibold text-white shadow-[0_12px_26px_rgba(105,198,42,0.28)] transition hover:bg-[#5dbb22] sm:w-[240px]">
+              Request a Demo <span aria-hidden="true">-&gt;</span>
+            </button>
+          </Link>
 
           <button className="h-[50px] w-full rounded-[10px] border border-white/90 px-8 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:w-[240px]">
             View Platform Architecture
