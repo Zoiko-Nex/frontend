@@ -53,7 +53,11 @@ export default function ScaleWithoutComplexity() {
   return (
     <section
       ref={ref}
-      className="relative overflow-hidden py-[5.5rem] bg-[#171724]"
+      className="relative overflow-hidden py-[120px]"
+      style={{
+        background:
+          "linear-gradient(90deg,#111222 0%,#14152A 55%,#111222 100%)"
+      }}
     >
       {/* Subtle radial glow */}
       <div
@@ -64,8 +68,8 @@ export default function ScaleWithoutComplexity() {
         }}
       />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10">
-        <div className="grid grid-cols-2 gap-16 items-center">
+      <div className="max-w-[1280px] mx-auto px-6">
+        <div className="grid lg:grid-cols-[1fr_660px] gap-28 items-center">
           {/* LEFT: Steps */}
           <div
             style={{
@@ -83,13 +87,13 @@ export default function ScaleWithoutComplexity() {
               Complexity
             </h2>
 
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-14">
               {steps.map((step, idx) => (
                 <div key={idx} className="flex gap-4">
                   {/* Number badge */}
                   <div className="flex-shrink-0 mt-0.5">
                     <span
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-[6px] text-[#6DC02F] text-[0.65rem] font-mono font-bold tracking-[0.05em]"
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-xl text-[#6DC02F] text-[0.65rem] font-mono font-bold tracking-[0.05em]"
                       style={{
                         border: "1px solid rgba(109,192,47,0.4)",
                         backgroundColor: "rgba(109,192,47,0.08)",
@@ -100,7 +104,7 @@ export default function ScaleWithoutComplexity() {
                   </div>
                   {/* Content */}
                   <div>
-                    <h3 className="text-white text-base font-semibold mb-1.5">
+                    <h3 className="text-white text-[24px] font-semibold mb-1.5">
                       {step.title}
                     </h3>
                     <p className="text-[#848293] text-sm leading-7">
@@ -114,21 +118,25 @@ export default function ScaleWithoutComplexity() {
 
           {/* RIGHT: Network Map Card */}
           <div
-            className="rounded-[14px] overflow-hidden bg-[#1e1e30]"
+            className="rounded-[24px] overflow-hidden bg-[#1A1A28]"
             style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateX(0)" : "translateX(30px)",
-              transition: "opacity 0.9s ease 0.2s, transform 0.9s ease 0.2s",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,.08)",
+              boxShadow: "0 40px 90px rgba(0,0,0,.45)"
             }}
           >
             {/* Card Header */}
             <div
-              className="flex items-center justify-between px-5 py-3"
+              className="flex items-center justify-between px-8 py-6"
               style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
             >
-              <span className="text-[0.6rem] font-mono tracking-[0.22em] uppercase text-[#6DC02F]">
-                Network Density Map
+              <span
+                style={{
+                  color: "#476800",
+                  fontSize: "16px",
+                  fontFamily: "JetBrains Mono"
+                }}
+              >
+                NETWORK DENSITY MAP
               </span>
               <div className="flex items-center gap-2">
                 <span className="relative inline-flex w-1.5 h-1.5">
@@ -141,14 +149,25 @@ export default function ScaleWithoutComplexity() {
                     style={{ backgroundColor: "#6DC02F" }}
                   />
                 </span>
-                <span className="text-[0.6rem] font-mono tracking-[0.18em] uppercase text-slate-500">
-                  Live Updating...
+                <span
+                  style={{
+                    color: "rgba(255,255,255,.4)",
+                    fontSize: "16px",
+                    fontFamily: "JetBrains Mono"
+                  }}
+                >
+                  LIVE UPDATING...
                 </span>
               </div>
             </div>
 
             {/* Green accent line */}
-            <div className="h-0.5 bg-[#6DC02F]" />
+            <div
+              style={{
+                height: "3px",
+                background: "#6DC02F"
+              }}
+            />
 
             {/* Map Image */}
             <div className="bg-[#0e1320] overflow-hidden">
@@ -167,7 +186,7 @@ export default function ScaleWithoutComplexity() {
               style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
             >
               <div
-                className="px-6 py-5"
+                className="px-8 py-7"
                 style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}
               >
                 <p className="text-[0.6rem] font-mono tracking-[0.18em] uppercase text-slate-500 mb-1.5">
