@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-
+import Link from "next/link";
 export default function PlatformHero() {
   return (
     <section style={{ backgroundColor: "#0C3B67", padding: "6rem 0" }}>
@@ -46,7 +46,7 @@ export default function PlatformHero() {
             </p>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", marginBottom: "3.5rem" }}>
-              <button style={{
+              {/* <button style={{
                 backgroundColor: "#ffffff",
                 color: "#000000",
                 padding: "1rem 2rem",
@@ -58,7 +58,24 @@ export default function PlatformHero() {
                 cursor: "pointer",
               }}>
                 Request a Demo <ArrowRight size={18} />
-              </button>
+              </button> */}
+              <Link href="/request-a-demo">
+                <button
+                  style={{
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                    padding: "1rem 2rem",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Request a Demo <ArrowRight size={18} />
+                </button>
+              </Link>
               <button style={{
                 backgroundColor: "transparent",
                 border: "1px solid #ffffff",

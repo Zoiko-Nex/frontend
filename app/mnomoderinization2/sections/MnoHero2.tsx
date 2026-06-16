@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
@@ -76,18 +77,23 @@ export default function MnoHero2() {
             </p>
 
             <div className="flex gap-4 flex-wrap">
-              <button
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3182B7";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D9AE3";
-                }}
-                className="px-8 py-[0.95rem] text-white font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
-                style={{ backgroundColor: "#2D9AE3", border: "2px solid #2D9AE3" }}
-              >
-                Request a Demo
-              </button>
+              <Link href="/request-a-demo">
+                <button
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3182B7";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D9AE3";
+                  }}
+                  className="px-8 py-[0.95rem] text-white font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
+                  style={{
+                    backgroundColor: "#2D9AE3",
+                    border: "2px solid #2D9AE3",
+                  }}
+                >
+                  Request a Demo
+                </button>
+              </Link>
               <button
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)";
