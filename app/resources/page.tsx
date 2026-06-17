@@ -12,7 +12,7 @@ export default function ResourcesPage() {
                     <div className="w-full max-w-[896px] text-center text-white text-5xl md:text-6xl font-bold font-['Hanken_Grotesk'] leading-tight">Telecom OSS/BSS Resources for<br className="hidden md:block" />Operators Building Governed<br className="hidden md:block" />Monetization</div>
                     <div className="w-full max-w-[672px] mt-4 flex">
                         <div className="w-full px-8 py-5 bg-white/5 rounded-lg outline outline-1 outline-offset-[-1px] outline-white/10 backdrop-blur-[6px] inline-flex justify-start items-center overflow-hidden gap-3 cursor-text">
-                            <img src="/image/resourcesimage/icon-22.svg" alt="Search" className="w-5 h-5 object-contain" />
+                            <img src="/image/resourcesimage/icon22.svg" alt="Search" className="w-5 h-5 object-contain" />
                             <div className="flex-1 inline-flex flex-col justify-start items-start overflow-hidden">
                                 <div className="self-stretch justify-center text-white/40 text-base font-normal font-['Inter']">Search technical papers, API docs, or case studies...</div>
                             </div>
@@ -48,7 +48,7 @@ export default function ResourcesPage() {
                         {/* CTO/Architect */}
                         <div className="p-6 bg-white rounded-lg border border-slate-200 flex flex-col gap-2 hover:shadow-lg transition-shadow cursor-pointer">
                             <div className="w-6 h-6 mb-2">
-                                <img src="/image/resourcesimage/icon-1.svg" alt="CTO/Architect" className="w-full h-full object-contain" />
+                                <img src="/image/resourcesimage/icon1.svg" alt="CTO/Architect" className="w-full h-full object-contain" />
                             </div>
                             <h3 className="mt-2 text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">CTO/Architect</h3>
                             <p className="text-slate-600 text-sm font-normal leading-relaxed">Technical stack validation and system modularity.</p>
@@ -56,7 +56,7 @@ export default function ResourcesPage() {
                         {/* Commercial */}
                         <div className="p-6 bg-white rounded-lg border border-slate-200 flex flex-col gap-2 hover:shadow-lg transition-shadow cursor-pointer">
                             <div className="w-6 h-6 mb-2">
-                                <img src="/image/resourcesimage/icon-2.svg" alt="Commercial" className="w-full h-full object-contain" />
+                                <img src="/image/resourcesimage/icon2.svg" alt="Commercial" className="w-full h-full object-contain" />
                             </div>
                             <h3 className="mt-2 text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">Commercial</h3>
                             <p className="text-slate-600 text-sm font-normal leading-relaxed">Revenue agility and product market entry guides.</p>
@@ -64,7 +64,7 @@ export default function ResourcesPage() {
                         {/* Finance */}
                         <div className="p-6 bg-white rounded-lg border border-slate-200 flex flex-col gap-2 hover:shadow-lg transition-shadow cursor-pointer">
                             <div className="w-6 h-6 mb-2">
-                                <img src="/image/resourcesimage/icon-3.svg" alt="Finance" className="w-full h-full object-contain" />
+                                <img src="/image/resourcesimage/icon3.svg" alt="Finance" className="w-full h-full object-contain" />
                             </div>
                             <h3 className="mt-2 text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">Finance</h3>
                             <p className="text-slate-600 text-sm font-normal leading-relaxed">Billing accuracy and settlement infrastructure.</p>
@@ -72,7 +72,7 @@ export default function ResourcesPage() {
                         {/* Security */}
                         <div className="p-6 bg-white rounded-lg border border-slate-200 flex flex-col gap-2 hover:shadow-lg transition-shadow cursor-pointer">
                             <div className="w-6 h-6 mb-2">
-                                <img src="/image/resourcesimage/icon-4.svg" alt="Security" className="w-full h-full object-contain" />
+                                <img src="/image/resourcesimage/icon4.svg" alt="Security" className="w-full h-full object-contain" />
                             </div>
                             <h3 className="mt-2 text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">Security</h3>
                             <p className="text-slate-600 text-sm font-normal leading-relaxed">Compliance frameworks and sovereign data control.</p>
@@ -80,7 +80,7 @@ export default function ResourcesPage() {
                         {/* Developer */}
                         <div className="p-6 bg-white rounded-lg border border-slate-200 flex flex-col gap-2 hover:shadow-lg transition-shadow cursor-pointer">
                             <div className="w-6 h-6 mb-2">
-                                <img src="/image/resourcesimage/icon-5.svg" alt="Developer" className="w-full h-full object-contain" />
+                                <img src="/image/resourcesimage/icon5.svg" alt="Developer" className="w-full h-full object-contain" />
                             </div>
                             <h3 className="mt-2 text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">Developer</h3>
                             <p className="text-slate-600 text-sm font-normal leading-relaxed">API endpoints, SDKs, and integration logic.</p>
@@ -112,10 +112,10 @@ export default function ResourcesPage() {
                                 </div>
                                 <div className="mt-8 flex justify-between items-end">
                                     <div className="w-8 h-8 flex items-center justify-center">
-                                        <img src="/image/resourcesimage/icon-6.svg" alt="Playbook icon" className="w-full h-full object-contain" />
+                                        <img src="/image/resourcesimage/icon6.svg" alt="Playbook icon" className="w-full h-full object-contain" />
                                     </div>
                                     <div className="w-10 h-10 rounded-xl border border-slate-200 flex justify-center items-center group-hover:bg-slate-50 transition-colors group-hover:border-slate-300">
-                                        <img src="/image/resourcesimage/icon-8.svg" alt="Arrow right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" />
+                                        <img src="/image/resourcesimage/icon8.svg" alt="Arrow right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" />
                                     </div>
                                 </div>
                             </div>
@@ -127,10 +127,10 @@ export default function ResourcesPage() {
                                 </div>
                                 <div className="mt-8 flex justify-between items-end">
                                     <div className="w-8 h-8 flex items-center justify-center">
-                                        <img src="/image/resourcesimage/icon-7.svg" alt="Brief icon" className="w-full h-full object-contain" />
+                                        <img src="/image/resourcesimage/icon7.svg" alt="Brief icon" className="w-full h-full object-contain" />
                                     </div>
                                     <div className="w-10 h-10 rounded-xl border border-slate-200 flex justify-center items-center group-hover:bg-slate-50 transition-colors group-hover:border-slate-300">
-                                        <img src="/image/resourcesimage/icon-8.svg" alt="Arrow right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" />
+                                        <img src="/image/resourcesimage/icon8.svg" alt="Arrow right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" />
                                     </div>
                                 </div>
                             </div>
@@ -145,16 +145,16 @@ export default function ResourcesPage() {
                     <h3 className="text-center text-slate-600 text-xs font-semibold font-['JetBrains_Mono'] tracking-widest uppercase">EXPLORE BY ASSET CATEGORY</h3>
                     <div className="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {[
-                            { name: 'GUIDES', icon: 'icon-9.svg' },
-                            { name: 'WHITE PAPERS', icon: 'icon-10.svg' },
-                            { name: 'DOCUMENTATION', icon: 'icon-11.svg' },
-                            { name: 'API REFERENCE', icon: 'icon-12.svg' },
-                            { name: 'WEBINARS', icon: 'icon-13.svg' },
-                            { name: 'CASE STUDIES', icon: 'icon-14.svg' },
-                            { name: 'COMPARISONS', icon: 'icon-15.svg' },
-                            { name: 'BLOG', icon: 'icon-16.svg' },
-                            { name: 'GLOSSARY', icon: 'icon-18.svg' },
-                            { name: 'RELEASE NOTES', icon: 'icon-19.svg' }
+                            { name: 'GUIDES', icon: 'icon9.svg' },
+                            { name: 'WHITE PAPERS', icon: 'icon10.svg' },
+                            { name: 'DOCUMENTATION', icon: 'icon11.svg' },
+                            { name: 'API REFERENCE', icon: 'icon12.svg' },
+                            { name: 'WEBINARS', icon: 'icon13.svg' },
+                            { name: 'CASE STUDIES', icon: 'icon14.svg' },
+                            { name: 'COMPARISONS', icon: 'icon15.svg' },
+                            { name: 'BLOG', icon: 'icon16.svg' },
+                            { name: 'GLOSSARY', icon: 'icon18.svg' },
+                            { name: 'RELEASE NOTES', icon: 'icon19.svg' }
                         ].map((cat, i) => (
                             <div key={i} className="self-stretch p-6 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 flex flex-col justify-start items-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer hover:shadow-sm">
                                 <div className="h-6 inline-flex justify-center items-start">
@@ -178,19 +178,19 @@ export default function ResourcesPage() {
                         <div className="mt-4 flex flex-col sm:flex-row gap-4">
                             <div className="flex-1 p-6 bg-white/5 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex flex-col gap-2 hover:bg-white/10 transition-colors cursor-pointer">
                                 <div className="h-6 flex items-start mb-2">
-                                    <img src="/image/resourcesimage/icon-19.svg" alt="Platform Docs" className="h-full object-contain" />
+                                    <img src="/image/resourcesimage/icon19.svg" alt="Platform Docs" className="h-full object-contain" />
                                 </div>
                                 <h3 className="text-white text-base font-bold font-['Inter'] leading-6">Platform Docs</h3>
                                 <p className="text-white/60 text-sm font-normal font-['Inter'] leading-5">Comprehensive guides on core<br />BSS architecture and data<br />schemas.</p>
-                                <div className="mt-2 text-lime-300 text-sm font-bold flex items-center gap-1 font-['Inter']">Open Docs <img src="/image/resourcesimage/icon-20.svg" alt="Arrow Right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" /></div>
+                                <div className="mt-2 text-lime-300 text-sm font-bold flex items-center gap-1 font-['Inter']">Open Docs <img src="/image/resourcesimage/icon20.svg" alt="Arrow Right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" /></div>
                             </div>
                             <div className="flex-1 px-6 pt-6 pb-11 bg-white/5 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex flex-col gap-2 hover:bg-white/10 transition-colors cursor-pointer">
                                 <div className="h-6 flex items-start mb-2">
-                                    <img src="/image/resourcesimage/icon-21.svg" alt="API Reference" className="h-full object-contain" />
+                                    <img src="/image/resourcesimage/icon21.svg" alt="API Reference" className="h-full object-contain" />
                                 </div>
                                 <h3 className="text-white text-base font-bold font-['Inter'] leading-6">API Reference</h3>
                                 <p className="text-white/60 text-sm font-normal font-['Inter'] leading-5">RESTful API documentation with<br />full request/response examples.</p>
-                                <div className="mt-2 text-lime-300 text-sm font-bold flex items-center gap-1 font-['Inter']">Browse API <img src="/image/resourcesimage/icon-20.svg" alt="Arrow Right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" /></div>
+                                <div className="mt-2 text-lime-300 text-sm font-bold flex items-center gap-1 font-['Inter']">Browse API <img src="/image/resourcesimage/icon20.svg" alt="Arrow Right" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" /></div>
                             </div>
                         </div>
                     </div>
