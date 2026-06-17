@@ -214,7 +214,7 @@ export default function CompanyPage() {
               <div className="flex gap-6 items-start">
                 <div className="w-12 h-12 bg-white border border-slate-200 flex justify-center items-center shrink-0">
                   <div className="w-5 h-4">
-                    <img src="/image/company/icon-11.svg" alt="Built by Zoiko Tech" className="w-full h-full object-contain" />
+                    <img src="/image/company/icon (11).svg" alt="Built by Zoiko Tech" className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
