@@ -83,7 +83,7 @@ export default function DeploymentPage() {
         desc: "A fully managed multi-tenant environment. This offers the fastest speed-to-market and lowest operational overhead for cloud-native setups.",
         badge: "Fastest Launch",
         color: "border-blue-500 text-blue-400",
-        link: "#saas"
+        link: "/sharedsaas"
       };
     } else {
       if (subscriberCount === "over_5m" || isCriticalLegacy) {
@@ -92,7 +92,7 @@ export default function DeploymentPage() {
           desc: "For operators with over 5M subscribers or mission-critical legacy integrations, we recommend a Hybrid Mesh or air-gapped Sovereign architecture to protect core transactions and preserve legacy investments.",
           badge: "Enterprise / Carrier Grade",
           color: "border-lime-500 text-lime-400",
-          link: "#sovereign"
+          link: "/hybrid"
         };
       }
       if (subscriberCount === "1m_5m") {
@@ -109,7 +109,7 @@ export default function DeploymentPage() {
         desc: "Perfect for new market entrants and MVNOs with under 1M subscribers looking for a pay-as-you-grow pricing model and rapid deployment.",
         badge: "Highly Efficient",
         color: "border-blue-500 text-blue-400",
-        link: "#saas"
+        link: "/sharedsaas"
       };
     }
   };
@@ -601,7 +601,7 @@ export default function DeploymentPage() {
               </div>
 
               <div className="pt-4 mt-auto w-full">
-                <Link href="#contact" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
+                <Link href="/sharedsaas" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
                   Learn More
                 </Link>
               </div>
@@ -628,7 +628,7 @@ export default function DeploymentPage() {
               </div>
 
               <div className="pt-4 mt-auto w-full">
-                <Link href="#contact" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
+                <Link href="/dedicate" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
                   Explore Specs
                 </Link>
               </div>
@@ -655,7 +655,7 @@ export default function DeploymentPage() {
               </div>
 
               <div className="pt-4 mt-auto w-full">
-                <Link href="#contact" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
+                <Link href="/Hybrid" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
                   View Roadmap
                 </Link>
               </div>
@@ -682,7 +682,7 @@ export default function DeploymentPage() {
               </div>
 
               <div className="pt-4 mt-auto w-full">
-                <Link href="#contact" className="text-lime-300 text-base font-bold leading-6 hover:text-lime-400 transition">
+                <Link href="/sovereign" className="text-lime-300 text-base font-bold leading-6 hover:text-lime-400 transition">
                   Request Details
                 </Link>
               </div>
@@ -707,8 +707,8 @@ export default function DeploymentPage() {
               </h2>
 
               <p className="text-white/70 text-lg font-normal leading-7">
-                ZoikoNex is architected for region-aware monetization. Our<br className="hidden lg:block"/>
-                jurisdiction packs automatically apply local tax, compliance, and<br className="hidden lg:block"/>
+                ZoikoNex is architected for region-aware monetization. Our<br className="hidden lg:block" />
+                jurisdiction packs automatically apply local tax, compliance, and<br className="hidden lg:block" />
                 currency rules regardless of where your instance is hosted.
               </p>
 
