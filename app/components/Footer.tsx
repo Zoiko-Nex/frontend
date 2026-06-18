@@ -44,12 +44,11 @@ export default function Footer() {
                   Platform
                 </h3>
                 <ul className="space-y-[10px] text-xs leading-5">
-                  <li><Link href="/platform/architecture-overview">Architecture Overview</Link></li>
-                  <li><Link href="/platform/18-domains">18 Domains</Link></li>
-                  <li><Link href="/platform/jurisdiction-engine">Jurisdiction Engine</Link></li>
-                  <li><Link href="/platform/evidence-ledger">Evidence Ledger</Link></li>
-                  <li><Link href="/platform/ai-governance">AI Governance</Link></li>
-                  <li><Link href="/platform/deployment-models">Deployment Models</Link></li>
+                  <li><Link href="/platform-architecture">Architecture Overview</Link></li>
+                  <li><Link href="/18domains">18 Domains</Link></li>
+                  <li><Link href="/globaljurisdiction">Jurisdiction Engine</Link></li>
+                  <li><Link href="/evidence">Evidence Ledger</Link></li>
+                  <li><Link href="/ai-governance">AI Governance</Link></li>
                 </ul>
               </div>
 
