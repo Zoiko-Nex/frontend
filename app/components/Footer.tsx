@@ -44,12 +44,12 @@ export default function Footer() {
                 Platform
               </h3>
               <ul className="space-y-[10px] text-xs leading-5">
-                <li><Link href="/platform/architecture-overview" className="hover:text-lime-300 transition-colors">Architecture Overview</Link></li>
-                <li><Link href="/platform/18-domains" className="hover:text-lime-300 transition-colors">18 Domains</Link></li>
-                <li><Link href="/platform/jurisdiction-engine" className="hover:text-lime-300 transition-colors">Jurisdiction Engine</Link></li>
-                <li><Link href="/platform/evidence-ledger" className="hover:text-lime-300 transition-colors">Evidence Ledger</Link></li>
+                <li><Link href="/platform-architecture" className="hover:text-lime-300 transition-colors">Architecture Overview</Link></li>
+                <li><Link href="/18domains" className="hover:text-lime-300 transition-colors">18 Domains</Link></li>
+                <li><Link href="/globaljurisdiction" className="hover:text-lime-300 transition-colors">Jurisdiction Engine</Link></li>
+                <li><Link href="/evidence" className="hover:text-lime-300 transition-colors">Evidence Ledger</Link></li>
                 <li><Link href="/platform/ai-governance" className="hover:text-lime-300 transition-colors">AI Governance</Link></li>
-                <li><Link href="/platform/deployment-models" className="hover:text-lime-300 transition-colors">Deployment Models</Link></li>
+                <li><Link href="/deployment" className="hover:text-lime-300 transition-colors">Deployment Models</Link></li>
               </ul>
             </div>
 

@@ -10,25 +10,25 @@ const platformPages = [
   {
     name: "Architecture Overview",
     description: "GTMI monetization framework with decoupled planes",
-    href: "/platform/architecture-overview",
+    href: "/platform-architecture",
     icon: "/image/Header/Frame (7).png",
   },
   {
     name: "18 Domains",
     description: "TM Forum aligned functional decomposition blocks",
-    href: "/platform/18-domains",
+    href: "/18domains",
     icon: "/image/Header/Frame (8).png",
   },
   {
     name: "Jurisdiction Engine",
     description: "Multi-currency ledger with localized compliance residency",
-    href: "/platform/jurisdiction-engine",
+    href: "/globaljurisdiction",
     icon: "/image/Header/Frame (9).png",
   },
   {
     name: "Evidence Ledger",
     description: "Immutable auditing tracking for cryptographic billing states",
-    href: "/platform/evidence-ledger",
+    href: "/evidence",
     icon: "/image/Header/Frame (10).png",
   },
 ];
