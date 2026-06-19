@@ -76,8 +76,8 @@ export default function Footer() {
               <ul className="space-y-[10px] text-xs leading-5">
                 <li><Link href="/trust/security" className="hover:text-lime-300 transition-colors">Security</Link></li>
                 <li><Link href="/trust/compliance" className="hover:text-lime-300 transition-colors">Compliance</Link></li>
-                <li><Link href="/governance" className="hover:text-lime-300 transition-colors">Governance</Link></li>
-                <li><Link href="/evidence-architecture" className="hover:text-lime-300 transition-colors">Evidence Architecture</Link></li>
+                <li><Link href="/trust/governance" className="hover:text-lime-300 transition-colors">Governance</Link></li>
+                <li><Link href="/trust/evidence-architecture" className="hover:text-lime-300 transition-colors">Evidence Architecture</Link></li>
                 <li><Link href="/trust/trust-center" className="hover:text-lime-300 transition-colors">Trust Center</Link></li>
               </ul>
             </div>
