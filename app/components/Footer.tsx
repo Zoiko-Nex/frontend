@@ -48,7 +48,7 @@ export default function Footer() {
                 <li><Link href="/18domains" className="hover:text-lime-300 transition-colors">18 Domains</Link></li>
                 <li><Link href="/globaljurisdiction" className="hover:text-lime-300 transition-colors">Jurisdiction Engine</Link></li>
                 <li><Link href="/evidence" className="hover:text-lime-300 transition-colors">Evidence Ledger</Link></li>
-                <li><Link href="/platform/ai-governance" className="hover:text-lime-300 transition-colors">AI Governance</Link></li>
+                <li><Link href="/ai-governance" className="hover:text-lime-300 transition-colors">AI Governance</Link></li>
                 <li><Link href="/deployment" className="hover:text-lime-300 transition-colors">Deployment Models</Link></li>
               </ul>
             </div>
@@ -60,10 +60,10 @@ export default function Footer() {
               </h3>
               <ul className="space-y-[10px] text-xs leading-5">
                 <li><Link href="/mvnolaunch" className="hover:text-lime-300 transition-colors">MVNO Launch</Link></li>
-                <li><Link href="/solutions/mvne-multi-brand" className="hover:text-lime-300 transition-colors">MVNE & Multi-Brand</Link></li>
-                <li><Link href="/solutions/mno-modernization" className="hover:text-lime-300 transition-colors">MNO Modernization</Link></li>
+                <li><Link href="/mnomoderinization1" className="hover:text-lime-300 transition-colors">MVNE & Multi-Brand</Link></li>
+                <li><Link href="/mnomoderinization2" className="hover:text-lime-300 transition-colors">MNO Modernization</Link></li>
                 <li><Link href="/esim-and-iot" className="hover:text-lime-300 transition-colors">eSIM & IoT</Link></li>
-                <li><Link href="/solutions/enterprise-b2b" className="hover:text-lime-300 transition-colors">Enterprise & B2B</Link></li>
+                <li><Link href="/solutions" className="hover:text-lime-300 transition-colors">Enterprise & B2B</Link></li>
                 <li><Link href="/networkapi" className="hover:text-lime-300 transition-colors">Network API</Link></li>
               </ul>
             </div>
