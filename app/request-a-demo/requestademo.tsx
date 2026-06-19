@@ -135,8 +135,7 @@ export default function DeploymentPage() {
 
                     <input
                       type="text"
-                      placeholder="John Doe"
-                      className="w-full border border-gray-300 px-2 py-2 outline-none"
+                      className="w-full border border-gray-300 px-2 py-2 outline-none text-gray-900 bg-white"
                     />
                   </div>
 
@@ -147,8 +146,7 @@ export default function DeploymentPage() {
 
                     <input
                       type="email"
-                      placeholder="j.doe@operator.com"
-                      className="w-full border border-gray-300 px-2 py-2 outline-none"
+                      className="w-full border border-gray-300 px-2 py-2 outline-none text-gray-900 bg-white"
                     />
                   </div>
                 </div>
@@ -160,8 +158,7 @@ export default function DeploymentPage() {
 
                   <input
                     type="text"
-                    placeholder="Enterprise Corp"
-                    className="w-full border border-gray-300 px-2 py-2 outline-none"
+                    className="w-full border border-gray-300 px-2 py-2 outline-none text-gray-900 bg-white"
                   />
                 </div>
 
@@ -171,10 +168,10 @@ export default function DeploymentPage() {
                       Operator Type
                     </label>
 
-                    <select className="w-full border border-gray-300 px-2 py-2 bg-white outline-none">
-                      <option>Tier-1 MNO</option>
-                      <option>Tier-2 MNO</option>
-                      <option>MVNO</option>
+                    <select className="w-full border border-gray-300 px-2 py-2 bg-white outline-none text-gray-900">
+                      <option className="text-gray-900 bg-white">Tier-1 MNO</option>
+                      <option className="text-gray-900 bg-white">Tier-2 MNO</option>
+                      <option className="text-gray-900 bg-white">MVNO</option>
                     </select>
                   </div>
 
@@ -183,10 +180,10 @@ export default function DeploymentPage() {
                       Primary Use Case
                     </label>
 
-                    <select className="w-full border border-gray-300 px-2 py-2 bg-white outline-none">
-                      <option>Legacy Migration</option>
-                      <option>Digital Transformation</option>
-                      <option>MVNO Launch</option>
+                    <select className="w-full border border-gray-300 px-2 py-2 bg-white outline-none text-gray-900">
+                      <option className="text-gray-900 bg-white">Legacy Migration</option>
+                      <option className="text-gray-900 bg-white">Digital Transformation</option>
+                      <option className="text-gray-900 bg-white">MVNO Launch</option>
                     </select>
                   </div>
                 </div>
@@ -198,8 +195,7 @@ export default function DeploymentPage() {
 
                   <textarea
                     rows={3}
-                    placeholder="Tell us about your infrastructure goals..."
-                    className="w-full border border-gray-300 px-4 py-4 outline-none resize-none"
+                    className="w-full border border-gray-300 px-4 py-4 outline-none resize-none text-gray-900 bg-white"
                   />
                 </div>
 
