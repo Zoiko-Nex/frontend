@@ -109,7 +109,7 @@ export default function CompanyPage() {
             <div className="p-8 border border-slate-200 rounded-xl flex flex-col gap-6 hover:shadow-lg transition-shadow bg-white">
               <div className="flex justify-between items-start">
                 <div className="w-8 h-8">
-                  <img src="/image/company/icon4.svg" alt="Product Control" className="w-full h-full object-contain" />
+                  <img src="/image/company/icons4.svg" alt="Product Control" className="w-full h-full object-contain" />
                 </div>
                 <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 text-zinc-500 text-[10px] font-['JetBrains_Mono'] rounded font-medium">ZNX-01</span>
               </div>
@@ -122,7 +122,7 @@ export default function CompanyPage() {
             <div className="p-8 border border-slate-200 rounded-xl flex flex-col gap-6 hover:shadow-lg transition-shadow bg-white">
               <div className="flex justify-between items-start">
                 <div className="w-8 h-8">
-                  <img src="/image/company/icon5.svg" alt="Charging & Billing" className="w-full h-full object-contain" />
+                  <img src="/image/company/icons5.svg" alt="Charging & Billing" className="w-full h-full object-contain" />
                 </div>
                 <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 text-zinc-500 text-[10px] font-['JetBrains_Mono'] rounded font-medium">ZNX-02</span>
               </div>
@@ -135,7 +135,7 @@ export default function CompanyPage() {
             <div className="p-8 border border-slate-200 rounded-xl flex flex-col gap-6 hover:shadow-lg transition-shadow bg-white">
               <div className="flex justify-between items-start">
                 <div className="w-8 h-8">
-                  <img src="/image/company/icon6.svg" alt="Tax Payments Settlement" className="w-full h-full object-contain" />
+                  <img src="/image/company/icons6.svg" alt="Tax Payments Settlement" className="w-full h-full object-contain" />
                 </div>
                 <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 text-zinc-500 text-[10px] font-['JetBrains_Mono'] rounded font-medium">ZNX-03</span>
               </div>
@@ -148,7 +148,7 @@ export default function CompanyPage() {
             <div className="p-8 border border-slate-200 rounded-xl flex flex-col gap-6 hover:shadow-lg transition-shadow bg-white">
               <div className="flex justify-between items-start">
                 <div className="w-8 h-8">
-                  <img src="/image/company/icon7.svg" alt="Assurance Evidence" className="w-full h-full object-contain" />
+                  <img src="/image/company/icons7.svg" alt="Assurance Evidence" className="w-full h-full object-contain" />
                 </div>
                 <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 text-zinc-500 text-[10px] font-['JetBrains_Mono'] rounded font-medium">ZNX-04</span>
               </div>
@@ -161,7 +161,7 @@ export default function CompanyPage() {
             <div className="p-8 border border-slate-200 rounded-xl flex flex-col gap-6 hover:shadow-lg transition-shadow bg-white">
               <div className="flex justify-between items-start">
                 <div className="w-8 h-8">
-                  <img src="/image/company/icon8.svg" alt="AI Governance" className="w-full h-full object-contain" />
+                  <img src="/image/company/icons8.svg" alt="AI Governance" className="w-full h-full object-contain" />
                 </div>
                 <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 text-zinc-500 text-[10px] font-['JetBrains_Mono'] rounded font-medium">ZNX-05</span>
               </div>
@@ -173,7 +173,7 @@ export default function CompanyPage() {
             <div className="p-8 border border-slate-200 rounded-xl flex flex-col gap-6 hover:shadow-lg transition-shadow bg-white">
               <div className="flex justify-between items-start">
                 <div className="w-8 h-8">
-                  <img src="/image/company/icon9.svg" alt="Deployment Scale" className="w-full h-full object-contain" />
+                  <img src="/image/company/icons9.svg" alt="Deployment Scale" className="w-full h-full object-contain" />
                 </div>
                 <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 text-zinc-500 text-[10px] font-['JetBrains_Mono'] rounded font-medium">ZNX-06</span>
               </div>
@@ -199,7 +199,7 @@ export default function CompanyPage() {
               <div className="flex gap-6 items-start">
                 <div className="w-12 h-12 bg-white border border-slate-200 flex justify-center items-center shrink-0">
                   <div className="w-5 h-4">
-                    <img src="/image/company/icon10.svg" alt="Part of Zoiko Group" className="w-full h-full object-contain" />
+                    <img src="/image/company/icons10.svg" alt="Part of Zoiko Group" className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -213,7 +213,7 @@ export default function CompanyPage() {
               <div className="flex gap-6 items-start">
                 <div className="w-12 h-12 bg-white border border-slate-200 flex justify-center items-center shrink-0">
                   <div className="w-5 h-4">
-                    <img src="/image/company/icon11.svg" alt="Built by Zoiko Tech" className="w-full h-full object-contain" />
+                    <img src="/image/company/icons11.svg" alt="Built by Zoiko Tech" className="w-full h-full object-contain" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
