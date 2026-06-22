@@ -1,316 +1,475 @@
 "use client";
 
-import Image from "next/image";
+import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+
+// Pre-defined key target telecommunication markets
+const TELECOM_MARKETS = [
+  "Multi-country / Global",
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Germany",
+  "France",
+  "Australia",
+  "Singapore",
+  "United Arab Emirates",
+  "Saudi Arabia",
+  "South Africa",
+  "Nigeria",
+  "Kenya",
+  "Brazil",
+  "Mexico",
+  "India"
+];
 
 export default function DeploymentPage() {
+  // --- Country Search Dropdown State ---
+  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const countryContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown menu automatically on clicking outside the selection container
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        countryContainerRef.current &&
+        !countryContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsCountryOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter country selection criteria instantly matching input string
+  const filteredCountries = TELECOM_MARKETS.filter((country) =>
+    country.toLowerCase().includes(countrySearch.toLowerCase())
+  );
+
   return (
-    <main>
-    <section className="bg-[#f5f3f4] py-10">
-      <div className="max-w-7xl mx-auto px-15   ">
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* LEFT SIDE */}
-          <div>
-            <h1 className="text-5xl font-bold text-black leading-tight">
-              Why Tier-1
-              <br />
-              Operators Choose
-              <br />
-              ZoikoNex
-            </h1>
+    <main className="min-h-screen bg-slate-50 relative overflow-hidden font-sans">
+      
+      {/* Top Ambient Radial Glow from Figma (at 88% -8%) */}
+      <div className="absolute inset-0 bg-radial-[at_88%_-8%] from-lime-500/10 via-transparent to-transparent pointer-events-none" />
 
-            <p className="mt-6 text-gray-600 text-lg leading-7 max-w-xl">
-              The infrastructure-grade BSS platform designed for sovereign
-              control, mathematical precision, and absolute reliability in
-              hyper-scale environments.
-            </p>
-
-            {/* Features */}
-            <div className="mt-6 space-y-8">
-              <div className="flex gap-5">
-                <div className="w-12 h-12 bg-gray-100 flex items-center justify-center shrink-0">
-                  {/* Icon */}
-                  <Image
-                src="/image/request-a-demo/Background.png"
-                alt="Dashboard"
-                width={12}
-                height={12}
-                className="w-full border border-gray-300"
-              />
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-xl text-black">
-                    Unmatched Launch Speed
-                  </h3>
-
-                  <p className="text-gray-600 mt-2 leading-6 text-sm">
-                    Reduce time-to-market from quarters to weeks with our
-                    pre-integrated modular architecture and CI/CD pipelines.
-                  </p>
-                </div>
+      {/* SECTION 1: HERO & MAIN FORM PANEL */}
+      <section className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-24">
+        <div className="grid lg:grid-cols-12 gap-12 items-start">
+          
+          {/* LEFT SIDE: Core Platform Context Card */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-sky-900 to-sky-950 rounded-[32px] p-8 md:p-10 text-white shadow-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-radial-[at_0%_0%] from-white/5 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10">
+              {/* Badge */}
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm shadow-[0_0_0_4px_rgba(123,193,68,0.18)]" />
+                <span className="text-lime-500 text-xs font-semibold font-mono uppercase tracking-widest">
+                  REQUEST A DEMO
+                </span>
               </div>
 
-              <div className="flex gap-5">
-                <div className="w-12 h-12 bg-gray-100 flex items-center justify-center shrink-0">
-                  {/* Icon */}
-                  <Image
-                src="/image/request-a-demo/Background (1).png"
-                alt="Dashboard"
-                width={12}
-                height={12}
-                className="w-full border border-gray-300"
-              />
+              {/* Heading */}
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
+                Why Operators Choose ZoikoNex for Governed Telecom Monetization
+              </h1>
+
+              {/* Description */}
+              <p className="mt-5 text-slate-300 text-sm leading-relaxed">
+                An infrastructure-grade OSS/BSS platform for real-time charging,
+                revenue control, multi-tenant operations, eSIM enablement, and
+                governed telecom monetization at scale.
+              </p>
+
+              {/* Feature Points Grid */}
+              <div className="mt-10 space-y-6">
+                
+                {/* Feature 1 */}
+                <div className="pt-6 border-t border-white/10 flex gap-4 items-start">
+                  <span className="text-lime-500 text-xs font-semibold font-mono pt-0.5">01</span>
+                  <div>
+                    <h4 className="text-white text-base font-bold">Launch Faster</h4>
+                    <p className="text-slate-300 text-sm mt-1 leading-normal">
+                      Modular deployment pathways and pre-integrated telecom workflows.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold text-xl text-black">
-                    Granular Revenue Control
-                  </h3>
-
-                  <p className="text-gray-600 mt-2 leading-6 text-sm">
-                    Eliminate leakage with real-time mediation and 100%
-                    auditability across every transactional touchpoint.
-                  </p>
+                {/* Feature 2 */}
+                <div className="pt-6 border-t border-white/10 flex gap-4 items-start">
+                  <span className="text-lime-500 text-xs font-semibold font-mono pt-0.5">02</span>
+                  <div>
+                    <h4 className="text-white text-base font-bold">Control Revenue Precisely</h4>
+                    <p className="text-slate-300 text-sm mt-1 leading-normal">
+                      Real-time rating, charging, taxation, settlement, and reconciliation.
+                    </p>
+                  </div>
                 </div>
+
+                {/* Feature 3 */}
+                <div className="pt-6 border-t border-white/10 flex gap-4 items-start">
+                  <span className="text-lime-500 text-xs font-semibold font-mono pt-0.5">03</span>
+                  <div>
+                    <h4 className="text-white text-base font-bold">Scale with Governance</h4>
+                    <p className="text-slate-300 text-sm mt-1 leading-normal">
+                      Multi-market, multi-tenant operations with jurisdiction-aware compliance.
+                    </p>
+                  </div>
+                </div>
+
               </div>
-
-              <div className="flex gap-5">
-                <div className="w-12 h-12 bg-gray-100 flex items-center justify-center shrink-0">
-                  {/* Icon */}
-                    <Image
-                src="/image/request-a-demo/Background (2).png"
-                alt="Dashboard"
-                width={12}
-                height={12}
-                className="w-full border border-gray-300"
-              />
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-xl text-black">
-                    Sovereign Scaling
-                  </h3>
-
-                  <p className="text-gray-600 mt-2 leading-6 text-sm">
-                    Multi-jurisdiction compliance built-in. Deploy on-prem,
-                    cloud-native, or hybrid while maintaining data residency.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Dashboard Image */}
-            <div className="mt-12">
-              <Image
-                src="/image/request-a-demo/Data Visualization.png"
-                alt="Dashboard"
-                width={600}
-                height={350}
-                className="w-full border border-gray-300"
-              />
             </div>
           </div>
 
-          {/* RIGHT SIDE */}
-          <div>
-            {/* Form Card */}
-            <div className="bg-white border border-gray-300 p-10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-35 bg-gray-100 rounded-full translate-x-10 -translate-y-10"></div>
+          {/* RIGHT SIDE: Figma Initialization Request Form Card */}
+          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 p-8 md:p-10 shadow-[0_18px_48px_-22px_rgba(11,60,99,0.28)] relative overflow-hidden">
+            
+            <div className="absolute top-0 right-0 w-40 h-36 bg-slate-50 rounded-full translate-x-12 -translate-y-12 pointer-events-none" />
 
-              <h2 className="text-3xl font-semibold text-black">
+            <div className="relative z-10">
+              <h2 className="text-2xl font-extrabold text-slate-800">
                 Initialize Your Deployment
               </h2>
-
-              <p className="mt-4 text-gray-600 text-xm">
-                Complete the form below to schedule a technical walkthrough
-                with our infrastructure architects.
+              <p className="mt-2 text-slate-600 text-sm leading-relaxed max-w-2xl">
+                Tell us what you are building, migrating, or modernizing. ZoikoNex will route your request to the right deployment, infrastructure, and commercial architecture team.
               </p>
 
-              <form className="mt-10 space-y-6">
-                <div className="grid md:grid-cols-2 gap-5">
+              <form className="mt-8 space-y-5" onSubmit={(e) => e.preventDefault()}>
+                
+                {/* Row 1: Name & Email */}
+                <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs leading-3  uppercase text-gray-700 mb-2">
-                      Full Name
+                    <label className="block text-slate-800 text-xs font-semibold mb-1.5 flex items-center gap-0.5">
+                      Full Name <span className="text-red-500 font-bold">*</span>
                     </label>
-
                     <input
                       type="text"
-                      className="w-full border border-gray-300 px-2 py-2 outline-none text-gray-900 bg-white"
+                      placeholder="Jordan Mensah"
+                      className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs leading-3  uppercase text-gray-700 mb-2">
-                      Work Email
+                    <label className="block text-slate-800 text-xs font-semibold mb-1.5 flex items-center gap-0.5">
+                      Work Email <span className="text-red-500 font-bold">*</span>
                     </label>
-
                     <input
                       type="email"
-                      className="w-full border border-gray-300 px-2 py-2 outline-none text-gray-900 bg-white"
+                      placeholder="jordan@operator.com"
+                      className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs leading-3  uppercase text-gray-700 mb-2">
-                    Organization
-                  </label>
-
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 px-2 py-2 outline-none text-gray-900 bg-white"
-                  />
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-5">
+                {/* Row 2: Organization & Job Title */}
+                <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs leading-3  uppercase text-gray-700 mb-2">
-                      Operator Type
+                    <label className="block text-slate-800 text-xs font-semibold mb-1.5 flex items-center gap-0.5">
+                      Organization <span className="text-red-500 font-bold">*</span>
                     </label>
-
-                    <select className="w-full border border-gray-300 px-2 py-2 bg-white outline-none text-gray-900">
-                      <option className="text-gray-900 bg-white">Tier-1 MNO</option>
-                      <option className="text-gray-900 bg-white">Tier-2 MNO</option>
-                      <option className="text-gray-900 bg-white">MVNO</option>
-                    </select>
+                    <input
+                      type="text"
+                      placeholder="Operator, MVNE, enterprise, or partner"
+                      className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
+                    />
                   </div>
 
                   <div>
-                    <label className="block text-xs leading-3  uppercase text-gray-700 mb-2">
-                      Primary Use Case
-                    </label>
-
-                    <select className="w-full border border-gray-300 px-2 py-2 bg-white outline-none text-gray-900">
-                      <option className="text-gray-900 bg-white">Legacy Migration</option>
-                      <option className="text-gray-900 bg-white">Digital Transformation</option>
-                      <option className="text-gray-900 bg-white">MVNO Launch</option>
-                    </select>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-slate-800 text-xs font-semibold">Job Title</label>
+                      <span className="text-[9px] font-mono font-medium tracking-wider text-slate-400 border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50 uppercase">
+                        RECOMMENDED
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="CTO, Head of Product, Founder…"
+                      className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs leading-3 uppercase text-gray-700 mb-2">
-                    Project Requirements (Optional)
+                {/* Row 3: Country / Market (CUSTOM COMPONENT IMPLEMENTATION) */}
+                <div className="relative" ref={countryContainerRef}>
+                  <label className="block text-slate-800 text-xs font-semibold mb-1.5 flex items-center gap-0.5">
+                    Country / Primary Market <span className="text-red-500 font-bold">*</span>
                   </label>
+                  
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={countrySearch}
+                      onChange={(e) => {
+                        setCountrySearch(e.target.value);
+                        setIsCountryOpen(true);
+                      }}
+                      onFocus={() => setIsCountryOpen(true)}
+                      placeholder="Search a country, or Multi-country / global"
+                      className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
+                      ▼
+                    </div>
+                  </div>
 
+                  {/* Dropdown Floating Options Panel */}
+                  {isCountryOpen && (
+                    <div className="absolute left-0 z-50 w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-50">
+                      {filteredCountries.length > 0 ? (
+                        filteredCountries.map((country, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setCountrySearch(country);
+                              setIsCountryOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-sky-700 transition font-medium"
+                          >
+                            {country}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-slate-400 italic">
+                          No regions matched
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 4: Operator Select Dropdown */}
+                <div>
+                  <label className="block text-slate-800 text-xs font-semibold mb-1.5 flex items-center gap-0.5">
+                    Operator Type <span className="text-sky-700 font-bold">*</span>
+                  </label>
+                  <div className="relative">
+                    <select 
+                      defaultValue=""
+                      className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 appearance-none focus:border-sky-600 transition"
+                    >
+                      <option value="" disabled>Select your operator model…</option>
+                      <option value="tier-1-mno">Tier-1 MNO</option>
+                      <option value="tier-2-mno">Tier-2 MNO</option>
+                      <option value="mvne">MVNE</option>
+                      <option value="mvna">MVNA</option>
+                      <option value="mvno">MVNO</option>
+                      <option value="enterprise-iot">Enterprise / IoT Operator</option>
+                      <option value="strategic-partner">Strategic Partner / Systems Integrator</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-[10px]">
+                      ▼
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 5: Project Requirements */}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-slate-800 text-xs font-semibold">Project Requirements</label>
+                    <span className="text-[9px] font-mono font-medium tracking-wider text-slate-400 border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50 uppercase">
+                      OPTIONAL
+                    </span>
+                  </div>
                   <textarea
                     rows={3}
-                    className="w-full border border-gray-300 px-4 py-4 outline-none resize-none text-gray-900 bg-white"
+                    placeholder="Briefly describe your deployment objective, current platform, target launch timeline, migration need, or integration requirements."
+                    className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 resize-none focus:border-sky-600 transition"
                   />
+                  <span className="block text-right text-[10px] text-slate-400 mt-1">0 / 1500</span>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full bg-[#2D84B8] text-white text-xs py-5 font-semibold tracking-wider uppercase hover:bg-[#246e98] transition"
-                >
-                  Schedule Technical Consultation →
-                </button>
+                {/* Submit Block */}
+                <div className="pt-4 space-y-3">
+                  <button
+                    type="submit"
+                    className="w-full bg-sky-700 text-white font-bold py-4 rounded-xl shadow-[0_10px_22px_-10px_rgba(22,104,184,0.60)] hover:bg-sky-800 transition flex items-center justify-center gap-2"
+                  >
+                    <span>Schedule Deployment Consultation</span>
+                    <span>→</span>
+                  </button>
+                  <p className="text-center text-[11px] text-slate-500 leading-normal">
+                    By submitting this form, you agree that ZoikoNex may contact you about your request. See{" "}
+                    <Link href="#" className="text-sky-700 hover:underline">Privacy Notice</Link>.
+                  </p>
+                </div>
 
-                <p className="text-xs text-center text-gray-500 leading-6">
-                  By submitting, you agree to our Terms of Service and Privacy
-                  Policy. We process your data to facilitate the requested demo.
-                </p>
               </form>
             </div>
 
-            {/* Testimonial */}
-            <div className="mt-8 bg-white border-l-4 border-[#2D84B8] p-5">
-              <p className="italic text-gray-700 text-xm leading-6">
-                "ZoikoNex transformed our billing cycle from a 48-hour batch
-                process to real-time mediation within weeks. The sovereign
-                control model is a game-changer for our multi-national
-                compliance requirements.  
-              </p>
-
-              <p className="mt-5 font-bold text-xm text-gray-700">
-                — CTA, Global Connect Tier-1
-              </p>
-            </div>
           </div>
         </div>
-      </div>
-    </section>
-    <section className="bg-[#F7F4F4] border-t border-slate-200 py-8">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex flex-col items-center gap-8">
-          <p className="text-xs font-semibold leading-3 tracking-wider text-zinc-700 uppercase">
-            Certified Infrastructure Compliance
-          </p>
+      </section>
 
-          <div className="flex flex-wrap justify-center items-center gap-12 opacity-50">
-            {/* GDPR */}
+      {/* SECTION 2: AFTER YOU SUBMIT STEP FLOW */}
+      <section className="bg-slate-50 py-16 border-t border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          
+          {/* Header Block */}
+          <div className="space-y-2 mb-12">
             <div className="flex items-center gap-2">
-              {/* Icon Here */}
-              <Image
-                src="/image/request-a-demo/Icon.png"
-                alt="icon"
-                width={22}
-                height={12}
-                
-              />
-              <span className="text-xl font-bold text-zinc-700">GDPR</span>
-            </div>
-
-            {/* ISO */}
-            <div className="flex items-center gap-2">
-              {/* Icon Here */}
-              <Image
-                src="/image/request-a-demo/Icon (1).png"
-                alt="icon"
-                width={22}
-                height={12}
-              />
-              <span className="text-xl font-bold text-zinc-700">
-                ISO 27001
+              <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm" />
+              <span className="text-sky-700 text-xs font-semibold font-mono uppercase tracking-widest">
+                AFTER YOU SUBMIT
               </span>
             </div>
+            <h2 className="text-3xl font-extrabold text-slate-800">
+              What happens after you request a demo
+            </h2>
+            <p className="text-slate-600 text-base max-w-3xl leading-relaxed">
+              No generic sales call. Your request is qualified by operator model and routed to the team that can speak to your architecture, migration, and commercial path.
+            </p>
+          </div>
 
-            {/* PCI */}
-            <div className="flex items-center gap-2">
-              {/* Icon Here */}
-              <Image
-                src="/image/request-a-demo/Icon (2).png"
-                alt="icon"
-                width={22}
-                height={12}
-                
-              />
-              <span className="text-xl font-bold text-zinc-700">
-                PCI-DSS
-              </span>
+          {/* Cards Flex/Grid Block */}
+          <div className="grid md:grid-cols-3 gap-6">
+            
+            {/* Step 1 */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col gap-4">
+              <div className="w-10 h-10 rounded-lg border border-slate-300 flex items-center justify-center bg-slate-50">
+                <span className="text-sky-700 text-xs font-semibold font-mono">01</span>
+              </div>
+              <div>
+                <h3 className="text-slate-800 text-base font-bold">Context review</h3>
+                <p className="text-slate-600 text-sm mt-2 leading-relaxed">
+                  We review your operator model, primary market, scale, and deployment context the moment you submit — no back-and-forth to get started.
+                </p>
+              </div>
             </div>
 
-            {/* SOC2 */}
-            <div className="flex items-center gap-2">
-              {/* Icon Here */}
-              <Image
-                src="/image/request-a-demo/Icon (3).png"
-                alt="icon"
-                width={26}
-                height={12}
-              />
-              <span className="text-xl font-bold text-zinc-700">
-                SOC2
-              </span>
+            {/* Step 2 */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col gap-4">
+              <div className="w-10 h-10 rounded-lg border border-slate-300 flex items-center justify-center bg-slate-50">
+                <span className="text-sky-700 text-xs font-semibold font-mono">02</span>
+              </div>
+              <div>
+                <h3 className="text-slate-800 text-base font-bold">Routed to the right team</h3>
+                <p className="text-slate-600 text-sm mt-2 leading-relaxed">
+                  Your request reaches the pre-sales, solution architecture, and commercial team matched to your operator class — MNO, MVNE/MVNA, MVNO, enterprise, or partner.
+                </p>
+              </div>
             </div>
 
-            {/* HIPAA */}
-            <div className="flex items-center gap-2">
-              {/* Icon Here */}
-              <Image
-                src="/image/request-a-demo/Icon (4).png"
-                alt="icon"
-                width={22}
-                height={12}
-              />
-              <span className="text-xl font-bold text-zinc-700">
-                HIPAA
-              </span>
+            {/* Step 3 */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col gap-4">
+              <div className="w-10 h-10 rounded-lg border border-slate-300 flex items-center justify-center bg-slate-50">
+                <span className="text-sky-700 text-xs font-semibold font-mono">03</span>
+              </div>
+              <div>
+                <h3 className="text-slate-800 text-base font-bold">Tailored demo & consultation</h3>
+                <p className="text-slate-600 text-sm mt-2 leading-relaxed">
+                  You get a technical demo plus a working session on architecture, migration, compliance, commercial model, and launch planning for your deployment.
+                </p>
+              </div>
             </div>
+
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* SECTION 3: DARK ENGAGEMENT METRICS HERO */}
+      <section className="bg-gradient-to-b from-sky-900 to-sky-950 text-white relative overflow-hidden py-16 md:py-20">
+        <div className="absolute inset-0 bg-radial-[at_100%_-50%] from-lime-500/20 via-transparent to-transparent pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Action Left details */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm relative">
+                <div className="absolute inset-0 bg-lime-500 rounded-sm shadow-[0_0_0_4px_rgba(123,193,68,0.18)]" />
+              </div>
+              <span className="text-lime-500 text-xs font-semibold font-mono uppercase tracking-widest">
+                SEE ZOIKONEX IN ACTION
+              </span>
+            </div>
+
+            <h2 className="text-3xl font-extrabold leading-tight text-white max-w-xl">
+              Every engagement is technical, structured, and aligned to your operator model.
+            </h2>
+
+            <p className="text-slate-300 text-base leading-relaxed max-w-2xl">
+              Run telecom like infrastructure — not software. Request a demo, or explore the platform architecture and standards first. Either way, we route you to the right team based on your context.
+            </p>
+
+            {/* Dynamic Button Rows */}
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Link
+                href="#"
+                className="px-5 py-3.5 bg-sky-700 text-white text-sm font-bold rounded-xl shadow-[0_12px_24px_-12px_rgba(22,104,184,0.70)] hover:bg-sky-600 transition flex items-center gap-2"
+              >
+                <span>Request a Demo</span>
+                <span>→</span>
+              </Link>
+              <Link
+                href="/platform-architecture"
+                className="px-5 py-3.5 rounded-xl border border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition"
+              >
+                View Platform Architecture
+              </Link>
+              <Link
+                href="/technical-architecture"
+                className="px-5 py-3.5 rounded-xl border border-white/30 text-white text-sm font-semibold hover:bg-white/10 transition"
+              >
+                Start Technical Evaluation
+              </Link>
+            </div>
+
+            {/* Direct Lines text */}
+            <div className="text-sm text-slate-300 pt-2">
+              Prefer to talk now?{" "}
+              <span className="text-white font-medium mx-1">deployments@zoikonex.com</span>
+              &nbsp;·&nbsp;
+              <span className="text-white font-medium ml-1">+1 (800) 555-0100</span>
+            </div>
+          </div>
+
+          {/* Metrics Right Block Grid */}
+          <div className="lg:col-span-5 bg-slate-950/40 border border-white/10 rounded-2xl p-6 divide-y divide-white/10">
+            
+            {/* Metric Item 1 */}
+            <div className="py-4 flex justify-between items-center first:pt-0">
+              <span className="text-white text-xl font-semibold font-mono tracking-wide">18</span>
+              <div className="text-right text-slate-400 text-xs leading-tight">
+                Unified domains,<br />zero fragmentation
+              </div>
+            </div>
+
+            {/* Metric Item 2 */}
+            <div className="py-4 flex justify-between items-center">
+              <div>
+                <span className="text-white text-xl font-semibold font-mono tracking-wide">&lt;200</span>
+                <span className="text-lime-500 text-lg font-semibold font-mono ml-0.5">ms</span>
+              </div>
+              <div className="text-right text-slate-400 text-xs leading-tight">
+                Real-time charging<br />performance class
+              </div>
+            </div>
+
+            {/* Metric Item 3 */}
+            <div className="py-4 flex justify-between items-center">
+              <span className="text-white text-xl font-semibold font-mono tracking-wide">Multi</span>
+              <div className="text-right text-slate-400 text-xs leading-tight">
+                Jurisdiction packs<br />at runtime
+              </div>
+            </div>
+
+            {/* Metric Item 4 */}
+            <div className="py-4 flex justify-between items-center last:pb-0">
+              <span className="text-white text-xl font-semibold font-mono tracking-wide">4</span>
+              <div className="text-right text-slate-400 text-xs leading-tight">
+                Deployment models:<br />SaaS to sovereign
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
     </main>
   );
 }
