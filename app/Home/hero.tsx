@@ -1,9 +1,58 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+
+type JurisdictionKey = "US" | "GH" | "AE" | "IN";
+
+interface JurisdictionData {
+  taxEngine: string;
+  compliance: string;
+  currency: string;
+  paymentRails: string;
+  invoiceFormat: string;
+}
+
+const jurisdictionPacks: Record<JurisdictionKey, JurisdictionData> = {
+  US: {
+    taxEngine: "SureTax / CereTax",
+    compliance: "FCC / USF / E-911",
+    currency: "USD",
+    paymentRails: "Card, Bank, ACH",
+    invoiceFormat: "US Standard",
+  },
+  GH: {
+    taxEngine: "GRA VAT / CST Engine",
+    compliance: "NCA / GRA / CST / Mobile Money Rules",
+    currency: "GHS",
+    paymentRails: "Mobile Money, Card, Bank Transfer",
+    invoiceFormat: "Ghana VAT Invoice",
+  },
+  AE: {
+    taxEngine: "FTA VAT Engine / UAE VAT Logic",
+    compliance: "TDRA / FTA VAT / Corporate Tax Readiness",
+    currency: "AED",
+    paymentRails: "Card, Bank Transfer, Direct Debit",
+    invoiceFormat: "UAE VAT Tax Invoice",
+  },
+  IN: {
+    taxEngine: "GST Engine / GSTN E-Invoice Logic",
+    compliance: "TRAI / DoT / GST / TDS / E-Invoicing",
+    currency: "INR",
+    paymentRails: "UPI, Card, NetBanking, NACH",
+    invoiceFormat: "GST Tax Invoice / IRN E-Invoice",
+  },
+};
+
 export default function HomePage() {
+  const [selectedTab, setSelectedTab] = useState<JurisdictionKey>("US");
+
+  const currentPack = jurisdictionPacks[selectedTab];
+
   return (
     <main>
       <section className="relative overflow-hidden bg-gradient-to-br from-gray-50 via-blue-50 to-lime-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-
+        
         {/* Background Glow */}
         <div className="absolute right-[-300px] top-[-250px] h-[700px] w-[700px] rounded-full bg-sky-500/5 blur-3xl" />
 
@@ -16,9 +65,7 @@ export default function HomePage() {
                 <span className="text-sky-600 text-xs font-bold uppercase tracking-widest">
                   GTMI PLATFORM
                 </span>
-
                 <div className="hidden sm:block w-px h-4 bg-slate-300" />
-
                 <span className="text-slate-500 dark:text-slate-400 text-xs">
                   Governed Telecom Monetization Infrastructure
                 </span>
@@ -26,9 +73,7 @@ export default function HomePage() {
 
               <h1 className="text-3xl sm:text-5xl lg:text-4xl font-extrabold leading-tight text-gray-900 dark:text-white">
                 The{" "}
-                <span className="text-sky-600">
-                  Infrastructure Layer
-                </span>
+                <span className="text-sky-600">Infrastructure Layer</span>
                 <br />
                 for Telecom Monetization
               </h1>
@@ -46,7 +91,6 @@ export default function HomePage() {
                 >
                   Request a Demo →
                 </Link>
-
                 <button className="px-8 py-4 bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 rounded-xl font-semibold text-gray-900 dark:text-white hover:bg-slate-50 dark:hover:bg-gray-700 transition">
                   View Platform Architecture
                 </button>
@@ -72,128 +116,109 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Side */}
+            {/* Right Side Showcase */}
             <div className="relative mt-10 lg:mt-0">
 
-              {/* Active Packs */}
-              <div className="absolute right-[-55px] top-[-80px] z-20 bg-[#1C1C2E] rounded-[20px] px-4 py-4 w-[200px] shadow-2xl">
+              {/* Active Packs Card */}
+              <div className="absolute right-[-35px] top-[-60px] z-20 bg-[#1C1C2E] rounded-[20px] px-4 py-4 w-[210px] shadow-2xl hidden sm:block">
                 <p className="text-[10px] uppercase tracking-[2px] text-white/50 mb-3">
                   ACTIVE PACKS
                 </p>
-
-                <div className="space-y-2.5 text-sm text-white">
+                <div className="space-y-2.5 text-xs text-white">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-lime-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-lime-500" />
                     <span>US — SureTax + FCC</span>
                   </div>
-
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-sky-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
                     <span>UAE — VAT + TRA</span>
                   </div>
-
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-lime-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
                     <span>Ghana — NCA + MoMo</span>
                   </div>
                 </div>
               </div>
 
-              {/* Main Card */}
-              <div className="relative w-full max-w-[544px] bg-white/90 backdrop-blur-sm border border-white rounded-[28px] px-7 py-6 shadow-[0_30px_80px_rgba(0,0,0,0.12)]">
-
-                {/* Heading */}
-                <div className="mb-5">
-                  <h4 className="text-sm font-semibold text-slate-600">
+              {/* Main Pack Card */}
+              <div className="relative w-full max-w-[544px] bg-white/90 backdrop-blur-md border border-white rounded-[28px] px-7 py-6 shadow-[0_30px_80px_rgba(0,0,0,0.12)]">
+                
+                {/* Heading Block */}
+                <div className="flex items-center justify-between mb-5">
+                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Jurisdiction Pack Selector
                   </h4>
+                  <div className="px-2.5 py-1 bg-lime-50 text-lime-700 rounded-full flex items-center gap-1.5 text-[11px] font-semibold">
+                    <span className="w-1.5 h-1.5 bg-lime-500 rounded-full animate-pulse" />
+                    Live
+                  </div>
                 </div>
 
-                {/* Country Selector */}
-                <div className="flex flex-wrap gap-2 mb-5">
-
-                  <button className="h-8 px-4 bg-sky-600 text-white rounded-xl text-xs font-semibold">
-                    🇺🇸 United States
-                  </button>
-
-                  <button className="h-8 px-4 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 bg-white">
-                    🇬🇭 Ghana
-                  </button>
-
-                  <button className="h-8 px-4 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 bg-white">
-                    🇦🇪 UAE
-                  </button>
-
-                  <button className="h-8 px-4 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 bg-white">
-                    🇮🇳 India
-                  </button>
-
+                {/* Country Buttons Switchers */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {[
+                    { id: "US", label: "🇺🇸 United States" },
+                    { id: "GH", label: "🇬🇭 Ghana" },
+                    { id: "AE", label: "🇦🇪 UAE" },
+                    { id: "IN", label: "🇮🇳 India" },
+                  ].map((tab) => {
+                    const isActive = selectedTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onMouseEnter={() => setSelectedTab(tab.id as JurisdictionKey)}
+                        onClick={() => setSelectedTab(tab.id as JurisdictionKey)}
+                        className={`h-8 px-3.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                          isActive
+                            ? "bg-sky-600 text-white shadow-md shadow-sky-600/10 border border-sky-600"
+                            : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Information Rows */}
+                {/* Rows Display Block */}
                 <div className="space-y-3">
-
-                  <div className="h-12 rounded-xl bg-[#F4F7FA] px-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      Tax Engine
-                    </span>
-
-                    <span className="text-xs font-medium text-sky-600">
-                      SureTax / CereTax
-                    </span>
-                  </div>
-
-                  <div className="h-12 rounded-xl bg-[#F4F7FA] px-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      Compliance
-                    </span>
-
-                    <span className="text-xs font-medium text-slate-900">
-                      FCC / USF / E-911
-                    </span>
-                  </div>
-
-                  <div className="h-12 rounded-xl bg-[#F4F7FA] px-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      Currency
-                    </span>
-
-                    <span className="text-xs font-medium text-lime-600">
-                      USD
-                    </span>
-                  </div>
-
-                  <div className="h-12 rounded-xl bg-[#F4F7FA] px-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      Payment Rails
-                    </span>
-
-                    <span className="text-xs font-medium text-slate-900">
-                      Card, Bank, ACH
-                    </span>
-                  </div>
-
-                  <div className="h-12 rounded-xl bg-[#F4F7FA] px-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">
-                      Invoice Format
-                    </span>
-
-                    <span className="text-xs font-medium text-sky-600">
-                      US Standard
-                    </span>
-                  </div>
-
+                  {[
+                    { label: "Tax Engine", value: currentPack.taxEngine, isSky: true },
+                    { label: "Compliance", value: currentPack.compliance, isSky: false },
+                    { label: "Currency", value: currentPack.currency, isLime: true },
+                    { label: "Payment Rails", value: currentPack.paymentRails, isSky: false },
+                    { label: "Invoice Format", value: currentPack.invoiceFormat, isSky: true },
+                  ].map((row, idx) => (
+                    <div
+                      key={idx}
+                      className="h-11 rounded-xl bg-slate-50 border border-slate-100/50 px-4 flex items-center justify-between transition-all duration-300"
+                    >
+                      <span className="text-xs font-medium text-slate-500">
+                        {row.label}
+                      </span>
+                      <span
+                        className={`text-xs font-medium text-right font-mono max-w-[70%] truncate ${
+                          row.isSky
+                            ? "text-sky-600"
+                            : row.isLime
+                            ? "text-lime-700"
+                            : "text-slate-900"
+                        }`}
+                      >
+                        {row.value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Bottom Floating Card */}
-              <div className="absolute -left-10 -bottom-8 bg-white border border-slate-200 rounded-[24px] shadow-xl px-4 py-3">
-                <h3 className="text-2xl leading-none font-extrabold">
+              {/* Bottom Domains Card */}
+              <div className="absolute -left-6 -bottom-6 bg-white border border-slate-100 rounded-[20px] shadow-xl px-5 py-3.5 hidden sm:block">
+                <h3 className="text-2xl font-extrabold tracking-tight leading-none">
                   <span className="text-sky-600">18</span>{" "}
                   <span className="text-[#1C1C2E]">Domains</span>
                 </h3>
-
-                <p className="text-sm text-slate-500 mt-2">
+                <p className="text-xs font-medium text-slate-400 mt-1.5">
                   Unified on one platform
                 </p>
               </div>
@@ -202,16 +227,15 @@ export default function HomePage() {
 
           </div>
         </div>
-
-
       </section>
+
+      {/* Trust Badges */}
       <section className="bg-white dark:bg-gray-900 border-y border-slate-200 dark:border-gray-700">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-20">
           <div className="flex items-center justify-start lg:justify-center gap-5 sm:gap-8 lg:gap-14 py-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
-
-            {/* TM Forum */}
+            
             <div className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded opacity-60 bg-gray-900 dark:bg-gray-700 flex items-center justify-center text-white text-[9px] sm:text-[10px] font-extrabold">
+              <div className="w-7 h-7 rounded opacity-60 bg-gray-900 dark:bg-gray-700 flex items-center justify-center text-white text-[9px] font-extrabold">
                 TM
               </div>
               <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-gray-300">
@@ -219,11 +243,10 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="w-px h-5 sm:h-6 bg-slate-200 dark:bg-gray-700 shrink-0" />
+            <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
-            {/* GSMA */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-7 sm:w-9 sm:h-8 rounded opacity-60 bg-blue-900 dark:bg-blue-700 flex items-center justify-center text-white text-[9px] sm:text-[10px] font-extrabold">
+              <div className="w-8 h-7 rounded opacity-60 bg-blue-900 dark:bg-blue-700 flex items-center justify-center text-white text-[9px] font-extrabold">
                 GSMA
               </div>
               <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-gray-300">
@@ -231,11 +254,10 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="w-px h-5 sm:h-6 bg-slate-200 dark:bg-gray-700 shrink-0" />
+            <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
-            {/* Open Standards */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded opacity-60 bg-sky-600 dark:bg-sky-500 flex items-center justify-center text-white text-[9px] sm:text-[10px] font-extrabold">
+              <div className="w-7 h-7 rounded opacity-60 bg-sky-600 dark:bg-sky-500 flex items-center justify-center text-white text-[9px] font-extrabold">
                 OS
               </div>
               <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-gray-300">
@@ -243,11 +265,10 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="w-px h-5 sm:h-6 bg-slate-200 dark:bg-gray-700 shrink-0" />
+            <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
-            {/* Multi Region */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded opacity-60 bg-lime-500 dark:bg-lime-600 flex items-center justify-center text-white text-[9px] sm:text-[10px] font-extrabold">
+              <div className="w-7 h-7 rounded opacity-60 bg-lime-500 dark:bg-lime-600 flex items-center justify-center text-white text-[9px] font-extrabold">
                 MR
               </div>
               <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-gray-300">
@@ -259,6 +280,5 @@ export default function HomePage() {
         </div>
       </section>
     </main>
-
   );
 }
