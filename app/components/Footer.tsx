@@ -88,10 +88,10 @@ export default function Footer() {
                 Resources
               </h3>
               <ul className="space-y-[10px] text-xs leading-5">
-                <li><Link href="/resources/documentation" className="hover:text-lime-300 transition-colors">Documentation</Link></li>
-                <li><Link href="#" className="hover:text-lime-300 transition-colors">API Reference</Link></li>
-                <li><Link href="/resources/developer-portal" className="hover:text-lime-300 transition-colors">Developer Portal</Link></li>
-                <li><Link href="/resources/case-studies" className="hover:text-lime-300 transition-colors">Case Studies</Link></li>
+                <li><Link href="/documentation" className="hover:text-lime-300 transition-colors">Documentation</Link></li>
+                <li><Link href="/api-reference" className="hover:text-lime-300 transition-colors">API Reference</Link></li>
+                <li><Link href="/api-reference" className="hover:text-lime-300 transition-colors">Developer Portal</Link></li>
+                <li><Link href="/casestudies" className="hover:text-lime-300 transition-colors">Case Studies</Link></li>
                 <li><Link href="/blog" className="hover:text-lime-300 transition-colors">Blog</Link></li>
                 <li><Link href="/changelog" className="hover:text-lime-300 transition-colors">Changelog</Link></li>
               </ul>
