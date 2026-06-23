@@ -62,5 +62,5 @@ export function getService(key: string): ServiceDef | undefined {
 export function serviceBaseUrl(svc: ServiceDef): string {
   // process.env.NEXT_PUBLIC_* is statically inlined by Next at build time.
   const fromEnv = (process.env as Record<string, string | undefined>)[svc.envVar];
-  return fromEnv || `http://localhost:${svc.port}`;
+  return fromEnv || `https://identity-tenancy-722985113446.europe-west1.run.app`;
 }
