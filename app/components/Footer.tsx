@@ -92,7 +92,7 @@ export default function Footer() {
                 <li><Link href="/api-reference" className="hover:text-lime-300 transition-colors">API Reference</Link></li>
                 <li><Link href="/api-reference" className="hover:text-lime-300 transition-colors">Developer Portal</Link></li>
                 <li><Link href="/casestudies" className="hover:text-lime-300 transition-colors">Case Studies</Link></li>
-                <li><Link href="/blog" className="hover:text-lime-300 transition-colors">Blog</Link></li>
+                <li><Link href="/blog-and-news" className="hover:text-lime-300 transition-colors">Blog</Link></li>
                 <li><Link href="/changelog" className="hover:text-lime-300 transition-colors">Changelog</Link></li>
               </ul>
             </div>

@@ -124,7 +124,7 @@ const researchPages = [
   {
     name: "Blog",
     description: "Insights on governed monetization",
-    href: "/blog",
+    href: "/blog-and-news",
     icon: "/image/Header/SVG (5).png",
   },
 ];
