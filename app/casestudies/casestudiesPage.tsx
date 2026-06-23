@@ -80,7 +80,7 @@ export default function CaseStudiesPage() {
 
                     <div className="self-stretch grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Card 1 */}
-                        <div className="w-full bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group">
+                        <Link href="/MVNO-launch" className="w-full bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group block">
                             <div className="self-stretch h-48 relative flex flex-col justify-center items-start overflow-hidden">
                                 <img className="self-stretch flex-1 relative object-cover" src="/image/case/image1.png" alt="MVNO Launch Readiness" />
                                 <div className="px-3 py-1 left-[16px] top-[16px] absolute bg-black rounded-xs flex flex-col justify-start items-start">
@@ -127,10 +127,10 @@ export default function CaseStudiesPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Card 2 */}
-                        <div className="w-full bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group">
+                        <Link href="/billing-and-charging" className="w-full bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group block">
                             <div className="self-stretch h-48 relative flex flex-col justify-center items-start overflow-hidden">
                                 <img className="self-stretch flex-1 relative object-cover" src="/image/case/image3.png" alt="Billing and Charging Modernization" />
                                 <div className="px-3 py-1 left-[16px] top-[16px] absolute bg-black rounded-xs flex flex-col justify-start items-start">
@@ -177,10 +177,10 @@ export default function CaseStudiesPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Card 3 */}
-                        <div className="w-full bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group">
+                        <Link href="/esim-and-lifecycle" className="w-full bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group">
                             <div className="self-stretch h-48 relative flex flex-col justify-center items-start overflow-hidden">
                                 <img className="self-stretch flex-1 relative object-cover" src="/image/case/image.png" alt="eSIM and Lifecycle Operations" />
                                 <div className="px-3 py-1 left-[16px] top-[16px] absolute bg-black rounded-xs flex flex-col justify-start items-start">
@@ -227,7 +227,7 @@ export default function CaseStudiesPage() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                     </div>
                 </div>
