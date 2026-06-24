@@ -444,6 +444,7 @@ export default function Header() {
           </div>
 
           <Link href="/company" className={isActive("/company")}>Company</Link>
+          <Link href="/careers" className={isActive("/careers")}>Careers</Link>
         </nav>
 
         {/* Action Controls Side Block */}
@@ -573,7 +574,8 @@ export default function Header() {
             </div>
 
             <Link href="/company" onClick={closeAllMenus} className="block py-2 text-base font-bold text-[#162540] border-b border-slate-100">Company</Link>
-            
+            <Link href="/careers" onClick={closeAllMenus} className="block py-2 text-base font-bold text-[#162540] border-b border-slate-100">Careers</Link>
+
             {/* Direct Mobile CTAs placed at base of layout menu container panel */}
             <div className="pt-4 space-y-3">
               <Link
