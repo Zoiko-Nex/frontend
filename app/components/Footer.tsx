@@ -120,10 +120,10 @@ export default function Footer() {
           <div className="flex flex-wrap justify-start lg:justify-center gap-x-6 gap-y-3 text-xs sm:text-sm text-white">
             <Link href="/privacy-policy" className="hover:underline">Privacy Policy</Link>
             <Link href="#" className="hover:underline">Terms of Service</Link>
-            <Link href="/cookies-policy" className="hover:underline">Cookie Policy</Link>
+            <Link href="#" className="hover:underline">Cookie Policy</Link>
             <Link href="#" className="hover:underline">Acceptable Use</Link>
             <Link href="#" className="hover:underline">Security</Link>
-            <Link href="#" className="hover:underline">Accessibility</Link>
+            <Link href="/accessibility" className="hover:underline">Accessibility</Link>
           </div>
           <div className="mt-8 space-y-3 text-left lg:text-center text-[11px] leading-5 text-white/65">
             <p>
