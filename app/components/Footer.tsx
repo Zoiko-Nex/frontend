@@ -118,9 +118,9 @@ export default function Footer() {
         {/* Bottom Metadata Layout */}
         <div className="border-t border-white/10 mt-14 pt-8">
           <div className="flex flex-wrap justify-start lg:justify-center gap-x-6 gap-y-3 text-xs sm:text-sm text-white">
-            <Link href="#" className="hover:underline">Privacy Policy</Link>
+            <Link href="/privacy-policy" className="hover:underline">Privacy Policy</Link>
             <Link href="#" className="hover:underline">Terms of Service</Link>
-            <Link href="#" className="hover:underline">Cookie Policy</Link>
+            <Link href="/cookies-policy" className="hover:underline">Cookie Policy</Link>
             <Link href="#" className="hover:underline">Acceptable Use</Link>
             <Link href="#" className="hover:underline">Security</Link>
             <Link href="#" className="hover:underline">Accessibility</Link>
