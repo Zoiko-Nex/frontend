@@ -124,20 +124,31 @@ const researchPages = [
   {
     name: "Blog",
     description: "Insights on governed monetization",
-    href: "/blog",
+    href: "/blog-and-news",
     icon: "/image/Header/SVG (5).png",
   },
+];
+
+const companyPages = [
+  { name: "About", description: "Our mission, vision, and core values", href: "/about", icon: "/image/Header/SVG.png" },
+  { name: "Leadership", description: "Meet the executive team behind ZoikoNex", href: "/leadership", icon: "/image/Header/SVG (1).png" },
+  { name: "Partners", description: "Global ecosystem and alliances", href: "/partners", icon: "/image/Header/SVG (2).png" },
+  { name: "Careers", description: "Join us in building telecom infrastructure", href: "/careers", icon: "/image/Header/SVG (3).png" },
+  { name: "Press & Media", description: "Latest news, press releases, and media kit", href: "/press-media", icon: "/image/Header/SVG (4).png" },
+  { name: "Contact", description: "Get in touch with our global offices", href: "/contact", icon: "/image/Header/SVG (5).png" },
 ];
 
 export default function Header() {
   const [openResources, setOpenResources] = useState(false);
   const [openSolutions, setOpenSolutions] = useState(false);
   const [openPlatform, setOpenPlatform] = useState(false);
+  const [openCompany, setOpenCompany] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const resourcesRef = useRef<HTMLDivElement | null>(null);
   const solutionsRef = useRef<HTMLDivElement | null>(null);
   const platformRef = useRef<HTMLDivElement | null>(null);
+  const companyRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
 
   const isActive = (path: string) =>
@@ -148,6 +159,7 @@ export default function Header() {
     setOpenPlatform(false);
     setOpenSolutions(false);
     setOpenResources(false);
+    setOpenCompany(false);
     setMobileMenuOpen(false);
   };
 
@@ -162,6 +174,9 @@ export default function Header() {
       }
       if (resourcesRef.current && !resourcesRef.current.contains(target)) {
         setOpenResources(false);
+      }
+      if (companyRef.current && !companyRef.current.contains(target)) {
+        setOpenCompany(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -443,8 +458,73 @@ export default function Header() {
             )}
           </div>
 
-          <Link href="/company" className={isActive("/company")}>Company</Link>
-          <Link href="/careers" className={isActive("/careers")}>Careers</Link>
+          {/* Company Mega Menu Container */}
+          <div
+            className="relative py-5"
+            ref={companyRef}
+            onMouseEnter={() => setOpenCompany(true)}
+            onMouseLeave={() => setOpenCompany(false)}
+          >
+            <Link
+              href="/company"
+              onClick={() => setOpenCompany(false)}
+              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${
+                openCompany || pathname.startsWith("/company") ? "text-sky-600" : "hover:text-sky-600"
+              }`}
+            >
+              Company
+              <ChevronDown size={14} className={`transition-transform duration-300 ${openCompany ? "rotate-180" : ""}`} />
+            </Link>
+
+            {openCompany && (
+              <div className="absolute top-[calc(100%-4px)] right-0 w-[500px] bg-white rounded-2xl border border-slate-200 shadow-[0px_18px_50px_-12px_rgba(13,27,46,0.18)] overflow-hidden z-50">
+                <div className="flex">
+                  <div className="w-[250px] p-5 border-r border-slate-100">
+                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-4 pl-1">COMPANY</h5>
+                    <div className="space-y-2">
+                      {companyPages.slice(0, 3).map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          onClick={closeAllMenus}
+                          className="group flex gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition duration-150"
+                        >
+                          <div className="w-9 h-9 rounded-[10px] bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200/60 group-hover:bg-sky-50 group-hover:border-sky-200 transition-colors">
+                            <Image src={item.icon} alt={item.name} width={18} height={18} className="object-contain" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-[#162540] text-sm font-semibold transition group-hover:text-sky-600">{item.name}</h3>
+                            <p className="mt-0.5 text-[#667085] text-xs leading-relaxed line-clamp-2">{item.description}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="w-[250px] p-5">
+                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-4 pl-1 invisible">MORE</h5>
+                    <div className="space-y-2">
+                      {companyPages.slice(3).map((item) => (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          onClick={closeAllMenus}
+                          className="group flex gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition duration-150"
+                        >
+                          <div className="w-9 h-9 rounded-[10px] bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200/60 group-hover:bg-sky-50 group-hover:border-sky-200 transition-colors">
+                            <Image src={item.icon} alt={item.name} width={18} height={18} className="object-contain" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-[#162540] text-sm font-semibold transition group-hover:text-sky-600">{item.name}</h3>
+                            <p className="mt-0.5 text-[#667085] text-xs leading-relaxed line-clamp-2">{item.description}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Action Controls Side Block */}
@@ -573,9 +653,26 @@ export default function Header() {
               )}
             </div>
 
-            <Link href="/company" onClick={closeAllMenus} className="block py-2 text-base font-bold text-[#162540] border-b border-slate-100">Company</Link>
-            <Link href="/careers" onClick={closeAllMenus} className="block py-2 text-base font-bold text-[#162540] border-b border-slate-100">Careers</Link>
-
+            {/* Mobile Accordion - Company */}
+            <div className="border-b border-slate-100 pb-2">
+              <button
+                onClick={() => setOpenCompany(!openCompany)}
+                className="w-full flex items-center justify-between py-2 text-base font-bold text-[#162540]"
+              >
+                <span>Company</span>
+                <ChevronDown size={18} className={`transition-transform duration-200 ${openCompany ? "rotate-180" : ""}`} />
+              </button>
+              {openCompany && (
+                <div className="mt-2 pl-2 space-y-4 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                  <div className="text-[10px] font-bold text-slate-400 tracking-wider">COMPANY INFO</div>
+                  {companyPages.map((item) => (
+                    <Link key={item.name} href={item.href} onClick={closeAllMenus} className="flex gap-3">
+                      <div><h4 className="text-xs font-semibold text-slate-900">{item.name}</h4></div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             {/* Direct Mobile CTAs placed at base of layout menu container panel */}
             <div className="pt-4 space-y-3">
               <Link
