@@ -655,7 +655,7 @@ export default function Header() {
 
             {/* Mobile Accordion - Company */}
             <div className="border-b border-slate-100 pb-2">
-              <button 
+              <button
                 onClick={() => setOpenCompany(!openCompany)}
                 className="w-full flex items-center justify-between py-2 text-base font-bold text-[#162540]"
               >
@@ -673,7 +673,6 @@ export default function Header() {
                 </div>
               )}
             </div>
-            
             {/* Direct Mobile CTAs placed at base of layout menu container panel */}
             <div className="pt-4 space-y-3">
               <Link
