@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+import React, { useState } from 'react';
+import CookieSetting from './cookie-setting';
 
 const pageTabs = [
   { id: 1, label: 'Summary' },
@@ -164,7 +166,10 @@ const inventoryData = [
   }
 ];
 export default function CookieConsent() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   return (
+<>
+  <CookieSetting isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 <div className="relative w-full min-h-screen bg-white bg-radial-[at_92%_-8%] from-lime-500/10 to-transparent to-60% overflow-x-hidden">
       
       <div className="relative z-10 w-full flex flex-col">
@@ -659,7 +664,10 @@ export default function CookieConsent() {
       </div>
 
       {/* CTA Button with right arrow */}
-      <button className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold font-['Plus_Jakarta_Sans'] text-sm flex items-center justify-center gap-2.5 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.70)] hover:bg-sky-800 transition-colors duration-200">
+      <button
+        onClick={() => setSettingsOpen(true)}
+        className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold font-['Plus_Jakarta_Sans'] text-sm flex items-center justify-center gap-2.5 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.70)] hover:bg-sky-800 transition-colors duration-200"
+      >
         <span>Open Cookie Settings</span>
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -681,7 +689,8 @@ export default function CookieConsent() {
     </div>
   </div>
 </section>
-</div>
-    </div>
+      </div>{/* end relative z-10 */}
+    </div>{/* end page wrapper */}
+</>
   );
 }
