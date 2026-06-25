@@ -58,9 +58,38 @@ export function getService(key: string): ServiceDef | undefined {
   return (SERVICES as Record<string, ServiceDef>)[key];
 }
 
-/** Resolve a service's base URL from a NEXT_PUBLIC env var, falling back to localhost. */
+/**
+ * Static map of every service env var to its value.
+ *
+ * IMPORTANT: Next.js inlines `process.env.NEXT_PUBLIC_*` at build time ONLY when
+ * the full var name is written as a LITERAL in the source. A dynamic lookup like
+ * `process.env[svc.envVar]` is NOT inlined and resolves to `undefined` in the
+ * browser bundle — which is why setting .env had no effect. Listing each var as a
+ * literal here makes the inlining happen.
+ */
+const SERVICE_BASE_URLS: Record<string, string | undefined> = {
+  NEXT_PUBLIC_SVC_IDENTITY: process.env.NEXT_PUBLIC_SVC_IDENTITY,
+  NEXT_PUBLIC_SVC_CUSTOMER: process.env.NEXT_PUBLIC_SVC_CUSTOMER,
+  NEXT_PUBLIC_SVC_CATALOGUE: process.env.NEXT_PUBLIC_SVC_CATALOGUE,
+  NEXT_PUBLIC_SVC_ORDER: process.env.NEXT_PUBLIC_SVC_ORDER,
+  NEXT_PUBLIC_SVC_FINANCE: process.env.NEXT_PUBLIC_SVC_FINANCE,
+  NEXT_PUBLIC_SVC_RATING: process.env.NEXT_PUBLIC_SVC_RATING,
+  NEXT_PUBLIC_SVC_PARTNER: process.env.NEXT_PUBLIC_SVC_PARTNER,
+  NEXT_PUBLIC_SVC_REVENUE_ASSURANCE: process.env.NEXT_PUBLIC_SVC_REVENUE_ASSURANCE,
+  NEXT_PUBLIC_SVC_TAX: process.env.NEXT_PUBLIC_SVC_TAX,
+  NEXT_PUBLIC_SVC_FRAUD: process.env.NEXT_PUBLIC_SVC_FRAUD,
+  NEXT_PUBLIC_SVC_KYC: process.env.NEXT_PUBLIC_SVC_KYC,
+  NEXT_PUBLIC_SVC_BILLING: process.env.NEXT_PUBLIC_SVC_BILLING,
+  NEXT_PUBLIC_SVC_EVIDENCE: process.env.NEXT_PUBLIC_SVC_EVIDENCE,
+  NEXT_PUBLIC_SVC_USAGE: process.env.NEXT_PUBLIC_SVC_USAGE,
+  NEXT_PUBLIC_SVC_DUNNING: process.env.NEXT_PUBLIC_SVC_DUNNING,
+  NEXT_PUBLIC_SVC_PAYMENTS: process.env.NEXT_PUBLIC_SVC_PAYMENTS,
+  NEXT_PUBLIC_SVC_INTEGRATION: process.env.NEXT_PUBLIC_SVC_INTEGRATION,
+  NEXT_PUBLIC_SVC_REPORTING: process.env.NEXT_PUBLIC_SVC_REPORTING,
+};
+
+/** Resolve a service's base URL from its NEXT_PUBLIC env var, falling back to localhost. */
 export function serviceBaseUrl(svc: ServiceDef): string {
-  // process.env.NEXT_PUBLIC_* is statically inlined by Next at build time.
-  const fromEnv = (process.env as Record<string, string | undefined>)[svc.envVar];
-  return fromEnv || `https://identity-tenancy-722985113446.europe-west1.run.app`;
+  const fromEnv = SERVICE_BASE_URLS[svc.envVar];
+  return fromEnv || `http://localhost:8081`;
 }
