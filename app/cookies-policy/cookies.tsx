@@ -254,39 +254,44 @@ export default function CookieConsent() {
           </p>
         </div>
 
-       
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-stretch">
           {cookieCategories.map((item) => (
-            <div 
+            <div
               key={item.id}
-              className="bg-white p-6 md:p-7 rounded-2xl border border-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22)] shadow-[0px_1px_2px_0px_rgba(11,60,99,0.06)] flex flex-col justify-between gap-6 hover:shadow-md transition-shadow duration-200"
+              className="bg-white rounded-2xl border border-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] flex flex-col justify-between hover:shadow-md transition-shadow duration-200"
             >
-              <div className="space-y-3">
-                <div className="flex items-center gap-2.5">
+              {/* Card body */}
+              <div className="px-[21px] pt-[19px] pb-5 space-y-3">
+                <div className="flex items-center gap-[10px]">
                   <div className={`w-2 h-2 rounded-sm shrink-0 ${item.isEssential ? 'bg-lime-500' : 'bg-sky-700'}`} />
-                  <h3 className="text-slate-800 text-base font-bold leading-6">
+                  <h3 className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6">
                     {item.title}
                   </h3>
                 </div>
-                
-                <p className="text-slate-600 text-sm font-normal leading-relaxed">
+                <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
                   {item.desc}
                 </p>
               </div>
 
-              <div className={`w-full p-2.5 rounded-lg border flex items-center gap-2 ${
-                item.isEssential 
-                  ? 'bg-stone-100 border-lime-500/30' 
-                  : 'bg-indigo-50/50 border-sky-700/20'
-              }`}>
-                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.isEssential ? 'bg-lime-600' : 'bg-sky-700'}`} />
-                <span className={`text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wider leading-none ${
-                  item.isEssential ? 'text-lime-600' : 'text-sky-700'
-                }`}>
-                  {item.badgeText}
-                </span>
-              </div>
-
+              {/* Badge — flush to card bottom */}
+              {item.isEssential ? (
+                <div className="mx-[21px] mb-[21px] inline-flex items-center gap-2 px-2.5 py-1.5 bg-stone-200 rounded-md border border-lime-500/30 self-start">
+                  <svg className="w-3 h-3 text-lime-600 shrink-0" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
+                    <polyline points="2,6 5,9 10,3" />
+                  </svg>
+                  <span className="text-lime-600 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide leading-4">
+                    Always active
+                  </span>
+                </div>
+              ) : (
+                <div className="mx-[21px] mb-[21px] flex items-center gap-2 px-2.5 py-[9px] bg-indigo-50 rounded-md border border-sky-700/30">
+                  <span className="text-sky-700 text-xs font-normal leading-none shrink-0">+</span>
+                  <span className="flex-1" />
+                  <span className="text-sky-700 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide leading-4">
+                    Off until consent
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -294,7 +299,7 @@ export default function CookieConsent() {
       </div>
     </section>
     <section className="w-full bg-white py-12 md:py-16">
-      <div className="w-full max-w-[832px] mx-auto px-4 md:px-0 space-y-8">
+      <div className="w-full max-w-[832px] mx-auto px-4 space-y-8">
         
         
         <div className="space-y-3">
@@ -307,54 +312,59 @@ export default function CookieConsent() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-6 w-full">
+        <div className="flex flex-col gap-5 w-full">
           {categoriesData.map((category) => (
             <div
               key={category.id}
-              className="w-full bg-white rounded-2xl border border-slate-200 shadow-[0px_1px_2px_0px_rgba(11,60,99,0.06)] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22)] p-5 md:p-6 space-y-5"
+              className="w-full bg-white rounded-2xl border border-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] px-[23px] pt-6 pb-[22px] space-y-4"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+              {/* ── Header row: title+badge left | control right ── */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-slate-800 text-base font-bold  leading-7">
+                  <h3 className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-7">
                     {category.title}
                   </h3>
-                  
-                  {/* Badge Renderer */}
-                  <div className={`px-2 py-1 rounded-md border flex items-center gap-2 ${
-                    category.badgeType === 'active' ? 'bg-stone-100 border-lime-500/30' :
-                    category.badgeType === 'warning' ? 'bg-yellow-600/10 border-yellow-600/40' :
-                    'bg-indigo-50 border-sky-700/30'
-                  }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${
-                      category.badgeType === 'active' ? 'bg-lime-600' :
-                      category.badgeType === 'warning' ? 'bg-yellow-600' :
-                      'bg-sky-700'
-                    }`} />
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide leading-4 ${
-                      category.badgeType === 'active' ? 'text-lime-600' :
-                      category.badgeType === 'warning' ? 'text-yellow-600' :
-                      'text-sky-700'
-                    }`}>
-                      {category.badge}
-                    </span>
-                  </div>
+
+                  {/* Badge */}
+                  {category.badgeType === 'active' && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-stone-200 rounded-md border border-lime-500/30">
+                      <svg className="w-3 h-3 text-lime-600 shrink-0" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
+                        <polyline points="2,6 5,9 10,3" />
+                      </svg>
+                      <span className="text-lime-600 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide leading-4">Always active</span>
+                    </div>
+                  )}
+                  {category.badgeType === 'consent' && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-[7px] bg-indigo-50 rounded-md border border-sky-700/30">
+                      <span className="text-sky-700 text-xs font-normal leading-none">+</span>
+                      <span className="text-sky-700 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide leading-4">Off until consent</span>
+                    </div>
+                  )}
+                  {category.badgeType === 'warning' && (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-yellow-600/10 rounded-md border border-yellow-600/40">
+                      <svg className="w-3 h-3 text-yellow-600 shrink-0" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={1.8}>
+                        <circle cx="6" cy="6" r="4.5" />
+                        <line x1="6" y1="4" x2="6" y2="6.5" />
+                      </svg>
+                      <span className="text-yellow-600 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide leading-4">Active if necessary</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 text-slate-600">
+                {/* Control label — right side */}
+                <div className="flex items-center gap-1.5 text-slate-600 shrink-0">
                   {category.controlType === 'disabled' && (
                     <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   )}
                   {category.controlType === 'toggle' && (
                     <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                   {category.controlType === 'limited' && (
-                    <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <span className="text-slate-400 text-sm leading-none">·</span>
                   )}
                   <span className="text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-5">
                     {category.controlText}
@@ -362,30 +372,30 @@ export default function CookieConsent() {
                 </div>
               </div>
 
-              <p className="text-slate-600 text-sm font-normal ] leading-6">
+              {/* Description */}
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-6">
                 {category.desc}
               </p>
 
-              <div className="pt-2 space-y-2.5 border-t border-slate-100 text-xs ">
-                <div className="grid grid-cols-1 md:grid-cols-[80px_1fr] gap-1 md:gap-4 items-start">
-                  <span className="text-slate-500 font-medium  uppercase tracking-wide pt-0.5">
+              {/* Examples & Retention table rows */}
+              <div className="pt-3 space-y-2 border-t border-slate-100">
+                <div className="flex items-start gap-4">
+                  <span className="w-[72px] shrink-0 text-slate-500 text-[10px] font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide leading-5 pt-px">
                     Examples
                   </span>
-                  <span className="text-slate-600 font-normal leading-5">
+                  <span className="text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5">
                     {category.examples}
                   </span>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-[80px_1fr] gap-1 md:gap-4 items-start">
-                  <span className="text-slate-500 font-medium  uppercase tracking-wide pt-0.5">
+                <div className="flex items-start gap-4">
+                  <span className="w-[72px] shrink-0 text-slate-500 text-[10px] font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide leading-5 pt-px">
                     Retention
                   </span>
-                  <span className="text-slate-600 font-normal leading-5">
+                  <span className="text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5">
                     {category.retention}
                   </span>
                 </div>
               </div>
-
             </div>
           ))}
         </div>
@@ -466,7 +476,7 @@ export default function CookieConsent() {
       </div>
     </section>
     <section className="w-full bg-white py-12 md:py-16">
-  <div className="w-full max-w-[832px] mx-auto px-4 md:px-0 space-y-8">
+  <div className="w-full max-w-[832px] mx-auto px-4 space-y-8">
     
     {/* Header Block */}
     <div className="space-y-3">
@@ -480,13 +490,13 @@ export default function CookieConsent() {
     </div>
 
     {/* Responsive Table Wrapper */}
-    <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-[0px_1px_2px_0px_rgba(11,60,99,0.06)] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22)]">
+    <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)]">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse min-w-[832px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              {['Name', 'Provider', 'Category', 'Purpose', 'Duration', 'Party', 'Consent', 'Owner', 'Last reviewed'].map((header) => (
-                <th key={header} className="px-4 py-3.5 text-slate-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide whitespace-nowrap">
+              {['Name', 'Provider', 'Category', 'Purpose', 'Duration', 'Party', 'Consent', 'Owner', 'Last Reviewed'].map((header) => (
+                <th key={header} className="px-[14px] py-[14px] text-slate-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide whitespace-nowrap">
                   {header}
                 </th>
               ))}
@@ -494,11 +504,13 @@ export default function CookieConsent() {
           </thead>
           <tbody className="divide-y divide-slate-200">
             {inventoryData.map((row, index) => (
-              <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-4 py-4 text-slate-800 text-xs font-medium font-['IBM_Plex_Mono'] whitespace-nowrap">
+              <tr key={index} className="hover:bg-slate-50/50 transition-colors align-top">
+                {/* Name — monospace medium */}
+                <td className="px-[14px] py-[14px] text-slate-800 text-xs font-medium font-['IBM_Plex_Mono'] leading-5 whitespace-nowrap w-[110px]">
                   {row.name}
                 </td>
-                <td className="px-4 py-4 text-slate-600 text-xs font-normal whitespace-nowrap">
+                {/* Provider — wraps */}
+                <td className="px-[14px] py-[14px] text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5 w-[96px]">
                   {row.provider}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
@@ -550,116 +562,80 @@ export default function CookieConsent() {
   </div>
 </section>
 <section className="w-full bg-white py-12 md:py-16">
-  <div className="w-full max-w-[832px] mx-auto px-4 md:px-0 space-y-8">
-    
+  <div className="w-full max-w-[832px] mx-auto px-4 space-y-8">
+
     {/* Section Header */}
     <div className="space-y-3">
-      <h2 className="text-slate-800 text-2xl font-extrabold leading-10 tracking-tight">
+      <h2 className="text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-10 tracking-tight">
         Cookie governance is part of product governance.
       </h2>
-      <p className="text-slate-600 text-base font-normal leading-6 max-w-[690px]">
+      <p className="text-slate-600 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6 max-w-[690px]">
         Consent, tags, analytics, and privacy changes are controlled like any other part of the platform.
       </p>
     </div>
 
+
     {/* Governance Two-Column Grid */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch w-full">
-      
+
       {/* Card 1: Review & Change Control */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-[0px_1px_2px_0px_rgba(11,60,99,0.06)] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22)] flex flex-col gap-5">
-        <h3 className="text-slate-800 text-base font-bold leading-6">
-          Review & change control
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] px-[23px] pt-[21px] pb-6">
+        <h3 className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6 mb-5">
+          Review &amp; change control
         </h3>
-        
-        <ul className="space-y-4">
-          <li className="flex items-start gap-3">
-            <div className="w-4 h-4 rounded-sm border border-lime-600 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-slate-600 text-sm font-normal leading-relaxed">
-              Tags are reviewed before deployment and classified by purpose.
-            </p>
-          </li>
-          
-          <li className="flex items-start gap-3">
-            <div className="w-4 h-4 rounded-sm border border-lime-600 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-slate-600 text-sm font-normal leading-relaxed">
-              New tags use an allowlist: no deploy without category, owner, purpose, and privacy review.
-            </p>
-          </li>
-          
-          <li className="flex items-start gap-3">
-            <div className="w-4 h-4 rounded-sm border border-lime-600 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-slate-600 text-sm font-normal leading-relaxed">
-              Each entry carries an owner, approval status, and last-review date.
-            </p>
-          </li>
+        <ul className="space-y-[17px]">
+          {[
+            'Tags are reviewed before deployment and classified by purpose.',
+            'New tags use an allowlist: no deploy without category, owner, purpose, and privacy review.',
+            'Each entry carries an owner, approval status, and last-review date.',
+          ].map((text, i) => (
+            <li key={i} className="flex items-start gap-[10px]">
+              <div className="w-4 h-4 shrink-0 mt-px flex items-center justify-center overflow-hidden">
+                <svg className="w-[10px] h-[8px] text-lime-600" fill="none" viewBox="0 0 10 8" stroke="currentColor" strokeWidth={1.47}>
+                  <polyline points="1,4 3.5,6.5 9,1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">{text}</p>
+            </li>
+          ))}
         </ul>
       </div>
 
       {/* Card 2: Consent Evidence */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-[0px_1px_2px_0px_rgba(11,60,99,0.06)] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22)] flex flex-col gap-5">
-        <h3 className="text-slate-800 text-base font-bold leading-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] px-[23px] pt-[21px] pb-6">
+        <h3 className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6 mb-5">
           Consent evidence
         </h3>
-        
-        <ul className="space-y-4">
-          <li className="flex items-start gap-3">
-            <div className="w-4 h-4 rounded-sm border border-lime-600 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-slate-600 text-sm font-normal leading-relaxed">
-              Non-essential tags do not fire before consent where consent is required.
-            </p>
-          </li>
-          
-          <li className="flex items-start gap-3">
-            <div className="w-4 h-4 rounded-sm border border-lime-600 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-slate-600 text-sm font-normal leading-relaxed">
-              Preference changes, banner version, consent state, timestamp, region, and policy version are recorded where appropriate.
-            </p>
-          </li>
-          
-          <li className="flex items-start gap-3">
-            <div className="w-4 h-4 rounded-sm border border-lime-600 flex items-center justify-center shrink-0 mt-0.5">
-              <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="text-slate-600 text-sm font-normal leading-relaxed">
-              Records are available to authorized administrators only, with retention and access controls.
-            </p>
-          </li>
+        <ul className="space-y-[17px]">
+          {[
+            'Non-essential tags do not fire before consent where consent is required.',
+            'Preference changes, banner version, consent state, timestamp, region, and policy version are recorded where appropriate.',
+            'Records are available to authorized administrators only, with retention and access controls.',
+          ].map((text, i) => (
+            <li key={i} className="flex items-start gap-[10px]">
+              <div className="w-4 h-4 shrink-0 mt-px flex items-center justify-center overflow-hidden">
+                <svg className="w-[10px] h-[8px] text-lime-600" fill="none" viewBox="0 0 10 8" stroke="currentColor" strokeWidth={1.47}>
+                  <polyline points="1,4 3.5,6.5 9,1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">{text}</p>
+            </li>
+          ))}
         </ul>
       </div>
 
     </div>
 
-    {/* Navigation Links Deck */}
-    <div className="flex flex-wrap items-center gap-3 pt-2">
+    {/* Navigation Pill Links */}
+    <div className="flex flex-wrap items-center gap-3">
       {['Privacy Policy', 'Security', 'Compliance'].map((label) => (
         <button
           key={label}
-          className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 rounded-full text-xs font-semibold flex items-center gap-2 transition-all duration-200 shadow-sm"
+          className="h-10 px-[15px] border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 rounded-full text-xs font-semibold font-['Plus_Jakarta_Sans'] flex items-center gap-2 transition-all duration-200"
         >
           <span>{label}</span>
-          <svg className="w-3 h-3 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          {/* Right-pointing arrow → */}
+          <svg className="w-2.5 h-2.5 text-slate-800 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -668,40 +644,41 @@ export default function CookieConsent() {
 
   </div>
 </section>
-<section className="w-full bg-white py-16 md:py-20 border-t border-slate-100">
-    <div className=" bg-white/0 rounded-[20px] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22)] shadow-[0px_1px_2px_0px_rgba(11,60,99,0.06)]">
-  <div className="w-full max-w-[832px] mx-auto px-4 text-center flex flex-col items-center justify-center gap-6">
-    
-    {/* Heading Block */}
-    <div className="space-y-3 max-w-xl">
-      <h2 className="text-slate-800 text-2xl md:text-3xl font-extrabold tracking-tight leading-10">
-        Manage your choices at any time.
-      </h2>
-      <p className="text-slate-600 text-base font-normal leading-6">
-        You should not need to search, email support, or clear your browser to change non-essential cookie preferences.
-      </p>
-    </div>
+<section className="w-full bg-slate-50 py-10">
+  <div className="w-full max-w-[832px] mx-auto px-4">
+    <div className="bg-white rounded-[20px] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] px-8 py-14 flex flex-col items-center text-center gap-6">
 
-    {/* Primary Action Button */}
-    <div className="pt-2">
-      <button className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.7)] hover:bg-sky-800 transition-colors duration-200">
-        Open Cookie Settings
+      {/* Heading Block */}
+      <div className="space-y-3 max-w-lg">
+        <h2 className="text-slate-800 text-3xl font-extrabold font-['Plus_Jakarta_Sans'] tracking-tight leading-10">
+          Manage your choices at any time.
+        </h2>
+        <p className="text-slate-600 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">
+          You should not need to search, email support, or clear your browser to change non-essential cookie preferences.
+        </p>
+      </div>
+
+      {/* CTA Button with right arrow */}
+      <button className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold font-['Plus_Jakarta_Sans'] text-sm flex items-center justify-center gap-2.5 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.70)] hover:bg-sky-800 transition-colors duration-200">
+        <span>Open Cookie Settings</span>
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
       </button>
-    </div>
 
-    {/* Inline Links Row */}
-    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-4 text-sm text-sky-700 font-normal">
-      {['Privacy Policy', 'Security', 'Compliance', 'Contact'].map((link) => (
-        <button 
-          key={link} 
-          className="hover:underline focus:outline-none focus:ring-2 focus:ring-sky-700 focus:ring-offset-2 rounded px-1 transition-all"
-        >
-          {link}
-        </button>
-      ))}
-    </div>
-    </div>
+      {/* Dot-separated text links */}
+      <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 text-sm font-normal font-['Plus_Jakarta_Sans']">
+        {['Privacy Policy', 'Security', 'Compliance', 'Contact'].map((link, i, arr) => (
+          <React.Fragment key={link}>
+            <button className="text-sky-700 hover:underline transition-all">{link}</button>
+            {i < arr.length - 1 && (
+              <span className="text-slate-400 select-none px-1">·</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
 
+    </div>
   </div>
 </section>
 </div>
