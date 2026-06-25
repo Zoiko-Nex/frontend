@@ -198,7 +198,7 @@ export default function CookieConsent() {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
           <button className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.7)] hover:bg-sky-800 transition-colors duration-200">
-            <span>Manage cookie preferences </span>
+            <span>Manage cookie preferences → </span>
          
           </button>
 
@@ -451,8 +451,7 @@ export default function CookieConsent() {
               
               {/* Primary Launch Action Element */}
               <button className="px-5 h-12 bg-sky-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.7)] hover:bg-sky-600 focus:outline focus:outline-2 focus:outline-white transition-all duration-200 shrink-0">
-                <span>Open preference center</span>
-                <div className="w-3.5 h-2.5 border-2 border-white rounded-sm shrink-0" />
+                <span>Open preference center →</span>
               </button>
 
               {/* Secondary Accept All Trigger Button */}
@@ -655,10 +654,10 @@ export default function CookieConsent() {
 
       {/* Heading Block */}
       <div className="space-y-3 max-w-lg">
-        <h2 className="text-slate-800 text-3xl font-extrabold font-['Plus_Jakarta_Sans'] tracking-tight leading-10">
+        <h2 className="text-slate-800 text-3xl font-extrabold tracking-tight leading-10">
           Manage your choices at any time.
         </h2>
-        <p className="text-slate-600 text-base font-normal font-['Plus_Jakarta_Sans'] leading-6">
+        <p className="text-slate-600 text-base font-normal  leading-6">
           You should not need to search, email support, or clear your browser to change non-essential cookie preferences.
         </p>
       </div>
@@ -668,10 +667,8 @@ export default function CookieConsent() {
         onClick={() => setSettingsOpen(true)}
         className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold font-['Plus_Jakarta_Sans'] text-sm flex items-center justify-center gap-2.5 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.70)] hover:bg-sky-800 transition-colors duration-200"
       >
-        <span>Open Cookie Settings</span>
-        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+        <span>Open Cookie Settings →</span>
+       
       </button>
 
       {/* Dot-separated text links */}
