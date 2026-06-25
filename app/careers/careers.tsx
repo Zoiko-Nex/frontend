@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { ArrowRight, Search, MapPin, Briefcase, Clock, Zap } from 'lucide-react';
 
 export default function Careers() {
@@ -239,7 +240,7 @@ export default function Careers() {
                   <div className="flex items-center gap-1.5"><Zap className="w-4 h-4 text-slate-400" /> Staff / Senior</div>
                 </div>
               </div>
-              <button className="px-6 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 shrink-0 shadow-sm">View Role</button>
+              <Link href="/apply?role=Telecom+Solution+Architect" className="px-6 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 shrink-0 shadow-sm text-center">Apply Now</Link>
             </div>
             
             {/* Role 2 */}
@@ -255,7 +256,7 @@ export default function Careers() {
                   <div className="flex items-center gap-1.5"><Zap className="w-4 h-4 text-slate-400" /> L3 / Senior</div>
                 </div>
               </div>
-              <button className="px-6 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 shrink-0 shadow-sm">View Role</button>
+              <Link href="/apply?role=Platform+Engineer" className="px-6 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 shrink-0 shadow-sm text-center">Apply Now</Link>
             </div>
 
             {/* Role 3 */}
@@ -271,7 +272,7 @@ export default function Careers() {
                   <div className="flex items-center gap-1.5"><Zap className="w-4 h-4 text-slate-400" /> Senior</div>
                 </div>
               </div>
-              <button className="px-6 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 shrink-0 shadow-sm">View Role</button>
+              <Link href="/apply?role=Security+Engineer" className="px-6 py-3 bg-black text-white text-sm font-semibold rounded hover:bg-gray-800 shrink-0 shadow-sm text-center">Apply Now</Link>
             </div>
           </div>
 

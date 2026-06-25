@@ -1,5 +1,5 @@
-import ApplicationForm from "../components/ApplicationForm";
-import Sidebar from "../components/Sidebar";
+import ApplicationForm from "./ApplicationForm";
+import Sidebar from "./Sidebar";
 
 export const metadata = {
   title: "Apply — Telecom Solution Architect | ZoikoNex",
@@ -7,7 +7,10 @@ export const metadata = {
     "Apply to join ZoikoNex — the infrastructure layer for governed telecom monetization.",
 };
 
-export default function CareersApplyPage() {
+export default async function CareersApplyPage(props: any) {
+  const searchParams = await props.searchParams;
+  const roleName = searchParams?.role || "Telecom Solution Architect";
+
   return (
     <main
       className="min-h-screen bg-[#F4F6F9] pt-8 pb-14 font-['Plus_Jakarta_Sans',sans-serif] sm:pt-12 sm:pb-18"
@@ -46,7 +49,7 @@ export default function CareersApplyPage() {
 
           <p className="mb-1 text-[13px] text-[#64748B]">Apply for:</p>
           <h1 className="text-[22px] font-extrabold leading-[1.2] text-[#1C1D31] sm:text-[28px]">
-            Telecom Solution Architect
+            {roleName}
           </h1>
           <p className="mt-3 max-w-180 text-[14px] leading-[1.75] text-[#4E5E73] sm:text-[14.5px]">
             Lead the structural evolution of our Tier-1 BSS frameworks. We are looking
