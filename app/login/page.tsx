@@ -14,7 +14,7 @@ const LoginPage = () => {
                 {/* Left Panel (Image & Hero Text Overlay) */}
                     <div className="w-[483px] h-full relative">
                         <Image
-                            src="/image/login/image.jpg"
+                            src="/image/login/login.jpg"
                             alt="ZoikoNex Professional Team"
                             fill
                             className="object-cover"
