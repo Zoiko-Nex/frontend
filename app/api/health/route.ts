@@ -2,24 +2,24 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const services = [
-    { id: "identity-tenancy", port: 8080 },
-    { id: "customer-account", port: 8081 },
-    { id: "product-catalogue-commercial", port: 8082 },
-    { id: "order-management-provisioning", port: 8083 },
-    { id: "finance-fabric-ledger", port: 8084 },
-    { id: "rating-charging", port: 8085 },
-    { id: "partner-settlement", port: 8086 },
-    { id: "revenue-assurance", port: 8087 },
-    { id: "tax-jurisdiction", port: 8089 },
-    { id: "fraud-risk", port: 8090 },
-    { id: "custmr-lfc-kyc", port: 8091 },
-    { id: "billing-invoice", port: 8092 },
-    { id: "evidence-ledger", port: 8093 },
-    { id: "usage-ingestion-mediation", port: 8094 },
-    { id: "dunning-collections-disputes", port: 8095 },
-    { id: "payments", port: 8096 },
-    { id: "integration-ecosystem", port: 8097 },
-    { id: "reporting-regulatory", port: 8098 },
+    { id: "identity-tenancy", url: "https://identity.api.zoikonex.com/health" },
+    { id: "customer-account", url: "https://customer.api.zoikonex.com/health" },
+    { id: "product-catalogue-commercial", url: "https://catalogue.api.zoikonex.com/health" },
+    { id: "order-management-provisioning", url: "https://ordering.api.zoikonex.com/health" },
+    { id: "finance-fabric-ledger", url: "https://finance.api.zoikonex.com/health" },
+    { id: "rating-charging", url: "https://rating.api.zoikonex.com/health" },
+    { id: "partner-settlement", url: "https://settlement.api.zoikonex.com/health" },
+    { id: "revenue-assurance", url: "https://assurance.api.zoikonex.com/health" },
+    { id: "tax-jurisdiction", url: "https://tax.api.zoikonex.com/health" },
+    { id: "fraud-risk", url: "https://fraud.api.zoikonex.com/health" },
+    { id: "custmr-lfc-kyc", url: "https://kyc.api.zoikonex.com/health" },
+    { id: "billing-invoice", url: "https://billing.api.zoikonex.com/health" },
+    { id: "evidence-ledger", url: "https://evidence.api.zoikonex.com/health" },
+    { id: "usage-ingestion-mediation", url: "https://usage.api.zoikonex.com/health" },
+    { id: "dunning-collections-disputes", url: "https://dunning.api.zoikonex.com/health" },
+    { id: "payments", url: "https://payments.api.zoikonex.com/health" },
+    { id: "integration-ecosystem", url: "https://integration.api.zoikonex.com/health" },
+    { id: "reporting-regulatory", url: "https://reporting.api.zoikonex.com/health" },
   ];
 
   const results: Record<string, boolean> = {};
@@ -28,9 +28,9 @@ export async function GET() {
     services.map(async (service) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 800);
-        
-        const res = await fetch(`http://127.0.0.1:${service.port}/health`, {
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const res = await fetch(service.url, {
           signal: controller.signal,
           headers: {
             "Accept": "application/json",

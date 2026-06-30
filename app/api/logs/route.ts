@@ -17,7 +17,7 @@ export async function GET() {
       } else {
         data = rawData.toString("utf8");
       }
-      
+
       const lines = data.split(/\r?\n/).filter(Boolean);
       logs.push(...lines.map(l => `[KYC] ${l}`));
     }
@@ -29,7 +29,7 @@ export async function GET() {
       } else {
         data = rawData.toString("utf8");
       }
-      
+
       const lines = data.split(/\r?\n/).filter(Boolean);
       logs.push(...lines.map(l => `[RATING] ${l}`));
     }
