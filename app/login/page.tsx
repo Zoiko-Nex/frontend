@@ -1,10 +1,71 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const LoginPage = () => {
+    const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        setSuccess('');
+
+        try {
+            const res = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    port: 8080,
+                    method: 'POST',
+                    path: '/v1/sessions',
+                    headers: {
+                        'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
+                        'X-Brand-ID': 'b1a2b3c4-d5e6-47a8-89c0-d1e2f3a4b5c6'
+                    },
+                    body: {
+                        email: email,
+                        password: password,
+                        device_fingerprint: 'browser-chrome-windows-12345'
+                    }
+                })
+            });
+
+            const result = await res.json();
+
+            if (!res.ok || result.status !== 200) {
+                const errMsg = result.data?.message || result.error || 'Authentication failed. Please check your credentials.';
+                throw new Error(errMsg);
+            }
+
+            const token = result.data?.access_token;
+            if (!token) {
+                throw new Error('No access token returned from identity server.');
+            }
+
+            localStorage.setItem('access_token', token);
+            setSuccess('Login successful! Redirecting to dashboard...');
+            setTimeout(() => {
+                router.push('/dashboards');
+            }, 1200);
+        } catch (err: any) {
+            setError(err.message || 'An unexpected error occurred.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="w-full bg-[#030712] text-white flex items-center justify-center py-20 relative overflow-hidden font-sans">
             {/* Lime radial glow */}
@@ -50,8 +111,20 @@ const LoginPage = () => {
                                 </Link>
                             </div>
 
+                            {/* Status Messages */}
+                            {error && (
+                                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                    {error}
+                                </div>
+                            )}
+                            {success && (
+                                <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 text-xs font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                    {success}
+                                </div>
+                            )}
+
                             {/* Credentials Fields */}
-                            <form className="mt-8 space-y-5" onSubmit={(e) => e.preventDefault()}>
+                            <form className="mt-6 space-y-5" onSubmit={handleLogin}>
                                 {/* Email */}
                                 <div>
                                     <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -60,9 +133,12 @@ const LoginPage = () => {
                                     <input
                                         type="email"
                                         placeholder="Enter Your Email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
                                         className="w-full h-12 bg-white rounded-xl border border-slate-300 px-4 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-700 transition-colors"
                                         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                         required
+                                        disabled={loading}
                                     />
                                 </div>
 
@@ -73,18 +149,22 @@ const LoginPage = () => {
                                     </label>
                                     <div className="relative">
                                         <input
-                                            type="password"
+                                            type={showPassword ? "text" : "password"}
                                             placeholder="**********"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
                                             className="w-full h-12 bg-white rounded-xl border border-slate-300 px-4 pr-12 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-cyan-700 transition-colors"
                                             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                             required
+                                            disabled={loading}
                                         />
                                         <button
                                             type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
                                             className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-semibold"
                                             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                         >
-                                            Show
+                                            {showPassword ? "Hide" : "Show"}
                                         </button>
                                     </div>
                                 </div>
@@ -92,10 +172,11 @@ const LoginPage = () => {
                                 {/* Login Button */}
                                 <button
                                     type="submit"
-                                    className="w-full h-12 bg-sky-700 hover:bg-sky-800 transition-colors text-white text-base font-bold rounded-xl mt-2 cursor-pointer"
+                                    disabled={loading}
+                                    className="w-full h-12 bg-sky-700 hover:bg-sky-800 transition-colors text-white text-base font-bold rounded-xl mt-2 cursor-pointer disabled:bg-slate-400 flex items-center justify-center"
                                     style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                 >
-                                    Login
+                                    {loading ? "Authenticating..." : "Login"}
                                 </button>
                             </form>
                         </div>

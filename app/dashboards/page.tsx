@@ -31,6 +31,164 @@ export default function DashboardsPage() {
 
   // Active Console View state (Tenant Admin, Super Admin, Customer Self-Service)
   const [currentConsole, setCurrentConsole] = useState<"tenant-admin" | "super-admin" | "customer-portal">("tenant-admin");
+
+  // Customer Self-Service Portal states
+  const [custPortalCustomerId, setCustPortalCustomerId] = useState("1f211ae1-b736-43d2-86ff-08463bd7be36");
+  const [custPortalAccountId, setCustPortalAccountId] = useState("393d645f-07ca-460c-93f1-939a7676bbe3");
+  const [orderOfferId, setOrderOfferId] = useState("a0000002-0000-4000-8000-000000000002");
+  const [orderProductId, setOrderProductId] = useState("a0000001-0000-4000-8000-000000000001");
+  const [prepaidBalance, setPrepaidBalance] = useState(15.00);
+  const [portalInvoices, setPortalInvoices] = useState<any[]>([]);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalMessage, setPortalMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const fetchPortalInvoices = async (accountId: string) => {
+    if (!accountId) return;
+    try {
+      const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8092,
+          method: "GET",
+          path: `/v1/invoices?limit=20`,
+          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" }
+        })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.status === 200 && result.data && result.data.items) {
+          const filtered = result.data.items.filter((inv: any) => inv.account_id === accountId);
+          setPortalInvoices(filtered);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch portal invoices:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentConsole === "customer-portal" && custPortalAccountId) {
+      fetchPortalInvoices(custPortalAccountId);
+    }
+  }, [currentConsole, custPortalAccountId]);
+
+  const handlePlaceOrder = async () => {
+    setPortalLoading(true);
+    setPortalMessage(null);
+    try {
+      // 1. Place the order
+      const resOrder = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8083,
+          method: "POST",
+          path: "/v1/orders",
+          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          body: {
+            customer_id: custPortalCustomerId,
+            account_id: custPortalAccountId,
+            order_type: "NEW_SERVICE",
+            catalog_version_id: "CATALOG-2026-Q2",
+            currency_code: "USD",
+            country_code: "US",
+            jurisdiction_code: "US-CA"
+          }
+        })
+      });
+      const resultOrder = await resOrder.json();
+      if (!resOrder.ok || resultOrder.status !== 201) {
+        throw new Error(resultOrder.data?.message || resultOrder.error || "Failed to place order.");
+      }
+      const orderId = resultOrder.data?.id;
+
+      // 2. Provision eSIM profile
+      const resProv = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8083,
+          method: "POST",
+          path: "/v1/provisioning",
+          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          body: {
+            order_id: orderId,
+            customer_id: custPortalCustomerId,
+            account_id: custPortalAccountId,
+            product_id: orderProductId,
+            service_type: "MOBILE_DATA",
+            jurisdiction_code: "US-CA"
+          }
+        })
+      });
+      const resultProv = await resProv.json();
+      if (!resProv.ok || resultProv.status !== 201) {
+        throw new Error(resultProv.data?.message || resultProv.error || "Order placed, but eSIM provisioning failed.");
+      }
+
+      setPortalMessage({ 
+        text: `Order placed successfully (ID: ${orderId})! eSIM Profile provisioned (ID: ${resultProv.data?.id || "N/A"}) and registered.`, 
+        type: "success" 
+      });
+    } catch (err: any) {
+      setPortalMessage({ text: err.message || "Order placement failed.", type: "error" });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const handleRunBilling = async () => {
+    setPortalLoading(true);
+    setPortalMessage(null);
+    try {
+      // 1. Create draft invoice
+      const resDraft = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8092,
+          method: "POST",
+          path: "/v1/invoices",
+          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          body: {
+            account_id: custPortalAccountId,
+            customer_id: custPortalCustomerId,
+            currency_code: "USD"
+          }
+        })
+      });
+      const resultDraft = await resDraft.json();
+      if (!resDraft.ok || resultDraft.status !== 201) {
+        throw new Error(resultDraft.data?.message || resultDraft.error || "Failed to create draft invoice.");
+      }
+      const invoiceId = resultDraft.data?.id;
+
+      // 2. Issue the invoice
+      const resIssue = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8092,
+          method: "POST",
+          path: `/v1/invoices/${invoiceId}/issue`,
+          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          body: {}
+        })
+      });
+      const resultIssue = await resIssue.json();
+      if (!resIssue.ok || resultIssue.status !== 200) {
+        throw new Error(resultIssue.data?.message || resultIssue.error || "Failed to issue the invoice.");
+      }
+
+      setPortalMessage({ text: `Billing run succeeded! Invoice issued: ${invoiceId}`, type: "success" });
+      fetchPortalInvoices(custPortalAccountId);
+    } catch (err: any) {
+      setPortalMessage({ text: err.message || "Billing cycle execution failed.", type: "error" });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
   
   // State-bound list of the 18 BSS/OSS domains
   const [services, setServices] = useState<DomainService[]>([
@@ -602,10 +760,8 @@ export default function DashboardsPage() {
                               <div className="self-stretch flex flex-col justify-start items-start w-full">
                                 {/* Card Header */}
                                 <div className="self-stretch inline-flex justify-start items-center gap-3.5 w-full">
-                                  <div className="p-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl flex justify-center items-center shrink-0 text-sky-700">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d={service.iconPath} />
-                                    </svg>
+                                  <div className="p-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl flex justify-center items-center shrink-0 w-11 h-11 text-sky-700">
+                                    <img src={service.iconPath} alt="" className="w-5 h-5 object-contain" />
                                   </div>
                                   <div className="flex-1 inline-flex flex-col justify-start items-start">
                                     <div className="justify-center text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">{service.name}</div>
@@ -707,7 +863,7 @@ export default function DashboardsPage() {
                                         setSelectedService(service);
                                         setRequestMethod("GET");
                                         setRequestPath("/health");
-                                        setRequestHeaders(`{\n  "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460"\n}`);
+                                        setRequestHeaders(`{\n  "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"\n}`);
                                         setRequestBody("");
                                         setApiResponse(null);
                                         setSelectedEndpoint("");
@@ -825,88 +981,180 @@ export default function DashboardsPage() {
           {/* Customer Portal view body */}
           {currentConsole === "customer-portal" && (
             <div className="self-stretch flex flex-col gap-6 w-full transition-all duration-300">
-              {/* Conditional Action Centre Alert */}
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-4">
-                <div className="p-2 bg-amber-100 rounded-lg text-amber-600 shrink-0">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                  </svg>
+              
+              {/* Account Credentials Panel */}
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm font-sans flex flex-col md:flex-row gap-5 items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">BSS Customer ID</label>
+                  <input
+                    type="text"
+                    value={custPortalCustomerId}
+                    onChange={(e) => setCustPortalCustomerId(e.target.value)}
+                    className="w-full h-10 border border-slate-200 rounded-lg px-3.5 text-xs text-slate-700 bg-slate-50 focus:outline-none focus:border-indigo-500 focus:bg-white font-mono"
+                    placeholder="e.g. eac403a6-bf76-49b3-907d-5a4bb6f81f4d"
+                  />
                 </div>
-                <div className="flex-1 font-sans">
-                  <h4 className="text-sm font-bold text-slate-800">Action Required: KYC Verification Pending</h4>
-                  <p className="text-xs text-slate-600 mt-1">We need you to complete identity verification to activate your pending eSIM profile. Please upload a passport copy below.</p>
-                  
-                  {/* Simple Interactive Action form inside the alert */}
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => alert("Simulating Passport OCR Verification Saga...")}
-                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow"
-                    >
-                      Upload Passport Copy
-                    </button>
-                  </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">BSS Billing Account ID / Number</label>
+                  <input
+                    type="text"
+                    value={custPortalAccountId}
+                    onChange={(e) => setCustPortalAccountId(e.target.value)}
+                    className="w-full h-10 border border-slate-200 rounded-lg px-3.5 text-xs text-slate-700 bg-slate-50 focus:outline-none focus:border-indigo-500 focus:bg-white font-mono"
+                    placeholder="e.g. 393d645f-07ca-460c-93f1-939a7676bbe3"
+                  />
                 </div>
+                <button
+                  onClick={() => fetchPortalInvoices(custPortalAccountId)}
+                  className="h-10 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  Sync Invoices
+                </button>
               </div>
 
-              {/* Customer Stats grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Status Banner */}
+              {portalMessage && (
+                <div className={`p-4 rounded-xl border text-xs font-semibold font-sans text-left ${
+                  portalMessage.type === "success" 
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
+                    : "bg-rose-50 border-rose-200 text-rose-600"
+                }`}>
+                  {portalMessage.text}
+                </div>
+              )}
+
+              {/* Interactive Control Centre Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Plan Card */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[140px]">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Service Line</span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-1">+1 (212) 555-0199</h3>
-                    <p className="text-xs text-slate-500 mt-0.5 font-sans">Plan: GoLite Premium 5G Unlimited</p>
-                  </div>
-                  <div className="mt-4">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Data Usage (25 GB Limit)</span>
-                    <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div className="bg-indigo-600 h-2 rounded-full" style={{ width: '73%' }}></div>
+                {/* 1. Placing eSIM orders */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[220px]">
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Purchase eSIM Plan (POST /v1/orders)</span>
+                      <h3 className="text-sm font-bold text-slate-800 mt-2 font-mono">Offer: {orderOfferId.slice(0, 18)}...</h3>
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
-                      <span>18.4 GB Used</span>
-                      <span>6.6 GB Left</span>
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Target Offer ID</label>
+                        <input
+                          type="text"
+                          value={orderOfferId}
+                          onChange={(e) => setOrderOfferId(e.target.value)}
+                          className="w-full h-8 border border-slate-200 rounded px-2 text-[10px] text-slate-700 bg-slate-50 font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Target Product ID</label>
+                        <input
+                          type="text"
+                          value={orderProductId}
+                          onChange={(e) => setOrderProductId(e.target.value)}
+                          className="w-full h-8 border border-slate-200 rounded px-2 text-[10px] text-slate-700 bg-slate-50 font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
+                  <button
+                    onClick={handlePlaceOrder}
+                    disabled={portalLoading}
+                    className="w-full py-2.5 mt-4 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-bold transition text-center disabled:bg-slate-400 flex items-center justify-center gap-1.5"
+                  >
+                    {portalLoading ? "Processing..." : "Place eSIM Order"}
+                  </button>
                 </div>
 
-                {/* Balance Card */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[140px]">
+                {/* 2. Prepaid Balance Wallet */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[220px]">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prepaid Balance Wallet</span>
-                    <h3 className="text-3xl font-extrabold text-slate-800 mt-1">$15.00</h3>
-                    <p className="text-xs text-slate-500 mt-0.5 font-sans">Status: Active</p>
+                    <h3 className="text-4xl font-extrabold text-slate-800 mt-3">${prepaidBalance.toFixed(2)}</h3>
+                    <p className="text-xs text-slate-500 mt-1.5 font-sans leading-relaxed">
+                      Prepaid balance managed on rating-charging engine (port 8085).
+                    </p>
                   </div>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={async () => {
-                        alert("Adding $10.00 to prepaid wallet via Payments API on port 8096...");
-                      }}
-                      className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition text-center"
-                    >
-                      Top Up $10.00
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setPrepaidBalance(prev => prev + 10);
+                      setPortalMessage({ text: "Wallet top-up simulation completed! $10.00 added.", type: "success" });
+                    }}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition text-center flex items-center justify-center gap-1.5"
+                  >
+                    Top Up $10.00
+                  </button>
                 </div>
 
-                {/* Latest Invoice Card */}
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[140px]">
+                {/* 3. Run Billing Invoice Cycle */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[220px]">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Latest Issued Invoice</span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-1">$45.00</h3>
-                    <p className="text-xs text-rose-500 font-semibold mt-0.5 font-sans">Due: July 15, 2026</p>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trigger Bill Run (TMF678)</span>
+                    <h3 className="text-lg font-bold text-slate-800 mt-3">Account Invoice Cycle</h3>
+                    <p className="text-xs text-slate-500 mt-1.5 font-sans leading-relaxed">
+                      Invokes draft invoice generation on port 8092 and publishes to ledger.
+                    </p>
                   </div>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => alert("Showing immutable invoice breakdown (TMF678)")}
-                      className="flex-1 px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-bold transition text-center"
-                    >
-                      View Charges
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleRunBilling}
+                    disabled={portalLoading}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition text-center disabled:bg-slate-400 flex items-center justify-center"
+                  >
+                    {portalLoading ? "Running Cycle..." : "Execute Billing Cycle"}
+                  </button>
                 </div>
 
               </div>
+
+              {/* Invoices List Registry Table */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-2">
+                <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Account Issued Invoices (Port 8092)</span>
+                  <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded font-mono font-semibold">Ledger Synced</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-3">Invoice ID</th>
+                        <th className="px-6 py-3">Bill Cycle</th>
+                        <th className="px-6 py-3">Amount</th>
+                        <th className="px-6 py-3">Status</th>
+                        <th className="px-6 py-3">Issued Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-sans">
+                      {portalInvoices.length > 0 ? (
+                        portalInvoices.map((inv: any) => (
+                          <tr key={inv.id}>
+                            <td className="px-6 py-4 font-mono text-xs font-bold text-sky-700">{inv.id}</td>
+                            <td className="px-6 py-4 text-xs font-semibold">{inv.bill_cycle_id || "CURRENT_CYCLE"}</td>
+                            <td className="px-6 py-4 text-xs font-bold">${((inv.amount_minor_units || 4500) / 100).toFixed(2)} {inv.currency_code || "USD"}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                                inv.status === "ISSUED" 
+                                  ? "bg-emerald-50 text-emerald-600" 
+                                  : inv.status === "DRAFT"
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-slate-50 text-slate-600"
+                              }`}>
+                                {inv.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                              {new Date(inv.created_at || Date.now()).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-10 text-center text-xs text-slate-400 italic">
+                            No billing invoice cycles found for this account. Click "Execute Billing Cycle" above to generate one.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -1008,7 +1256,7 @@ export default function DashboardsPage() {
                     } else {
                       setRequestMethod("GET");
                       setRequestPath("/health");
-                      setRequestHeaders(`{\n  "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460"\n}`);
+                      setRequestHeaders(`{\n  "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"\n}`);
                       setRequestBody("");
                     }
                   }}
@@ -1118,7 +1366,10 @@ export default function DashboardsPage() {
                       parsedBody = JSON.parse(requestBody);
                     }
 
-                    const port = selectedServicePort[selectedService.id];
+                    let port = selectedServicePort[selectedService.id];
+                    if (requestPath.startsWith("/api/v1/auth/") || requestPath.startsWith("/v1/tenants") || requestPath.startsWith("/v1/sessions")) {
+                      port = 8080;
+                    }
 
                     const res = await fetch("/api/proxy", {
                       method: "POST",
@@ -1204,7 +1455,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 3a: Create Product Specification (POST /v1/products)",
       method: "POST",
       path: "/v1/products",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         product_name: "Premium 5G Unlimited Plan",
         product_type: "DATA",
@@ -1220,12 +1471,31 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 3b: Create Commercial Offer (POST /v1/offers)",
       method: "POST",
       path: "/v1/offers",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
-        offer_name: "Promo Offer June 2026",
         product_id: "prod-1234",
-        price_minor_units: 4500,
-        currency_code: "USD"
+        offer_name: "Promo Offer June 2026",
+        description: "Discounted monthly recurring plan",
+        country_code: "US",
+        jurisdiction_code: "US-NY",
+        validity_days: 30
+      }
+    },
+    {
+      label: "Step 3c: Associate Price Rule (POST /v1/price-rules)",
+      method: "POST",
+      path: "/v1/price-rules",
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      body: {
+        product_id: "prod-1234",
+        offer_id: "offer-1234",
+        country_code: "US",
+        jurisdiction_code: "US-NY",
+        amount_minor_units: 4500,
+        currency_code: "USD",
+        charge_structure: "FLAT",
+        billing_period: "MONTHLY",
+        rounding_policy_id: "ROUND_HALF_UP"
       }
     }
   ],
@@ -1234,7 +1504,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Prepaid: Initiate Balance Reservation (POST /v1/charging/reservations)",
       method: "POST",
       path: "/v1/charging/reservations",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         session_id: "charge-session-9988",
         subscriber_id: "sub-0987",
@@ -1248,7 +1518,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Prepaid: Process Usage CDR (POST /v1/rating/calculate)",
       method: "POST",
       path: "/v1/rating/calculate",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         subscriber_id: "sub-0987",
         volume: 1024,
@@ -1262,7 +1532,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 8: Create Draft Invoice (POST /v1/invoices)",
       method: "POST",
       path: "/v1/invoices",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         account_id: "acc-1234",
         billing_period: "2026-06",
@@ -1274,7 +1544,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Trigger Billing Cycle Run (POST /v1/billing/runs)",
       method: "POST",
       path: "/v1/billing/runs",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         bill_cycle_id: "cycle-2026-06",
         account_id: "acc-1234",
@@ -1287,7 +1557,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 9: Create Payment Intent (POST /v1/payment-intents)",
       method: "POST",
       path: "/v1/payment-intents",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         amount_minor_units: 4500,
         currency: "USD",
@@ -1301,7 +1571,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Calculate Interconnect Revenue Share (POST /v1/settlements)",
       method: "POST",
       path: "/v1/settlements",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         partner_id: "partner-helios-net",
         traffic_period: "2026-06",
@@ -1312,15 +1582,15 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
   ],
   "cust-lifecycle": [
     {
-      label: "Step 1: Authenticate / User Login (POST /api/v1/auth/login)",
+      label: "Step 1: Authenticate / User Login (POST /v1/sessions)",
       method: "POST",
-      path: "/api/v1/auth/login",
+      path: "/v1/sessions",
       headers: { 
-        "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460",
-        "X-Brand-ID": "7ac9843d-0453-4876-b605-e45ba05b0d0c"
+        "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+        "X-Brand-ID": "b1a2b3c4-d5e6-47a8-89c0-d1e2f3a4b5c6"
       },
       body: {
-        email: "engineer@acme.com",
+        email: "admin@acme.com",
         password: "SecurePassword123",
         device_fingerprint: "browser-chrome-windows-12345"
       }
@@ -1329,22 +1599,22 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 2a: Create Party Profile (POST /v1/parties)",
       method: "POST",
       path: "/v1/parties",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         party_type: "INDIVIDUAL",
-        first_name: "Jane",
-        last_name: "Doe",
-        email: "jane.doe@acme.com"
+        pii_token: "f2220099-0000-4000-8000-000000000099",
+        data_residency_region: "us-east-1",
+        jurisdiction_code: "US-CA"
       }
     },
     {
       label: "Step 2b: Create Customer Profile (POST /v1/customers)",
       method: "POST",
       path: "/v1/customers",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         party_id: "party-5678",
-        customer_type: "RESIDENTIAL",
+        customer_type: "RETAIL",
         status: "ACTIVE"
       }
     },
@@ -1352,13 +1622,14 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 2c: Create Billing Account (POST /v1/accounts)",
       method: "POST",
       path: "/v1/accounts",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         customer_id: "cust-1234",
-        first_name: "Jane",
-        last_name: "Doe",
-        email: "jane.doe@acme.com",
-        brand_id: "7ac9843d-0453-4876-b605-e45ba05b0d0c"
+        account_number: "ACC-54321",
+        account_type: "RETAIL",
+        currency_code: "USD",
+        credit_limit_minor_units: 100000,
+        credit_limit_currency_code: "USD"
       }
     }
   ],
@@ -1367,7 +1638,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Send Campaign Push Alert (POST /v1/campaigns/send)",
       method: "POST",
       path: "/v1/campaigns/send",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         campaign_name: "Summer Unlimited Upgrade",
         target_group: "high_data_users",
@@ -1380,34 +1651,36 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 4: Place Product Order (POST /v1/orders)",
       method: "POST",
       path: "/v1/orders",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         customer_id: "cust-1234",
-        offer_id: "offer-5678",
-        order_type: "NEW_INSTALL",
-        items: [
-          {
-            product_id: "prod-1234",
-            quantity: 1
-          }
-        ]
+        account_id: "acc-1234",
+        order_type: "NEW_SERVICE",
+        catalog_version_id: "CATALOG-2026-Q2",
+        currency_code: "USD",
+        country_code: "US",
+        jurisdiction_code: "US-CA"
       }
     },
     {
       label: "Step 5a: Provision eSIM Profile (POST /v1/provisioning)",
       method: "POST",
       path: "/v1/provisioning",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         order_id: "order-1234",
-        service_type: "ESIM"
+        customer_id: "cust-1234",
+        account_id: "acc-1234",
+        product_id: "prod-1234",
+        service_type: "MOBILE_DATA",
+        jurisdiction_code: "US-CA"
       }
     },
     {
       label: "Step 5b: Register SIM (POST /v1/sims)",
       method: "POST",
       path: "/v1/sims",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         iccid: "8904903200000888990",
         imsi: "310410123456789",
@@ -1418,7 +1691,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 5c: Activate SIM Profile (PATCH /v1/sims/{id})",
       method: "PATCH",
       path: "/v1/sims/8904903200000888990",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         action: "ACTIVATE"
       }
@@ -1429,7 +1702,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Register IoT Device Fleet (POST /v1/iot/devices)",
       method: "POST",
       path: "/v1/iot/devices",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         device_imei: "354920009988221",
         model: "SensNode-v2",
@@ -1442,7 +1715,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Reserve MSISDN Phone Number (POST /v1/numbers/reserve)",
       method: "POST",
       path: "/v1/numbers/reserve",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         msisdn: "+12125550199",
         reservation_timeout_seconds: 600
@@ -1454,7 +1727,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 7a: Create Jurisdiction Policy (POST /v1/jurisdiction-policies)",
       method: "POST",
       path: "/v1/jurisdiction-policies",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         jurisdiction_code: "US-NY",
         tax_rate: 0.0875,
@@ -1465,7 +1738,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 7b: Request Tax Decision (POST /v1/tax-decisions)",
       method: "POST",
       path: "/v1/tax-decisions",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         amount_minor_units: 5000,
         tax_category: "TELECOM",
@@ -1479,7 +1752,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 6a: Start KYC Verification (POST /v1/kyc/cases)",
       method: "POST",
       path: "/v1/kyc/cases",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         customer_id: "cust-1234",
         document_type: "PASSPORT",
@@ -1490,7 +1763,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 6b: Submit KYC Documentation (PATCH /v1/kyc/cases/{id}/submit)",
       method: "PATCH",
       path: "/v1/kyc/cases/kyc-case-9988/submit",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: {
         verification_status: "SUBMITTED"
       }
@@ -1501,7 +1774,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 10: Verify Audit/Evidence Chain (GET /v1/evidence/verify)",
       method: "GET",
       path: "/v1/evidence/verify",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: null
     },
     {
@@ -1510,7 +1783,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       path: "/v1/evidence",
       headers: {},
       body: {
-        subject_id: "e305ff64-cc3f-42e8-b7c1-8406f363c460",
+        subject_id: "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
         action: "BILL_CYCLE_COMPLETE",
         payload_hash: "8f7d9a1b6c0e3a5f4d2c8b7a69f0e1d2c3b4a5d6e7f8",
         signed_by: "billing-invoice-service"
@@ -1522,7 +1795,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Get AI Governance Status (GET /v1/ai/controls)",
       method: "GET",
       path: "/v1/ai/controls",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: null
     }
   ],
@@ -1531,7 +1804,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Generate Revenue Report (GET /v1/reports/revenue)",
       method: "GET",
       path: "/v1/reports/revenue",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: null
     }
   ],
@@ -1555,7 +1828,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "List Active Webhook Subscriptions (GET /v1/developer/keys)",
       method: "GET",
       path: "/v1/developer/keys",
-      headers: { "X-Tenant-ID": "e305ff64-cc3f-42e8-b7c1-8406f363c460" },
+      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
       body: null
     }
   ]

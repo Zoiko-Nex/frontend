@@ -7,6 +7,14 @@ import { Check, ChevronDown, ArrowRight, ArrowLeft } from 'lucide-react';
 
 const RegisterPage = () => {
     const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [registrationDetails, setRegistrationDetails] = useState<{
+        partyId: string;
+        customerId: string;
+        accountNumber: string;
+    } | null>(null);
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -40,9 +48,111 @@ const RegisterPage = () => {
         setStep(3);
     };
 
-    const handleStep3Submit = (e: React.FormEvent) => {
+    const handleStep3Submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setStep(4);
+        setLoading(true);
+        setError('');
+
+        try {
+            // Generate a secure client-side PII token (ZN-ADR-013 compliance)
+            const piiToken = typeof window !== 'undefined' && window.crypto?.randomUUID 
+                ? window.crypto.randomUUID() 
+                : "f2220099-0000-4000-8000-00000000" + Math.floor(1000 + Math.random() * 9000);
+
+            // 1. Create Party Profile
+            const partyRes = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    port: 8081,
+                    method: 'POST',
+                    path: '/v1/parties',
+                    headers: { 'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d' },
+                    body: {
+                        party_type: 'INDIVIDUAL',
+                        pii_token: piiToken,
+                        data_residency_region: 'us-east-1',
+                        jurisdiction_code: formData.country === 'US' ? 'US-CA' : formData.country || 'US-CA'
+                    }
+                })
+            });
+
+            const partyResult = await partyRes.json();
+            if (!partyRes.ok || partyResult.status !== 201) {
+                throw new Error(partyResult.data?.message || partyResult.error || 'Failed to create Party profile.');
+            }
+
+            const partyId = partyResult.data?.party_id;
+            if (!partyId) {
+                throw new Error('Party creation response did not include a party_id.');
+            }
+
+            // 2. Create Customer Profile
+            const customerRes = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    port: 8081,
+                    method: 'POST',
+                    path: '/v1/customers',
+                    headers: { 'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d' },
+                    body: {
+                        party_id: partyId,
+                        customer_type: 'RETAIL',
+                        status: 'ACTIVE'
+                    }
+                })
+            });
+
+            const customerResult = await customerRes.json();
+            if (!customerRes.ok || customerResult.status !== 201) {
+                throw new Error(customerResult.data?.message || customerResult.error || 'Failed to create Customer profile.');
+            }
+
+            const customerId = customerResult.data?.id;
+            if (!customerId) {
+                throw new Error('Customer creation response did not include a customer ID.');
+            }
+
+            // 3. Create Billing Account
+            const accountNumber = 'ACC-' + Math.floor(100000 + Math.random() * 900000);
+            const accountRes = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    port: 8081,
+                    method: 'POST',
+                    path: '/v1/accounts',
+                    headers: { 'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d' },
+                    body: {
+                        customer_id: customerId,
+                        account_number: accountNumber,
+                        account_type: 'RETAIL',
+                        currency_code: 'USD',
+                        credit_limit_minor_units: 100000,
+                        credit_limit_currency_code: 'USD'
+                    }
+                })
+            });
+
+            const accountResult = await accountRes.json();
+            if (!accountRes.ok || accountResult.status !== 201) {
+                throw new Error(accountResult.data?.message || accountResult.error || 'Failed to create Billing Account.');
+            }
+
+            // Save details for UI rendering on Step 4
+            setRegistrationDetails({
+                partyId,
+                customerId,
+                accountNumber
+            });
+
+            setStep(4);
+        } catch (err: any) {
+            setError(err.message || 'An error occurred during registration. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleBack = () => {
@@ -300,6 +410,12 @@ const RegisterPage = () => {
                     {step === 3 && (
                         <form onSubmit={handleStep3Submit} className="flex-1 flex flex-col justify-between mt-[32px]">
                             <div className="space-y-[22px]">
+                                {error && (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold font-sans text-left">
+                                        {error}
+                                    </div>
+                                )}
+
                                 <div className="flex gap-[38px]">
                                     <FormSelect
                                         label="Subscriber/Device Scale"
@@ -319,7 +435,7 @@ const RegisterPage = () => {
                                     <FormSelect
                                         label="Timeline"
                                         required
-                                        value={formData.timeline}
+                                        value={formData.scale ? formData.timeline : ''} // simple check
                                         onChange={(val) => handleFieldChange('timeline', val)}
                                         placeholder="Select timeline"
                                         options={[
@@ -371,16 +487,18 @@ const RegisterPage = () => {
                                     <button
                                         type="button"
                                         onClick={handleBack}
-                                        className="text-slate-600 hover:text-slate-800 text-xs font-normal font-sans py-2 cursor-pointer transition-colors"
+                                        disabled={loading}
+                                        className="text-slate-600 hover:text-slate-800 text-xs font-normal font-sans py-2 cursor-pointer transition-colors disabled:opacity-50"
                                     >
                                         ← Back
                                     </button>
                                     <button
                                         type="submit"
-                                        className="bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-base font-bold flex items-center justify-center gap-1.5 px-[30px] h-11 transition-colors cursor-pointer"
+                                        disabled={loading}
+                                        className="bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-base font-bold flex items-center justify-center gap-1.5 px-[30px] h-11 transition-colors cursor-pointer disabled:bg-slate-400"
                                         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                     >
-                                        Submit Request <Check size={16} />
+                                        {loading ? "Provisioning..." : <>Submit Request <Check size={16} /></>}
                                     </button>
                                 </div>
                             </div>
@@ -388,58 +506,69 @@ const RegisterPage = () => {
                     )}
 
                     {step === 4 && (
-                        <div className="flex-1 flex flex-col justify-between mt-[32px]">
+                        <div className="flex-1 flex flex-col justify-between mt-[20px]">
                             <div className="flex flex-col items-center text-center">
                                 {/* Success Checkmark */}
-                                <div className="w-14 h-14 bg-emerald-500/10 rounded-full border border-emerald-500 flex items-center justify-center mb-4">
-                                    <Check size={26} className="text-emerald-500 stroke-[2.5]" />
+                                <div className="w-12 h-12 bg-emerald-500/10 rounded-full border border-emerald-500 flex items-center justify-center mb-3">
+                                    <Check size={24} className="text-emerald-500 stroke-[2.5]" />
                                 </div>
-                                <h4 className="text-slate-700 text-base font-bold font-sans">Request received</h4>
-                                <p className="text-slate-500 text-xs mt-2 max-w-[340px] leading-relaxed font-sans">
-                                    Your access request has been submitted. Here is what happens next based on the path you selected:
+                                <h4 className="text-slate-700 text-lg font-bold font-sans">Organization Provisioned!</h4>
+                                <p className="text-slate-500 text-xs mt-1 max-w-[420px] leading-relaxed font-sans">
+                                    Your corporate profile, customer account, and billing ledger have been successfully provisioned in the backend database.
                                 </p>
                             </div>
 
+                            {/* Provisioned IDs */}
+                            {registrationDetails && (
+                                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 my-2 w-[553px] space-y-2 text-left">
+                                    <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1.5 mb-2 font-sans uppercase tracking-wider">
+                                        BSS Provisioning Record Details
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs font-sans">
+                                        <span className="text-slate-400">Party Profile ID:</span>
+                                        <code className="text-sky-700 font-mono font-semibold bg-sky-50 px-2 py-0.5 rounded">{registrationDetails.partyId}</code>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs font-sans">
+                                        <span className="text-slate-400">Customer Account ID:</span>
+                                        <code className="text-emerald-700 font-mono font-semibold bg-emerald-50 px-2 py-0.5 rounded">{registrationDetails.customerId}</code>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs font-sans">
+                                        <span className="text-slate-400">Billing Account Number:</span>
+                                        <code className="text-purple-700 font-mono font-semibold bg-purple-50 px-2 py-0.5 rounded">{registrationDetails.accountNumber}</code>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Timeline steps block */}
-                            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-4 my-5 w-[553px]">
-                                <div className="flex gap-3">
-                                    <div className="w-5 h-5 bg-sky-600/10 rounded-full border border-sky-600 flex items-center justify-center text-sky-700 text-[10px] font-bold shrink-0 mt-0.5">
+                            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-2 my-2 w-[553px]">
+                                <div className="flex gap-2.5">
+                                    <div className="w-4 h-4 bg-sky-600/10 rounded-full border border-sky-600 flex items-center justify-center text-sky-700 text-[9px] font-bold shrink-0 mt-0.5">
                                         1
                                     </div>
-                                    <p className="text-slate-600 text-xs leading-normal font-sans text-left">
-                                        ZoikoNex reviews your profile and prepares a formula-based quote.
+                                    <p className="text-slate-600 text-[11px] leading-normal font-sans text-left">
+                                        Use your registered email to log in and access the subscriber dashboard.
                                     </p>
                                 </div>
-
-                                <div className="flex gap-3">
-                                    <div className="w-5 h-5 bg-sky-600/10 rounded-full border border-sky-600 flex items-center justify-center text-sky-700 text-[10px] font-bold shrink-0 mt-0.5">
+                                <div className="flex gap-2.5">
+                                    <div className="w-4 h-4 bg-sky-600/10 rounded-full border border-sky-600 flex items-center justify-center text-sky-700 text-[9px] font-bold shrink-0 mt-0.5">
                                         2
                                     </div>
-                                    <p className="text-slate-600 text-xs leading-normal font-sans text-left">
-                                        A Pricing Pack is emailed within 48 hours — includes TCO model, indicative ranges, and sample contract structure.
-                                    </p>
-                                </div>
-
-                                <div className="flex gap-3">
-                                    <div className="w-5 h-5 bg-sky-600/10 rounded-full border border-sky-600 flex items-center justify-center text-sky-700 text-[10px] font-bold shrink-0 mt-0.5">
-                                        3
-                                    </div>
-                                    <p className="text-slate-600 text-xs leading-normal font-sans text-left">
-                                        A follow-up is sent 5 business days later to answer questions or schedule a briefing.
+                                    <p className="text-slate-600 text-[11px] leading-normal font-sans text-left">
+                                        Create custom products, commercial offers, and price rules under the Product Catalog module.
                                     </p>
                                 </div>
                             </div>
 
                             {/* Bottom Actions */}
                             <div>
-                                <div className="w-[561px] h-px bg-slate-500/20 mb-[19px]" />
-                                <div className="flex items-center justify-center pt-4 pr-2.5">
+                                <div className="w-[561px] h-px bg-slate-500/20 mb-[14px]" />
+                                <div className="flex items-center justify-center pt-2 pr-2.5">
                                     <Link 
                                         href="/login" 
                                         className="text-sky-600 hover:text-sky-700 text-xs font-bold flex items-center gap-1 transition-colors"
                                         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                     >
-                                        Already approved? Sign in <ArrowRight size={14} />
+                                        Approved! Sign in to continue <ArrowRight size={14} />
                                     </Link>
                                 </div>
                             </div>
