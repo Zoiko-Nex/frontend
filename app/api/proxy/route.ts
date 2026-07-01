@@ -39,7 +39,9 @@ export async function POST(request: Request) {
 
     const authHeader = fetchHeaders["Authorization"] || fetchHeaders["authorization"];
     const isLoginPath = path === "/v1/sessions" || path === "/api/v1/auth/login";
-    if ((!authHeader || authHeader.length < 50) && !isLoginPath) {
+    const isMockToken = authHeader?.includes("mock_token_for_poc_demonstration");
+    
+    if ((!authHeader || (authHeader.length < 50 && !isMockToken)) && !isLoginPath) {
       try {
         const tokenUrl = portToUrl[8080] ? `${portToUrl[8080]}/oauth/v1/token` : "http://127.0.0.1:8080/oauth/v1/token";
         const tokenRes = await fetch(tokenUrl, {

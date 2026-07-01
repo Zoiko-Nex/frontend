@@ -194,7 +194,7 @@ const RegisterPage = () => {
                 </div>
 
                 {/* Right Panel (Form Card) */}
-                <div className="w-[610px] h-full bg-white text-slate-800 px-[25px] py-[32px] flex flex-col justify-between relative shrink-0">
+                <div className="w-[610px] h-full bg-white text-slate-800 px-[25px] py-[32px] flex flex-col justify-between relative shrink-0 rounded-r-[20px]">
                     
                     {/* Header Block */}
                     <div>
