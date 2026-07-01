@@ -77,8 +77,8 @@ export default function Footer() {
                 <li><Link href="/security" className="hover:text-lime-300 transition-colors">Security</Link></li>
                 <li><Link href="/compliance" className="hover:text-lime-300 transition-colors">Compliance</Link></li>
                 <li><Link href="/trust/governance" className="hover:text-lime-300 transition-colors">Governance</Link></li>
-                <li><Link href="/trust/evidence-architecture" className="hover:text-lime-300 transition-colors">Evidence Architecture</Link></li>
-                <li><Link href="/trust/trust-center" className="hover:text-lime-300 transition-colors">Trust Center</Link></li>
+                <li><Link href="/evidence" className="hover:text-lime-300 transition-colors">Evidence Architecture</Link></li>
+                <li><Link href="/trust" className="hover:text-lime-300 transition-colors">Trust Center</Link></li>
               </ul>
             </div>
 
@@ -90,7 +90,7 @@ export default function Footer() {
               <ul className="space-y-[10px] text-xs leading-5">
                 <li><Link href="/documentation" className="hover:text-lime-300 transition-colors">Documentation</Link></li>
                 <li><Link href="/api-reference" className="hover:text-lime-300 transition-colors">API Reference</Link></li>
-                <li><Link href="/api-reference" className="hover:text-lime-300 transition-colors">Developer Portal</Link></li>
+                <li><Link href="/developer-portal" className="hover:text-lime-300 transition-colors">Developer Portal</Link></li>
                 <li><Link href="/casestudies" className="hover:text-lime-300 transition-colors">Case Studies</Link></li>
                 <li><Link href="/blog-and-news" className="hover:text-lime-300 transition-colors">Blog</Link></li>
                 <li><Link href="/changelog" className="hover:text-lime-300 transition-colors">Changelog</Link></li>
@@ -108,7 +108,7 @@ export default function Footer() {
                 <li><Link href="/partners" className="hover:text-lime-300 transition-colors">Partners</Link></li>
                 <li><Link href="/careers" className="hover:text-lime-300 transition-colors">Careers</Link></li>
                 <li><Link href="/press-media" className="hover:text-lime-300 transition-colors">Press & Media</Link></li>
-                <li><Link href="/contact" className="hover:text-lime-300 transition-colors">Contact</Link></li>
+                <li><Link href="/contact-us" className="hover:text-lime-300 transition-colors">Contact</Link></li>
               </ul>
             </div>
 
@@ -122,7 +122,7 @@ export default function Footer() {
             <Link href="/Terms-and-services" className="hover:underline">Terms of Service</Link>
             <Link href="/cookies-policy" className="hover:underline">Cookie Policy</Link>
             <Link href="/acceptable-use" className="hover:underline">Acceptable Use</Link>
-            <Link href="#" className="hover:underline">Security</Link>
+            <Link href="/security" className="hover:underline">Security</Link>
             <Link href="/accessibility" className="hover:underline">Accessibility</Link>
           </div>
           <div className="mt-8 space-y-3 text-left lg:text-center text-[11px] leading-5 text-white/65">

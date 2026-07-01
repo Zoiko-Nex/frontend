@@ -23,7 +23,6 @@ const apiDomains = [
   { id: 18, name: 'Analytics Intelligence', endpoints: 22, desc: 'AI-driven insights for network optimization and revenue forecasting.' ,icon:"/image/developer/Icon (17).png"},
   {id:19,name:'Partner/Wholesale Ops',endpoints:14,desc:'Settlement engines and portal access for carrier and reseller ecosystems.',icon:"/image/developer/Icon (18).png"},
   {id:20 ,name:'API/Integration Layer',endpoints:30,desc:'Unified gateway with advanced rate-limiting and security standards.',icon:"/image/developer/Icon (19).png"}
-
 ];
 
 const guides = [
@@ -41,17 +40,13 @@ const sdks = [
 ];
 
 export default function ZoikoNexPage() {
-  // State to track if all domains are expanded or not
   const [showAllDomains, setShowAllDomains] = useState(false);
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans antialiased text-zinc-900 selection:bg-cyan-500 selection:text-white">
+    <div className="min-h-screen bg-stone-50 dark:bg-gray-950 font-sans antialiased text-zinc-900 dark:text-gray-100 selection:bg-cyan-500 selection:text-white transition-colors duration-300">
       
-      {/* 1. STICKY HEADER */}
-      
-
       {/* 2. HERO SECTION */}
-      <section className="relative overflow-hidden bg-gray-950 py-24 lg:py-32 text-white">
+      <section className="relative overflow-hidden bg-gray-950 py-24 lg:py-32 text-white border-b border-white/5">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_1px,transparent_1px)] [background-size:24px_24px]"></div>
         <div className="mx-auto max-w-6xl px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
           <div className="flex flex-col items-start gap-6">
@@ -110,37 +105,34 @@ export default function ZoikoNexPage() {
       {/* 3. API DOMAINS GRID */}
       <section id="platform" className="mx-auto max-w-7xl px-6 py-24">
         <div className="flex flex-col gap-4 mb-12">
-          <h2 className="text-4xl font-semibold tracking-tight text-zinc-900">Sovereign API Domains</h2>
-          <p className="max-w-2xl text-base text-zinc-600">
+          <h2 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-white">Sovereign API Domains</h2>
+          <p className="max-w-2xl text-base text-zinc-600 dark:text-gray-400">
             18 high-availability clusters providing atomic control over the entire monetization lifecycle.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500 ease-in-out">
           {apiDomains.map((domain, index) => {
-            // Check if the current element is past the first 6 items
             const isExtra = index >= 6;
 
             return (
               <div 
                 key={domain.id} 
-                className={`flex flex-col justify-between border border-stone-200 bg-white p-8 transition-all duration-300 transform
+                className={`flex flex-col justify-between border border-stone-200 dark:border-zinc-800 bg-white dark:bg-gray-900 p-8 transition-all duration-300 transform
                   ${isExtra && !showAllDomains ? 'hidden opacity-0 -translate-y-4 scale-95' : 'flex opacity-100 translate-y-0 scale-100'}
-                  hover:border-stone-400 hover:shadow-sm`}
+                  hover:border-stone-400 dark:hover:border-zinc-600 hover:shadow-sm`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-6">
-                    <img className="h-6 w-6  "
-                        src={domain.icon}
-                        alt="icon"  />
-                    <span className="rounded bg-stone-100 px-2 py-1 font-mono text-[10px] font-medium tracking-tight text-zinc-700">
+                    <img className="h-6 w-6 dark:brightness-110" src={domain.icon} alt="icon" />
+                    <span className="rounded bg-stone-100 dark:bg-zinc-800 px-2 py-1 font-mono text-[10px] font-medium tracking-tight text-zinc-700 dark:text-gray-300">
                       {domain.endpoints} ENDPOINTS
                     </span>
                   </div>
-                  <h3 className="text-xl font-semibold tracking-tight text-zinc-900 mb-2">{domain.name}</h3>
-                  <p className="text-sm text-zinc-600 leading-relaxed mb-6">{domain.desc}</p>
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white mb-2">{domain.name}</h3>
+                  <p className="text-sm text-zinc-600 dark:text-gray-400 leading-relaxed mb-6">{domain.desc}</p>
                 </div>
-                <a href={`#domain-${domain.id}`} className="group flex items-center gap-1.5 text-sm font-semibold text-sky-600 hover:text-sky-700">
+                <a href={`#domain-${domain.id}`} className="group flex items-center gap-1.5 text-sm font-semibold text-sky-600 dark:text-cyan-400 hover:text-sky-700 dark:hover:text-cyan-300">
                   Explore Domain &rarr;
                 </a>
               </div>
@@ -151,7 +143,7 @@ export default function ZoikoNexPage() {
         <div className="flex justify-center mt-12">
           <button 
             onClick={() => setShowAllDomains(!showAllDomains)}
-            className="rounded border border-zinc-400 px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-stone-100 transition active:scale-98 cursor-pointer"
+            className="rounded border border-zinc-400 dark:border-zinc-600 px-6 py-3 text-sm font-semibold text-zinc-900 dark:text-white hover:bg-stone-100 dark:hover:bg-zinc-900 transition active:scale-98 cursor-pointer"
           >
             {showAllDomains ? 'Show Less' : 'View All 18 Domains'}
           </button>
@@ -159,9 +151,8 @@ export default function ZoikoNexPage() {
       </section>
 
       {/* 4. SANDBOX & SDKS ENVIRONMENT */}
-      <section className="bg-gray-950 py-14 text-white">
+      <section className="bg-gray-950 py-14 text-white border-t border-b border-white/5">
         <div className="mx-auto max-w-6xl px-6 grid grid-cols-1 lg:grid-cols-2 gap-16">
-          {/* Environment Info */}
           <div className="flex flex-col justify-center gap-6">
             <span className="font-mono text-xs font-semibold tracking-wider text-cyan-500">ENVIRONMENT PROVISIONING</span>
             <h2 className="text-4xl font-semibold tracking-tight">90-Day Technical Sandbox</h2>
@@ -178,22 +169,19 @@ export default function ZoikoNexPage() {
             </ul>
           </div>
 
-          {/* Sovereign SDKs */}
           <div className="flex flex-col gap-4">
             <span className="font-mono text-xs font-semibold tracking-wider text-gray-500">SOVEREIGN SDKS</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {sdks.map((sdk, idx) => (
                 <div key={idx} className="border border-white/10 bg-white/5 p-6 rounded-xs hover:border-white/20 transition flex flex-col justify-between">
                   <div className="flex items-start justify-between mb-4">
-                    <img className='w-6 h-6'
-                    src={sdk.icon}/>
+                    <img className='w-6 h-6 dark:brightness-110' src={sdk.icon} alt={sdk.lang}/>
                     <span className="font-mono text-[10px] text-gray-500">{sdk.version}</span>
                   </div>
                   <div>
                     <h4 className="text-base font-bold text-white mb-2">{sdk.lang}</h4>
                     <a href="#github" className="inline-flex items-center gap-1.5 text-xs text-cyan-500 hover:underline">
-                      View on GitHub <img className="h-2.5 w-2.5 "
-                      src="/image/developer/Icon.svg"/>
+                      View on GitHub <img className="h-2.5 w-2.5" src="/image/developer/Icon.svg" alt="link-icon"/>
                     </a>
                   </div>
                 </div>
@@ -204,28 +192,27 @@ export default function ZoikoNexPage() {
       </section>
 
       {/* 5. POPULAR GUIDES */}
-      <section id="resources" className="bg-white py-24">
+      <section id="resources" className="bg-white dark:bg-gray-900 py-24 transition-colors duration-300">
         <div className="mx-auto max-w-6xl px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="flex flex-col items-start gap-6 lg:col-span-1">
-            <h2 className="text-4xl font-semibold tracking-tight text-zinc-900">Popular Guides</h2>
-            <p className="text-base text-zinc-600 leading-relaxed">
+            <h2 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-white">Popular Guides</h2>
+            <p className="text-base text-zinc-600 dark:text-gray-400 leading-relaxed">
               Start building with our comprehensive technical blueprints and operational standards.
             </p>
-            <a href="#docs" className="inline-flex items-center gap-2 text-base font-medium text-sky-600 hover:text-sky-700 group">
+            <a href="#docs" className="inline-flex items-center gap-2 text-base font-medium text-sky-600 dark:text-cyan-400 hover:text-sky-700 dark:hover:text-cyan-300 group">
               Documentation Home
-              <img className="h-4 w-4 "
-              src="/image/developer/Icon (20).png"/>
+              <img className="h-4 w-4 dark:brightness-200" src="/image/developer/Icon (20).png" alt="arrow"/>
             </a>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:col-span-2">
             {guides.map((guide, idx) => (
-              <div key={idx} className="border border-stone-200 p-6 flex flex-col justify-between hover:border-stone-400 transition">
+              <div key={idx} className="border border-stone-200 dark:border-zinc-800 p-6 flex flex-col justify-between hover:border-stone-400 dark:hover:border-zinc-600 transition bg-stone-50/50 dark:bg-gray-950/50">
                 <div>
-                  <h3 className="text-2xl font-semibold text-zinc-900 tracking-tight mb-2">{guide.title}</h3>
-                  <p className="text-sm text-zinc-600 mb-4 leading-relaxed">{guide.desc}</p>
+                  <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight mb-2">{guide.title}</h3>
+                  <p className="text-sm text-zinc-600 dark:text-gray-400 mb-4 leading-relaxed">{guide.desc}</p>
                 </div>
-                <span className="font-mono text-xs font-normal text-zinc-500">{guide.readTime}</span>
+                <span className="font-mono text-xs font-normal text-zinc-500 dark:text-gray-500">{guide.readTime}</span>
               </div>
             ))}
           </div>
@@ -233,24 +220,24 @@ export default function ZoikoNexPage() {
       </section>
 
       {/* 6. GLOBAL LIVE SYSTEM STATUS */}
-      <section className="border-t border-b border-stone-200 bg-stone-100 py-24">
+      <section className="border-t border-b border-stone-200 dark:border-zinc-800 bg-stone-100 dark:bg-gray-950 py-24 transition-colors duration-300">
         <div className="mx-auto max-w-6xl px-6 flex flex-col gap-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 font-mono text-xs font-semibold tracking-wider text-zinc-900">
+              <div className="flex items-center gap-2 font-mono text-xs font-semibold tracking-wider text-zinc-900 dark:text-white">
                 <span className="h-3 w-3 rounded-full bg-lime-400 animate-pulse"></span>
                 ALL SYSTEMS OPERATIONAL
               </div>
-              <h2 className="text-4xl font-semibold text-zinc-900">99.99% Availability</h2>
+              <h2 className="text-4xl font-semibold text-zinc-900 dark:text-white">99.99% Availability</h2>
             </div>
-            <div className="flex gap-8 border-l border-stone-300 pl-8">
+            <div className="flex gap-8 border-l border-stone-300 dark:border-zinc-700 pl-8">
               <div>
-                <div className="font-mono text-xs text-zinc-500">GLOBAL LATENCY</div>
-                <div className="text-2xl font-semibold text-black">18ms AVG</div>
+                <div className="font-mono text-xs text-zinc-500 dark:text-gray-400">GLOBAL LATENCY</div>
+                <div className="text-2xl font-semibold text-black dark:text-white">18ms AVG</div>
               </div>
               <div>
-                <div className="font-mono text-xs text-zinc-500">UPTIME (30D)</div>
-                <div className="text-2xl font-semibold text-black">99.998%</div>
+                <div className="font-mono text-xs text-zinc-500 dark:text-gray-400">UPTIME (30D)</div>
+                <div className="text-2xl font-semibold text-black dark:text-white">99.998%</div>
               </div>
             </div>
           </div>
@@ -258,14 +245,14 @@ export default function ZoikoNexPage() {
           {/* Regional Clusters Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {['US-East (Virginia)', 'EU-Central (Frankfurt)', 'Asia-Pacific (Singapore)'].map((region, idx) => (
-              <div key={idx} className="border border-stone-200 bg-white p-6 rounded-xs">
+              <div key={idx} className="border border-stone-200 dark:border-zinc-800 bg-white dark:bg-gray-900 p-6 rounded-xs">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-base font-bold text-zinc-900">{region}</h4>
-                  <span className="font-mono text-[10px] text-lime-800 bg-lime-100 px-2 py-0.5 rounded-sm">OPERATIONAL</span>
+                  <h4 className="text-base font-bold text-zinc-900 dark:text-white">{region}</h4>
+                  <span className="font-mono text-[10px] text-lime-800 dark:text-lime-400 bg-lime-100 dark:bg-lime-950/50 px-2 py-0.5 rounded-sm">OPERATIONAL</span>
                 </div>
                 <div className="grid grid-cols-10 gap-1 h-8">
                   {Array.from({ length: 10 }).map((_, barIdx) => (
-                    <div key={barIdx} className={`h-full ${barIdx === 5 && idx !== 1 ? 'bg-lime-400' : 'bg-lime-300'} rounded-xs`}></div>
+                    <div key={barIdx} className={`h-full ${barIdx === 5 && idx !== 1 ? 'bg-lime-400' : 'bg-lime-500'} rounded-xs`}></div>
                   ))}
                 </div>
               </div>
@@ -283,12 +270,10 @@ export default function ZoikoNexPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-4">
             <button className="rounded bg-white px-8 py-4 text-sm font-semibold text-black hover:bg-stone-100 transition flex items-center gap-2">
-<img className="h-4 w-4 "
-              src="/image/developer/Icon (21).png"/>              Technical Support
+              <img className="h-4 w-4" src="/image/developer/Icon (21).png" alt="support"/> Technical Support
             </button>
             <button className="rounded border border-white/20 px-8 py-4 text-sm font-semibold text-white hover:bg-white/5 transition flex items-center gap-2">
-<img className="h-4 w-4 "
-              src="/image/developer/Icon (22).png"/>              Developer Briefing
+              <img className="h-4 w-4" src="/image/developer/Icon (22).png" alt="briefing"/> Developer Briefing
             </button>
           </div>
         </div>
