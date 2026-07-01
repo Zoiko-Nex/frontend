@@ -455,13 +455,13 @@ export default function Header() {
         <div className="flex items-center gap-3">
           <Link
             href="/request-a-demo"
-            className="hidden sm:inline-block px-4 py-2 bg-white text-black rounded-xl text-xs font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 transition"
+            className="hidden sm:inline-block px-4 py-2 bg-white text-black rounded-lg text-xs font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 transition"
           >
             Request a Demo
           </Link>
           <Link
             href="/register"
-            className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-xl text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
+            className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
           >
             Get Started
           </Link>
@@ -582,14 +582,14 @@ export default function Header() {
               <Link
                 href="/register"
                 onClick={closeAllMenus}
-                className="block md:hidden w-full text-center py-3 bg-sky-600 text-white rounded-xl text-sm font-semibold shadow-sm hover:bg-sky-700 transition"
+                className="block md:hidden w-full text-center py-3 bg-sky-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-sky-700 transition"
               >
                 Get Started
               </Link>
               <Link
                 href="/request-a-demo"
                 onClick={closeAllMenus}
-                className="block sm:hidden w-full text-center py-3 bg-white text-black border border-slate-200 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-50 transition"
+                className="block sm:hidden w-full text-center py-3 bg-white text-black border border-slate-200 rounded-lg text-sm font-semibold shadow-sm hover:bg-slate-50 transition"
               >
                 Request a Demo
               </Link>

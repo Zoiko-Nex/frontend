@@ -88,8 +88,29 @@ const SERVICE_BASE_URLS: Record<string, string | undefined> = {
   NEXT_PUBLIC_SVC_REPORTING: process.env.NEXT_PUBLIC_SVC_REPORTING,
 };
 
-/** Resolve a service's base URL from its NEXT_PUBLIC env var, falling back to localhost. */
+const PORT_TO_LIVE_URL: Record<number, string> = {
+  8080: "https://identity.api.zoikonex.com",
+  8081: "https://customer.api.zoikonex.com",
+  8082: "https://catalogue.api.zoikonex.com",
+  8083: "https://ordering.api.zoikonex.com",
+  8084: "https://finance.api.zoikonex.com",
+  8085: "https://rating.api.zoikonex.com",
+  8086: "https://settlement.api.zoikonex.com",
+  8087: "https://assurance.api.zoikonex.com",
+  8089: "https://tax.api.zoikonex.com",
+  8090: "https://fraud.api.zoikonex.com",
+  8091: "https://kyc.api.zoikonex.com",
+  8092: "https://billing.api.zoikonex.com",
+  8093: "https://evidence.api.zoikonex.com",
+  8094: "https://usage.api.zoikonex.com",
+  8095: "https://dunning.api.zoikonex.com",
+  8096: "https://payments.api.zoikonex.com",
+  8097: "https://integration.api.zoikonex.com",
+  8098: "https://reporting.api.zoikonex.com",
+};
+
+/** Resolve a service's base URL from its NEXT_PUBLIC env var, falling back to the live domain or localhost. */
 export function serviceBaseUrl(svc: ServiceDef): string {
   const fromEnv = SERVICE_BASE_URLS[svc.envVar];
-  return fromEnv || `http://localhost:8081`;
+  return fromEnv || PORT_TO_LIVE_URL[svc.port] || `http://localhost:${svc.port}`;
 }
