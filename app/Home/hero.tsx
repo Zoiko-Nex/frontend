@@ -99,9 +99,11 @@ export default function HomePage() {
                 >
                   Request a Demo →
                 </Link>
+                <Link href="/platform-architecture">
                 <button className="px-6 md:px-8 py-3.5 md:py-4 bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 rounded-xl font-semibold text-gray-900 dark:text-white hover:bg-slate-50 dark:hover:bg-gray-700 transition duration-200">
                   View Platform Architecture
                 </button>
+                </Link>
               </div>
 
               {/* Features */}
