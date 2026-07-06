@@ -157,29 +157,7 @@ async function request<T>(method: string, serviceKey: string, path: string, body
     }
   }
 
-  // --- POC Bypass for Integration Testing UI ---
-  // If the backend returns an error (like 401, 502, or 400) because the test data doesn't exist,
-  // we will intercept it here and inject a success response so the UI transitions smoothly.
   if (!proxyPayload.ok) {
-    const isMockToken = session?.accessToken === 'mock_token_for_poc_demonstration';
-    if (isMockToken) {
-      console.warn(`[POC Bypass] Intercepted ${proxyPayload.status} from ${svc.label}${path}. Returning mock success.`);
-      
-      // Attempt to return sensible fake data for the UI
-      let fakeData: any = { id: genUuid(), status: "CREATED", message: "MOCKED_SUCCESS" };
-      
-      if (path.includes("dashboard")) {
-          fakeData = { CREATED: 12, AUTHORISED: 5, CAPTURED: 200, SETTLED: 150 };
-      } else if (path.includes("invoices")) {
-          fakeData = { items: [{ invoice_id: genUuid(), invoice_number: "INV-MOCK", status: "DRAFT", total_amount_minor_units: 15000, currency_code: "USD" }] };
-      } else if (path.includes("payment-intents")) {
-          fakeData = { items: [{ payment_intent_id: genUuid(), status: "CREATED", payment_rail: "CARD", provider_name: "STRIPE", amount_minor_units: 15000, currency_code: "USD" }] };
-      }
-      
-      return fakeData as T;
-    }
-    
-    // If not a mock token, throw the real error
     throw new ApiException(proxyPayload.status, typeof proxyPayload.data === "object" ? proxyPayload.data : { message: String(proxyPayload.data) });
   }
 

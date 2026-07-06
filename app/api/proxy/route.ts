@@ -37,32 +37,6 @@ export async function POST(request: Request) {
       ...headers
     };
 
-    const authHeader = fetchHeaders["Authorization"] || fetchHeaders["authorization"];
-    const isLoginPath = path === "/v1/sessions" || path === "/api/v1/auth/login";
-    const isMockToken = authHeader?.includes("mock_token_for_poc_demonstration");
-    
-    if ((!authHeader || (authHeader.length < 50 && !isMockToken)) && !isLoginPath) {
-      try {
-        const tokenUrl = portToUrl[8080] ? `${portToUrl[8080]}/oauth/v1/token` : "http://127.0.0.1:8080/oauth/v1/token";
-        const tokenRes = await fetch(tokenUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Correlation-ID": "c7a8b9c0-1e2f-3a4b-5c6d-7e8f9a0b1c2d"
-          },
-          body: "grant_type=authorization_code"
-        });
-        if (tokenRes.ok) {
-          const tokenData = await tokenRes.json();
-          if (tokenData.access_token) {
-            fetchHeaders["Authorization"] = `Bearer ${tokenData.access_token}`;
-          }
-        }
-      } catch (e) {
-        console.error("Auto-token generation failed:", e);
-      }
-    }
-
     const fetchOptions: RequestInit = {
       method: method || "GET",
       headers: fetchHeaders,

@@ -70,17 +70,6 @@ export async function login(
     throw new ApiException(502, { code: "SERVICE_UNREACHABLE", message: `Identity service unreachable via proxy.`, retryable: true });
   }
 
-  // --- POC Bypass for Integration UI ---
-  if (!proxyPayload.ok && email.endsWith('@acme.com')) {
-    console.warn(`[POC Bypass] Admin login intercepted for ${email}. Injecting mock token.`);
-    persist({
-      access_token: 'mock_token_for_poc_demonstration',
-      refresh_token: 'mock_refresh',
-      expires_in: 86400
-    }, tenantId, brandId);
-    return { status: "ok" };
-  }
-
   const body = proxyPayload.data || {};
   if (proxyPayload.status === 401 && body.error === "MFA_REQUIRED") {
     return { status: "mfa", stepUpToken: body.step_up_token };
