@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { NAV } from "./nav";
 import { useAuth } from "./useAuth";
 import { logout } from "@/lib/admin/auth";
+import { fetchMe, canAccessDomain } from "@/lib/admin/permissions";
 import LoginScreen from "./LoginScreen";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -14,9 +16,28 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
 
+  const me = useQuery({
+    queryKey: ["identity", "me"],
+    queryFn: fetchMe,
+    enabled: authenticated,
+    staleTime: 60_000,
+  });
+
   if (!authenticated) {
     return <LoginScreen />;
   }
+
+  // Nav items the caller's role/policies don't grant are hidden entirely —
+  // groups that end up empty are dropped too, so a narrowly-scoped sub-user
+  // never sees an empty section header.
+  const visibleNav = NAV
+    .map((group) => ({ ...group, items: group.items.filter((item) => canAccessDomain(item.domain, me.data)) }))
+    .filter((group) => group.items.length > 0);
+
+  const currentItem = NAV.flatMap((g) => g.items).find(
+    (item) => pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href)),
+  );
+  const denied = !me.isLoading && currentItem && !canAccessDomain(currentItem.domain, me.data);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -39,7 +60,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         <nav style={{ flex: 1, overflowY: "auto", padding: "12px 10px 24px" }}>
-          {NAV.map((group) => (
+          {visibleNav.map((group) => (
             <div key={group.group} style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--ax-text-faint)", padding: "4px 10px 7px", fontWeight: 600 }}>
                 {group.group}
@@ -101,7 +122,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </header>
 
         <main style={{ flex: 1, padding: "28px 32px", maxWidth: 1320, width: "100%", animation: "ax-fade .25s ease-out" }}>
-          {children}
+          {denied ? (
+            <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--ax-text-dim)" }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ax-text)" }}>Access denied</div>
+              <div style={{ fontSize: 13, marginTop: 8 }}>
+                Your role doesn&apos;t grant access to {currentItem?.label}. Ask a tenant admin to assign the relevant permission.
+              </div>
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>
