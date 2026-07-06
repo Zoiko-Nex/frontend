@@ -122,21 +122,31 @@ async function tryRefresh(session: PlatformSession): Promise<PlatformSession | n
   }
 }
 
+export interface PlatformBrand {
+  id: string;
+  name: string;
+  code_name: string;
+}
+
 export interface PlatformTenant {
   tenant_id: string;
   name: string;
   domain_suffix: string;
   status: string;
   brand_count: number;
+  brands: PlatformBrand[];
   created_at: string;
   updated_at: string;
 }
 
-export async function fetchTenants(): Promise<PlatformTenant[]> {
+/** Authenticated request against identity-tenancy, with one silent
+ *  refresh-and-retry on a 401 (refresh tokens rotate). Every platform-admin
+ *  API call shares this so the retry logic lives in exactly one place. */
+async function authedRequest(method: string, path: string, body?: unknown): Promise<any> {
   let session = getPlatformSession();
   if (!session) throw new ApiException(401, { code: "UNAUTHENTICATED", message: "Not signed in." });
 
-  const doFetch = (s: PlatformSession) => proxy("GET", "/v1/tenants", { headers: { authorization: `Bearer ${s.accessToken}` } });
+  const doFetch = (s: PlatformSession) => proxy(method, path, { headers: { authorization: `Bearer ${s.accessToken}` }, body });
 
   let payload = await doFetch(session);
   if (payload.status === 401) {
@@ -150,5 +160,38 @@ export async function fetchTenants(): Promise<PlatformTenant[]> {
     if (payload.status === 401) clearPlatformSession();
     throw new ApiException(payload.status, typeof payload.data === "object" ? payload.data : { message: String(payload.data) });
   }
-  return (payload.data?.tenants ?? []) as PlatformTenant[];
+  return payload.data;
+}
+
+export async function fetchTenants(): Promise<PlatformTenant[]> {
+  const data = await authedRequest("GET", "/v1/tenants");
+  return (data?.tenants ?? []) as PlatformTenant[];
+}
+
+export interface ProvisionTenantInput {
+  name: string;
+  domain_suffix: string;
+  brand_name: string;
+  brand_code: string;
+}
+
+export async function provisionTenant(input: ProvisionTenantInput): Promise<{ tenant_id: string; brand_id: string }> {
+  return authedRequest("POST", "/v1/tenants", input);
+}
+
+export interface CreateTenantAdminInput {
+  email: string;
+  full_name: string;
+  password: string;
+  brand_id: string;
+}
+
+export async function createTenantAdmin(tenantId: string, input: CreateTenantAdminInput): Promise<{ user_id: string; email: string }> {
+  return authedRequest("POST", `/v1/tenants/${tenantId}/admin-user`, input);
+}
+
+export type TenantLifecycleAction = "ACTIVATE" | "SUSPEND" | "REACTIVATE" | "ARCHIVE";
+
+export async function updateTenantLifecycle(tenantId: string, action: TenantLifecycleAction, reason?: string): Promise<void> {
+  await authedRequest("PATCH", `/v1/tenants/${tenantId}`, { action, reason });
 }
