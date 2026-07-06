@@ -13,33 +13,10 @@ import {
   CopyId, LoadingRows, EmptyState, ErrorBanner,
 } from "../admin/_components/ui";
 import StatusBadge from "../admin/_components/StatusBadge";
-
-function loginUrl() {
-  if (typeof window === "undefined") return "https://zoikonex.com/admin";
-  return `${window.location.origin}/admin`;
-}
+import { loginUrl, buildInvite as buildInviteBase, CopyButton } from "../admin/_components/invite";
 
 function buildInvite(opts: { tenantName: string; tenantId: string; email: string; password?: string }) {
-  const lines = [
-    `ZoikoNex login — ${opts.tenantName}`,
-    `URL: ${loginUrl()}`,
-    `Tenant ID: ${opts.tenantId}`,
-    `Email: ${opts.email}`,
-  ];
-  if (opts.password) lines.push(`Temporary password: ${opts.password}`);
-  return lines.join("\n");
-}
-
-function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Button
-      variant={copied ? "primary" : "default"}
-      onClick={() => { navigator.clipboard?.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
-    >
-      {copied ? "Copied!" : label}
-    </Button>
-  );
+  return buildInviteBase({ label: opts.tenantName, tenantId: opts.tenantId, email: opts.email, password: opts.password });
 }
 
 export default function PlatformControlRoom() {

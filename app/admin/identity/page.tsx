@@ -12,6 +12,7 @@ import {
   CopyId, EmptyState, LoadingRows, ErrorBanner,
 } from "../_components/ui";
 import StatusBadge from "../_components/StatusBadge";
+import { buildInvite, CopyButton, generatePassword } from "../_components/invite";
 
 type Tab = "users" | "sessions" | "roles" | "policies";
 
@@ -49,21 +50,13 @@ function tabStyle(active: boolean): React.CSSProperties {
 /* ───────── Users ───────── */
 function UsersTab() {
   const qc = useQueryClient();
-  const { session } = useAuth();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ email: "", full_name: "", brand_id: session?.brandId || "" });
 
   const q = useQuery({
     queryKey: ["identity", "users"],
     queryFn: () => api.get<{ users?: User[]; items?: User[] }>("identity", "/v1/users"),
   });
   const users = q.data?.users ?? q.data?.items ?? [];
-
-  const create = useMutation({
-    mutationFn: () => api.post("identity", "/v1/users", form),
-    onSuccess: () => { toast.success("User created"); setOpen(false); setForm({ email: "", full_name: "", brand_id: session?.brandId || "" }); qc.invalidateQueries({ queryKey: ["identity", "users"] }); },
-    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create user"),
-  });
 
   return (
     <div>
@@ -88,15 +81,88 @@ function UsersTab() {
         </Table>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New user"
-        footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button variant="primary" loading={create.isPending} onClick={() => create.mutate()}>Create user</Button></>}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Field label="Email"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
-          <Field label="Full name"><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></Field>
-          <Field label="Brand ID" hint="UUID of the brand this user belongs to."><Input className="mono" value={form.brand_id} onChange={(e) => setForm({ ...form, brand_id: e.target.value })} /></Field>
+      {open && <NewUserModal onClose={() => setOpen(false)} onDone={() => qc.invalidateQueries({ queryKey: ["identity", "users"] })} />}
+    </div>
+  );
+}
+
+/* ───────── New user: identity + permissions in one screen ───────── */
+function NewUserModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { session } = useAuth();
+  const domains = permissionDomains();
+  const [form, setForm] = useState({
+    email: "", full_name: "", password: "",
+    brand_id: session?.brandId || "",
+  });
+  const [granted, setGranted] = useState<Set<string>>(new Set());
+  const [result, setResult] = useState<{ email: string; password: string } | null>(null);
+
+  const toggle = (domain: string) => {
+    const next = new Set(granted);
+    if (next.has(domain)) next.delete(domain); else next.add(domain);
+    setGranted(next);
+  };
+
+  const create = useMutation({
+    mutationFn: () => api.post("identity", "/v1/users", {
+      email: form.email, full_name: form.full_name, brand_id: form.brand_id, password: form.password,
+      rules: Array.from(granted).map((domain) => ({ effect: "allow", action_pattern: `${domain}:*`, resource_pattern: "*" })),
+    }),
+    onSuccess: () => { toast.success("User created"); onDone(); setResult({ email: form.email, password: form.password }); },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create user"),
+  });
+
+  const valid = form.email && form.full_name && form.brand_id && form.password.length >= 12;
+
+  if (result) {
+    const invite = buildInvite({ label: "your account", tenantId: session?.tenantId, email: result.email, password: result.password });
+    return (
+      <Modal open onClose={onClose} title="User created" width={460}
+        footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <p style={{ fontSize: 13, color: "var(--ax-text-dim)" }}>
+            This is the only time the temporary password is shown. Copy it now and share it with them securely.
+          </p>
+          <pre className="mono" style={{ fontSize: 12.5, background: "var(--ax-bg-overlay)", border: "1px solid var(--ax-border)", borderRadius: 8, padding: 14, whiteSpace: "pre-wrap", margin: 0 }}>{invite}</pre>
+          <CopyButton text={invite} label="Copy login details" />
         </div>
       </Modal>
-    </div>
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} title="New user" width={520}
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!valid} loading={create.isPending} onClick={() => create.mutate()}>Create user</Button></>}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="Email"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+        <Field label="Full name"><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></Field>
+        <Field label="Temporary password" hint="At least 12 characters — shown once after creation, so save it.">
+          <div style={{ display: "flex", gap: 8 }}>
+            <Input type="text" className="mono" style={{ flex: 1 }} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <Button variant="default" type="button" onClick={() => setForm({ ...form, password: generatePassword() })}>Generate</Button>
+          </div>
+        </Field>
+
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ax-text-dim)", marginBottom: 10 }}>
+            What can they access?
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+            {domains.map((d) => (
+              <label key={d.domain} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={granted.has(d.domain)} onChange={() => toggle(d.domain)} />
+                {d.label}
+              </label>
+            ))}
+          </div>
+          {granted.size === 0 && (
+            <p style={{ fontSize: 12, color: "var(--ax-text-faint)", marginTop: 8 }}>
+              Nothing selected — this user will be able to sign in but won&apos;t see any dashboard section yet.
+            </p>
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
