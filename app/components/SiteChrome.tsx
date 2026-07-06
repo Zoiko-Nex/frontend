@@ -6,17 +6,19 @@ import Footer from "./Footer";
 
 /**
  * SiteChrome renders the public marketing Header/Footer for every route EXCEPT
- * the admin console (`/admin/**`), which owns its own full-screen chrome.
+ * the admin consoles (`/admin/**`, `/platform-admin/**`), which own their own
+ * full-screen chrome.
  *
  * This keeps the marketing site untouched (zero route moves) while giving the
- * operations console a clean canvas.
+ * operations consoles a clean canvas.
  */
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
+  const isPlatformAdmin = pathname?.startsWith("/platform-admin");
   const isDashboard = pathname?.startsWith("/dashboards");
 
-  if (isAdmin || isDashboard) {
+  if (isAdmin || isPlatformAdmin || isDashboard) {
     return <>{children}</>;
   }
 
