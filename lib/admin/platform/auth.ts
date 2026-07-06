@@ -135,18 +135,24 @@ export interface PlatformTenant {
   status: string;
   brand_count: number;
   brands: PlatformBrand[];
+  user_count: number;
   created_at: string;
   updated_at: string;
 }
 
 /** Authenticated request against identity-tenancy, with one silent
  *  refresh-and-retry on a 401 (refresh tokens rotate). Every platform-admin
- *  API call shares this so the retry logic lives in exactly one place. */
-async function authedRequest(method: string, path: string, body?: unknown): Promise<any> {
+ *  API call shares this so the retry logic lives in exactly one place.
+ *
+ *  extraHeaders lets a platform-admin operate on a SPECIFIC tenant's
+ *  tenant-scoped routes (e.g. listing that tenant's users) by setting
+ *  X-Tenant-ID directly — those routes read tenant from the header, not the
+ *  caller's own JWT, and role_platform_admin bypasses their scope check. */
+async function authedRequest(method: string, path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<any> {
   let session = getPlatformSession();
   if (!session) throw new ApiException(401, { code: "UNAUTHENTICATED", message: "Not signed in." });
 
-  const doFetch = (s: PlatformSession) => proxy(method, path, { headers: { authorization: `Bearer ${s.accessToken}` }, body });
+  const doFetch = (s: PlatformSession) => proxy(method, path, { headers: { authorization: `Bearer ${s.accessToken}`, ...extraHeaders }, body });
 
   let payload = await doFetch(session);
   if (payload.status === 401) {
@@ -194,4 +200,17 @@ export type TenantLifecycleAction = "ACTIVATE" | "SUSPEND" | "REACTIVATE" | "ARC
 
 export async function updateTenantLifecycle(tenantId: string, action: TenantLifecycleAction, reason?: string): Promise<void> {
   await authedRequest("PATCH", `/v1/tenants/${tenantId}`, { action, reason });
+}
+
+export interface TenantUser {
+  user_id: string;
+  email: string;
+  full_name: string;
+  status: string;
+  created_at: string;
+}
+
+export async function fetchTenantUsers(tenantId: string): Promise<TenantUser[]> {
+  const data = await authedRequest("GET", "/v1/users", undefined, { "x-tenant-id": tenantId });
+  return (data?.users ?? []) as TenantUser[];
 }
