@@ -608,7 +608,7 @@ export default function DeploymentPage() {
             </div>
 
             {/* Card 2: Dedicated Cloud */}
-            <div className="px-8 pt-8 pb-14 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300/20 flex flex-col items-start h-full">
+            <div className="p-8 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300/20 flex flex-col items-start h-full">
               <div className="mb-4">
                 <span className="text-lime-800 text-xs font-bold font-mono leading-3 tracking-wider block mb-4 uppercase">
                   Enterprise Isolation
@@ -655,14 +655,14 @@ export default function DeploymentPage() {
               </div>
 
               <div className="pt-4 mt-auto w-full">
-                <Link href="/Hybrid" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
+                <Link href="/hybrid" className="text-sky-600 text-base font-bold leading-6 hover:text-sky-700 transition">
                   View Roadmap
                 </Link>
               </div>
             </div>
 
             {/* Card 4: Sovereign */}
-            <div className="px-8 pt-8 pb-14 bg-gray-800 rounded-lg outline outline-1 outline-offset-[-1px] outline-white/10 flex flex-col items-start h-full">
+            <div className="p-8 bg-gray-800 rounded-lg outline outline-1 outline-offset-[-1px] outline-white/10 flex flex-col items-start h-full">
               <div className="mb-4">
                 <span className="text-lime-300 text-xs font-bold font-mono leading-3 tracking-wider block mb-4 uppercase">
                   Maximum Autonomy

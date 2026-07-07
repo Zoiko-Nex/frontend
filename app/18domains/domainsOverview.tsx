@@ -24,13 +24,13 @@ export default function Domains() {
             ZoikoNex unifies the critical domains required to launch, monetize, manage, govern, and scale modern telecom services—from customer onboarding and product catalog to real-time charging, billing, taxation, eSIM lifecycle management, compliance, APIs, AI governance, and evidence-grade operational control.
           </p>
           <div className="flex flex-wrap items-center gap-6 mt-4">
-            <Link href="#" className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 rounded-xl flex justify-center items-center gap-2 transition">
+            <Link href="/contact-us" className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 rounded-xl flex justify-center items-center gap-2 transition">
               <span className="text-white text-lg font-normal font-['Inter'] leading-7">Request a Platform Briefing</span>
               <svg className="w-5 h-5 text-white ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
               </svg>
             </Link>
-            <Link href="#" className="px-8 py-4 rounded-xl outline outline-1 outline-offset-[-1px] outline-zinc-500 hover:outline-zinc-300 hover:bg-white/5 transition flex justify-center items-center">
+            <Link href="#18-domains" className="px-8 py-4 rounded-xl outline outline-1 outline-offset-[-1px] outline-zinc-500 hover:outline-zinc-300 hover:bg-white/5 transition flex justify-center items-center">
               <span className="text-white text-lg font-normal font-['Inter'] leading-7">Explore the 18 Domains</span>
             </Link>
           </div>
@@ -95,7 +95,7 @@ export default function Domains() {
       </section>
 
       {/* DOMAINS GRID */}
-      <section className="max-w-7xl mx-auto px-6 py-24">
+      <section id="18-domains" className="max-w-7xl mx-auto px-6 py-24">
         <div className="mb-16">
           <div className="text-sky-600 text-[10px] font-bold font-['JetBrains_Mono'] uppercase tracking-wider mb-2">THE ARCHITECTURE</div>
           <h2 className="text-white text-3xl font-semibold font-['Hanken_Grotesk']">A Unified Sovereign Ecosystem</h2>
@@ -194,7 +194,7 @@ export default function Domains() {
       <section className="w-full bg-[#191a21] py-24 border-t border-gray-800">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20">
-            <h2 className="text-5xl font-bold text-[#262835] font-['Hanken_Grotesk'] mb-4">Value Architecture</h2>
+            <h2 className="text-white text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px] mb-4">Value Architecture</h2>
             <p className="text-gray-500 text-[11px] font-medium">Strategic impact mapped by institutional role.</p>
           </div>
 
@@ -218,8 +218,8 @@ export default function Domains() {
                 ].map((row, idx) => (
                   <tr key={idx} className="border-b border-[#2d303f]/50">
                     <td className="py-7 font-bold text-white text-xs">{row[0]}</td>
-                    <td className="py-7 text-gray-500 text-xs">{row[1]}</td>
-                    <td className="py-7 text-gray-300 text-xs">{row[2]}</td>
+                    <td className="py-7 text-slate-300 text-xs">{row[1]}</td>
+                    <td className="py-7 text-slate-200 text-xs">{row[2]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -377,6 +377,25 @@ export default function Domains() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/image/18domain/eight.png" alt="Microchip" className="w-full h-auto object-cover rounded-sm shadow-2xl opacity-80" />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA SECTION */}
+      <section className="w-full max-w-7xl mx-auto px-6 py-28 flex justify-center items-center">
+        <div className="w-full max-w-[896px] p-8 md:p-12 bg-gray-900/60 rounded-3xl border border-white/10 backdrop-blur-[6px] flex flex-col justify-center items-center gap-8">
+          <div className="flex flex-col justify-center items-center">
+            <h2 className="text-center text-white text-3xl md:text-5xl font-normal font-['Hanken_Grotesk'] leading-tight md:leading-[58px]">
+              Map ZoikoNex to your telecom<br className="hidden md:block"/>operating model.
+            </h2>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 w-full">
+            <Link href="/contact-us" className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-xl flex justify-center items-center">
+              <span className="text-center text-white text-lg md:text-xl font-normal font-['Inter'] leading-7">Request a Platform Briefing</span>
+            </Link>
+            <Link href="/api-reference" className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 rounded-xl border border-zinc-500 hover:bg-white/5 transition-colors flex justify-center items-center">
+              <span className="text-center text-white text-lg md:text-xl font-normal font-['Inter'] leading-7">View API Reference</span>
+            </Link>
           </div>
         </div>
       </section>

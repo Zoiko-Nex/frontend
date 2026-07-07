@@ -24,12 +24,12 @@ export default function EvidenceLedger() {
               <p className="text-gray-500 text-lg font-normal font-['Inter'] leading-7">The Nexus Sovereign Evidence Ledger is designed for preserving<br className="hidden lg:block"/>traceable records for billing, tax, and AI. Establish a mathematical<br className="hidden lg:block"/>proof-of-transaction that ensures regulatory compliance and<br className="hidden lg:block"/>absolute financial clarity.</p>
             </div>
             <div className="w-full pt-1 flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4">
-              <button className="w-full sm:w-80 px-12 py-4 bg-[#3182a4] hover:bg-[#2b728f] transition-colors rounded-sm flex flex-col justify-center items-center text-white text-sm font-semibold font-['Inter'] leading-4">
+              <Link href="/contact-us" className="w-full sm:w-80 px-12 py-4 bg-[#3182a4] hover:bg-[#2b728f] transition-colors rounded-sm flex flex-col justify-center items-center text-white text-sm font-semibold font-['Inter'] leading-4 text-center">
                 Request an Evidence Architecture Briefing
-              </button>
-              <button className="w-full sm:w-64 px-16 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white/40 hover:bg-white/5 transition-colors flex flex-col justify-center items-center text-white text-sm font-semibold font-['Inter'] leading-4">
-                View Evidence Architecture
-              </button>
+              </Link>
+              <Link href="/trust/evidence-architecture" className="w-full sm:w-64 px-16 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white/40 hover:bg-white/5 transition-colors flex flex-col justify-center items-center text-white text-sm font-semibold font-['Inter'] leading-4 text-center">
+                View Evidence<br/>Architecture
+              </Link>
             </div>
           </div>
           
@@ -106,6 +106,8 @@ export default function EvidenceLedger() {
           </div>
         </div>
       </section>
+
+
 
       {/* WHY EVIDENCE MATTERS */}
       <section className="w-full py-20 bg-stone-50 flex flex-col justify-center items-center">
@@ -344,6 +346,84 @@ export default function EvidenceLedger() {
 
           </div>
         </div>
+      </section>
+
+      {/* EVENT TO EVIDENCE JOURNEY */}
+      <section id="architecture" className="w-full py-20 bg-stone-50 flex flex-col justify-center items-center overflow-x-auto overflow-y-hidden">
+          <div className="w-full max-w-[1280px] px-6 flex flex-col justify-start items-start gap-16 min-w-[1000px]">
+              <div className="self-stretch flex flex-col justify-start items-center">
+                  <div className="text-center justify-center text-black text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px]">Event-to-Evidence Journey</div>
+              </div>
+              <div className="self-stretch relative inline-flex justify-between items-start">
+                  <div className="w-40 self-stretch inline-flex flex-col justify-start items-center gap-2 z-10 relative">
+                      <div className="w-12 h-12 bg-lime-300 rounded-xl inline-flex justify-center items-center">
+                          <div className="text-center justify-center text-lime-950 text-lg font-bold font-['Nimbus_Sans'] leading-7">1</div>
+                      </div>
+                      <div className="self-stretch pt-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Event Occurs</div>
+                      </div>
+                      <div className="self-stretch px-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-700 text-base font-normal font-['Nimbus_Sans'] leading-6">Network or logic<br/>event triggers in<br/>the stack.</div>
+                      </div>
+                  </div>
+                  <div className="w-40 self-stretch inline-flex flex-col justify-start items-center gap-2 z-10 relative">
+                      <div className="w-12 h-12 bg-lime-300 rounded-xl inline-flex justify-center items-center">
+                          <div className="text-center justify-center text-lime-950 text-lg font-bold font-['Nimbus_Sans'] leading-7">2</div>
+                      </div>
+                      <div className="self-stretch pt-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Extraction</div>
+                      </div>
+                      <div className="self-stretch px-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-700 text-base font-normal font-['Nimbus_Sans'] leading-6">Atomic data<br/>capture from<br/>source stream.</div>
+                      </div>
+                  </div>
+                  <div className="w-40 self-stretch inline-flex flex-col justify-start items-center gap-2 z-10 relative">
+                      <div className="w-12 h-12 bg-lime-300 rounded-xl inline-flex justify-center items-center">
+                          <div className="text-center justify-center text-lime-950 text-lg font-bold font-['Nimbus_Sans'] leading-7">3</div>
+                      </div>
+                      <div className="self-stretch pt-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Canonical Map</div>
+                      </div>
+                      <div className="self-stretch px-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-700 text-base font-normal font-['Nimbus_Sans'] leading-6">Mapping raw data<br/>to Evidence<br/>Object Model.</div>
+                      </div>
+                  </div>
+                  <div className="w-40 self-stretch inline-flex flex-col justify-start items-center gap-2 z-10 relative">
+                      <div className="w-12 h-12 bg-lime-300 rounded-xl inline-flex justify-center items-center">
+                          <div className="text-center justify-center text-lime-950 text-lg font-bold font-['Nimbus_Sans'] leading-7">4</div>
+                      </div>
+                      <div className="self-stretch pt-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Validation</div>
+                      </div>
+                      <div className="self-stretch px-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-700 text-base font-normal font-['Nimbus_Sans'] leading-6">Schema and<br/>cryptographic<br/>integrity checks.</div>
+                      </div>
+                  </div>
+                  <div className="w-40 self-stretch inline-flex flex-col justify-start items-center gap-2 z-10 relative">
+                      <div className="w-12 h-12 bg-lime-300 rounded-xl inline-flex justify-center items-center">
+                          <div className="text-center justify-center text-lime-950 text-lg font-bold font-['Nimbus_Sans'] leading-7">5</div>
+                      </div>
+                      <div className="self-stretch pt-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Persistence</div>
+                      </div>
+                      <div className="self-stretch px-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-700 text-base font-normal font-['Nimbus_Sans'] leading-6">Immutable commit<br/>to the Sovereign<br/>Ledger.</div>
+                      </div>
+                  </div>
+                  <div className="w-40 self-stretch inline-flex flex-col justify-start items-center gap-2 z-10 relative">
+                      <div className="w-12 h-12 bg-lime-300 rounded-xl inline-flex justify-center items-center">
+                          <div className="text-center justify-center text-lime-950 text-lg font-bold font-['Nimbus_Sans'] leading-7">6</div>
+                      </div>
+                      <div className="self-stretch pt-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Operational<br/>Use</div>
+                      </div>
+                      <div className="self-stretch px-4 flex flex-col justify-start items-center">
+                          <div className="text-center justify-center text-zinc-700 text-base font-normal font-['Nimbus_Sans'] leading-6">Audit, billing, and<br/>AI feedback ready.</div>
+                      </div>
+                  </div>
+                  <div className="w-full h-0.5 left-0 top-[24px] absolute bg-gradient-to-r from-lime-300/0 via-lime-300 to-lime-300/0"></div>
+              </div>
+          </div>
       </section>
 
       {/* EVIDENCE OBJECT MODEL */}

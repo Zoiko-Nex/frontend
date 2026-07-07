@@ -74,32 +74,33 @@ export default function PhasedDeployment() {
               transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
             }}
           >
-            {/* Eyebrow */}
-            <p className="text-[0.6rem] tracking-[0.3em] text-[#2D9AE3] uppercase font-semibold mb-5">
-              STRUCTURED MIGRATION
-            </p>
-
             <h2
-              className="text-white font-extrabold leading-[1.15] mb-12"
-              style={{ fontSize: "clamp(1.8rem, 3.5vw, 3rem)", letterSpacing: "-0.02em" }}
+              className="text-white font-bold leading-[1.15] mb-12"
+              style={{ fontSize: "clamp(2rem, 3.5vw, 3.2rem)", letterSpacing: "-0.01em" }}
             >
               Phased Deployment For<br />Enterprise Environments
             </h2>
 
-            {/* Steps */}
-            <div className="flex flex-col gap-8">
+            {/* Steps Timeline */}
+            <div className="flex flex-col gap-10 relative">
+              {/* Vertical line connecting the steps */}
+              <div className="absolute left-7 top-7 bottom-7 w-[2px] bg-slate-700/50 -z-10"></div>
+
               {steps.map((step, i) => (
-                <div key={i} className="flex gap-5 items-start">
-                  {/* Number bubble */}
+                <div key={i} className="flex gap-6 items-start relative z-10">
+                  {/* Number box */}
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[0.75rem] font-bold flex-shrink-0 mt-0.5"
-                    style={{ border: "1px solid rgba(45,154,227,0.4)" }}
+                    className={`w-14 h-14 rounded-[14px] flex items-center justify-center text-lg font-semibold flex-shrink-0 border ${
+                      i === 0
+                        ? "bg-[#1e293b]/50 border-sky-500/30 text-sky-400"
+                        : "bg-[#0f172a]/50 border-slate-700 text-slate-400"
+                    }`}
                   >
                     {step.num}
                   </div>
-                  <div>
-                    <h4 className="text-white font-bold text-base mb-1.5">{step.title}</h4>
-                    <p className="text-[#7B8FA6] text-[0.88rem] leading-7">{step.desc}</p>
+                  <div className="pt-2">
+                    <h4 className="text-white font-bold text-[1.1rem] mb-2">{step.title}</h4>
+                    <p className="text-[#94a3b8] text-[0.95rem] leading-[1.7]">{step.desc}</p>
                   </div>
                 </div>
               ))}

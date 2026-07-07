@@ -419,7 +419,7 @@ export default function GlobalJurisdiction() {
             </p>
           </div>
           <div className="pt-4 flex flex-col justify-center items-center">
-            <Link href="#" className="px-8 py-3.5 bg-[#3182a4] hover:bg-[#2b728f] transition-all text-white text-sm font-bold tracking-wide shadow-[0_20px_50px_-10px_rgba(202,236,102,0.3)]">
+            <Link href="/request-a-demo" className="px-8 py-3.5 bg-[#3182a4] hover:bg-[#2b728f] transition-all text-white text-sm font-bold tracking-wide shadow-[0_20px_50px_-10px_rgba(202,236,102,0.3)]">
               Request a Platform Briefing
             </Link>
           </div>

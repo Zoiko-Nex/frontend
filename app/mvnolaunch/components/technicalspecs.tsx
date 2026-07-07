@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from "next/image";
+import Link from "next/link";
 
 
 export default function TechnicalSpecsCTA() {
@@ -33,12 +34,12 @@ export default function TechnicalSpecsCTA() {
 
         {/* Action Elements */}
         <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center w-full">
-          <button className="px-10 py-4 bg-[#2A78A1] hover:bg-[#226284] text-white text-sm font-semibold leading-4 rounded transition-colors duration-200 shadow-md">
+          <Link href="/api-reference" className="px-10 py-4 bg-[#2A78A1] hover:bg-[#226284] text-white text-sm font-semibold leading-4 rounded transition-colors duration-200 shadow-md text-center">
             Explore API Docs
-          </button>
-          <button className="px-10 py-4 bg-transparent hover:bg-white/5 text-white border border-white/20 text-sm font-semibold leading-4 rounded transition-colors duration-200">
+          </Link>
+          <Link href="/contact-us" className="px-10 py-4 bg-transparent hover:bg-white/5 text-white border border-white/20 text-sm font-semibold leading-4 rounded transition-colors duration-200 text-center">
             Contact Architecture Team
-          </button>
+          </Link>
         </div>
 
       </div>

@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+
 export default function NetworkAPIHero() {
   return (
     <section className="bg-[#02031D] dark:bg-gray-900">
@@ -38,7 +40,8 @@ export default function NetworkAPIHero() {
                 </p>
 
                 <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <button
+                  <Link
+                    href="/request-a-demo"
                     className="
                       inline-flex items-center justify-center
                       px-6 py-3
@@ -49,9 +52,10 @@ export default function NetworkAPIHero() {
                     "
                   >
                     Start Monetizing APIs
-                  </button>
+                  </Link>
 
-                  <button
+                  <Link
+                    href="/documentation"
                     className="
                       inline-flex items-center justify-center gap-2
                       px-6 py-3
@@ -63,7 +67,7 @@ export default function NetworkAPIHero() {
                   >
                     Developer Documentation
                     <span>→</span>
-                  </button>
+                  </Link>
                 </div>
               </div>
 

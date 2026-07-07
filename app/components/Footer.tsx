@@ -77,7 +77,7 @@ export default function Footer() {
                 <li><Link href="/security" className="hover:text-lime-300 transition-colors">Security</Link></li>
                 <li><Link href="/compliance" className="hover:text-lime-300 transition-colors">Compliance</Link></li>
                 <li><Link href="/trust/governance" className="hover:text-lime-300 transition-colors">Governance</Link></li>
-                <li><Link href="/evidence" className="hover:text-lime-300 transition-colors">Evidence Architecture</Link></li>
+                <li><Link href="/trust/evidence-architecture" className="hover:text-lime-300 transition-colors">Evidence Architecture</Link></li>
                 <li><Link href="/trust" className="hover:text-lime-300 transition-colors">Trust Center</Link></li>
               </ul>
             </div>
@@ -105,7 +105,7 @@ export default function Footer() {
               <ul className="space-y-[10px] text-xs leading-5">
                 <li><Link href="/about" className="hover:text-lime-300 transition-colors">About</Link></li>
                 <li><Link href="/leadership" className="hover:text-lime-300 transition-colors">Leadership</Link></li>
-                <li><Link href="/partners" className="hover:text-lime-300 transition-colors">Partners</Link></li>
+                <li><Link href="/partner" className="hover:text-lime-300 transition-colors">Partners</Link></li>
                 <li><Link href="/careers" className="hover:text-lime-300 transition-colors">Careers</Link></li>
                 <li><Link href="/press-media" className="hover:text-lime-300 transition-colors">Press & Media</Link></li>
                 <li><Link href="/contact-us" className="hover:text-lime-300 transition-colors">Contact</Link></li>

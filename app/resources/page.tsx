@@ -22,7 +22,7 @@ export default function ResourcesPage() {
                         <Link href="/request-a-demo">
                             <button className="w-full sm:w-auto px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm text-white text-sm font-semibold shadow-lg">Request a Demo</button>
                         </Link>
-                        <button className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/20 transition-colors rounded-sm border border-white/20 text-white text-sm font-semibold">Start Technical Evaluation</button>
+                        <Link href="/technical-architecture" className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/20 transition-colors rounded-sm border border-white/20 text-white text-sm font-semibold block text-center">Start Technical Evaluation</Link>
                     </div>
                 </div>
             </section>
