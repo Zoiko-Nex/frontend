@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function RACTA() {
   return (
     <section className="bg-[#10101D] py-28">
@@ -16,16 +18,17 @@ export default function RACTA() {
         </p>
 
         <div className="flex justify-center flex-wrap gap-4">
-          <button className="bg-[#2D7DB3] text-white px-8 py-3.5 font-semibold text-[0.9rem] border-none rounded cursor-pointer">
+          <Link href="/request-a-demo" className="bg-[#2D7DB3] text-white px-8 py-3.5 font-semibold text-[0.9rem] border-none rounded cursor-pointer inline-flex items-center justify-center">
             Assure Your Revenue
-          </button>
+          </Link>
 
-          <button
-            className="bg-transparent text-white px-8 py-3.5 font-semibold text-[0.9rem] rounded cursor-pointer"
+          <Link
+            href="/contact"
+            className="bg-transparent text-white px-8 py-3.5 font-semibold text-[0.9rem] rounded cursor-pointer inline-flex items-center justify-center"
             style={{ border: "1.5px solid #3A4456" }}
           >
             Talk to an Auditor
-          </button>
+          </Link>
         </div>
 
       </div>

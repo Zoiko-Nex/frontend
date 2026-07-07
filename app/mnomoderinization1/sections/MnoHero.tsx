@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 const tenants = [
   {
@@ -99,18 +100,18 @@ export default function MnoHero() {
               operational complexity.
             </p>
 
-            <button
+            <Link href="/plans-and-pricing"
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3182B7";
-                (e.currentTarget as HTMLButtonElement).style.color = "#fff";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "#3182B7";
+                (e.currentTarget as HTMLElement).style.backgroundColor = "#3182B7";
+                (e.currentTarget as HTMLElement).style.color = "#fff";
+                (e.currentTarget as HTMLElement).style.borderColor = "#3182B7";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D9AE3";
-                (e.currentTarget as HTMLButtonElement).style.color = "#fff";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "#2D9AE3";
+                (e.currentTarget as HTMLElement).style.backgroundColor = "#2D9AE3";
+                (e.currentTarget as HTMLElement).style.color = "#fff";
+                (e.currentTarget as HTMLElement).style.borderColor = "#2D9AE3";
               }}
-              className="px-9 py-4 font-bold text-[0.95rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
+              className="px-9 py-4 font-bold text-[0.95rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200 inline-block text-center"
               style={{
                 backgroundColor: "#2D9AE3",
                 color: "#ffffff",
@@ -118,7 +119,7 @@ export default function MnoHero() {
               }}
             >
               Scale Your MVNE
-            </button>
+            </Link>
           </div>
 
           {/* RIGHT — Dashboard card */}

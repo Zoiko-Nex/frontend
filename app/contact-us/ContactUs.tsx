@@ -225,10 +225,11 @@ const ContactUs = () => {
                         
                         <div className="relative">
                             <select
+                                defaultValue=""
                                 className="w-[570.80px] h-10 left-[29px] top-[56.80px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 px-4 text-slate-800 text-sm font-normal appearance-none focus:outline-none focus:outline-sky-700 focus:outline-1 cursor-pointer"
                                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                             >
-                                <option value="" disabled selected hidden>Select an inquiry type…</option>
+                                <option value="" disabled hidden>Select an inquiry type…</option>
                                 <option value="sales">Platform Sales</option>
                                 <option value="support">Customer Support</option>
                                 <option value="partnership">Partnerships</option>
@@ -282,10 +283,11 @@ const ContactUs = () => {
                         </div>
                         <div className="relative">
                             <select
+                                defaultValue=""
                                 className="w-[288px] h-10 left-[29px] top-[242.39px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 px-4 text-slate-800 text-sm font-normal appearance-none focus:outline-none focus:outline-sky-700 focus:outline-1 cursor-pointer"
                                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                             >
-                                <option value="" disabled selected hidden>Select…</option>
+                                <option value="" disabled hidden>Select…</option>
                                 <option value="US">United States</option>
                                 <option value="GB">United Kingdom</option>
                                 <option value="CA">Canada</option>

@@ -413,6 +413,187 @@ export default function WhyZoikoNexPage() {
           </div>
         </div>
       </section>
+
+      {/* Deployment Architecture Section */}
+      <section className="bg-white dark:bg-gray-900 py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-4xl mx-auto mb-14">
+            <p className="text-sky-600 text-xs font-bold uppercase tracking-widest mb-4">
+              Deployment Architecture
+            </p>
+            <h2 className="text-gray-900 dark:text-white text-3xl md:text-4xl font-bold leading-tight mb-4">
+              One Architecture. Four Deployment Models. Zero Compromise.
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 text-lg font-normal leading-relaxed">
+              Commercially and technically distinct paths to production — all<br className="hidden md:block"/> running the same unified platform.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* Card 1 */}
+            <div className="bg-white dark:bg-gray-800 rounded-[20px] p-7 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow flex flex-col h-full">
+              <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-3 py-1 w-max mb-6">
+                <span className="text-sky-700 dark:text-sky-400 text-[10px] font-bold uppercase tracking-wide">Shared SaaS</span>
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-2">Shared SaaS</h3>
+              <p className="text-sky-600 dark:text-sky-400 text-xs font-semibold mb-4">Fastest time to live</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-5 flex-grow">
+                Strong tenant-aware isolation in shared environment. Launch and iterate at speed without infrastructure overhead.
+              </p>
+              <p className="text-slate-600 dark:text-slate-300 text-xs font-semibold mt-6">Best for: Launch and scale operators</p>
+            </div>
+
+            {/* Card 2 */}
+            <div className="bg-white dark:bg-gray-800 rounded-[20px] p-7 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow flex flex-col h-full">
+              <div className="bg-violet-100 dark:bg-violet-900/30 rounded-full px-3 py-1 w-max mb-6">
+                <span className="text-violet-900 dark:text-violet-300 text-[10px] font-bold uppercase tracking-wide">Dedicated Cloud</span>
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-2">Dedicated Cloud</h3>
+              <p className="text-sky-600 dark:text-sky-400 text-xs font-semibold mb-4">Enterprise isolation</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-5 flex-grow">
+                Single-tenant application and data boundary for operators with compliance or brand separation requirements.
+              </p>
+              <p className="text-slate-600 dark:text-slate-300 text-xs font-semibold mt-6">Best for: Multi-brand operators</p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-white dark:bg-gray-800 rounded-[20px] p-7 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow flex flex-col h-full">
+              <div className="bg-amber-100 dark:bg-amber-900/30 rounded-full px-3 py-1 w-max mb-6">
+                <span className="text-amber-800 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wide">Hybrid</span>
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-2">Hybrid</h3>
+              <p className="text-sky-600 dark:text-sky-400 text-xs font-semibold mb-4">Flexible architecture</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-5 flex-grow">
+                Mix of controlled local edge and cloud core for complex operational environments with specific residency needs.
+              </p>
+              <p className="text-slate-600 dark:text-slate-300 text-xs font-semibold mt-6">Best for: Complex environments</p>
+            </div>
+
+            {/* Card 4 */}
+            <div className="bg-white dark:bg-gray-800 rounded-[20px] p-7 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow flex flex-col h-full">
+              <div className="bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-full px-3 py-1 w-max mb-6">
+                <span className="text-gray-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wide">Sovereign</span>
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-2">Sovereign</h3>
+              <p className="text-sky-600 dark:text-sky-400 text-xs font-semibold mb-4">Maximum control</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-5 flex-grow">
+                Independent keys, isolated hosting, and fully regulated posture for government or heavily regulated operators.
+              </p>
+              <p className="text-slate-600 dark:text-slate-300 text-xs font-semibold mt-6">Best for: Government / regulated</p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Solution Paths Section */}
+      <section className="bg-gray-50 dark:bg-slate-950 py-16 md:py-20 border-t border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <p className="text-sky-600 text-xs font-bold uppercase tracking-widest mb-4">
+              Solution Paths
+            </p>
+            <h2 className="text-gray-900 dark:text-white text-3xl md:text-4xl font-bold leading-tight mb-4">
+              Built for Your Operator Model
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 text-lg font-normal leading-relaxed">
+              Each path is designed around a distinct operator archetype —<br className="hidden md:block"/> with outcomes, capabilities, and next steps matched to your context.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Card 1 */}
+            <div className="bg-white dark:bg-gray-900 rounded-[20px] p-8 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-6">
+                <img src="/image/home/star.svg" alt="Star" className="w-5 h-5" />
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-4">MVNO Launch</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-6 flex-grow mb-8">
+                Go from zero to live with charging, billing, tax, payments, and lifecycle built in from day one. No stitching. No gaps.
+              </p>
+              <Link href="/mvnolaunch" className="flex items-center gap-2 text-sky-600 hover:text-sky-700 text-xs font-semibold">
+                Explore Solution <img src="/image/home/arrow-right.svg" alt="Arrow" className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Card 2 */}
+            <div className="bg-white dark:bg-gray-900 rounded-[20px] p-8 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-6">
+                <img src="/image/home/users.svg" alt="Users" className="w-5 h-5" />
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-4">MVNE & Multi-Brand</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-6 flex-grow mb-8">
+                Operate multiple brands, wholesale overlays, and partner structures inside one governed environment.
+              </p>
+              <Link href="/mnomoderinization1" className="flex items-center gap-2 text-sky-600 hover:text-sky-700 text-xs font-semibold">
+                Explore Solution <img src="/image/home/arrow-right.svg" alt="Arrow" className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-white dark:bg-gray-900 rounded-[20px] p-8 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-6">
+                <img src="/image/home/arrow-top-right.svg" alt="Modernization" className="w-5 h-5" />
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-4">MNO Modernization</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-6 flex-grow mb-8">
+                Replace brittle legacy monetization stacks through controlled migration and coexistence models designed for live environments.
+              </p>
+              <Link href="/mnomoderinization2" className="flex items-center gap-2 text-sky-600 hover:text-sky-700 text-xs font-semibold">
+                Explore Solution <img src="/image/home/arrow-right.svg" alt="Arrow" className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Card 4 */}
+            <div className="bg-white dark:bg-gray-900 rounded-[20px] p-8 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-6">
+                <img src="/image/home/phone.svg" alt="Phone" className="w-5 h-5" />
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-4">eSIM & IoT</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-6 flex-grow mb-8">
+                Support fleet-scale embedded connectivity with GSMA-aligned lifecycle and billing controls at device-fleet scale.
+              </p>
+              <Link href="/esim-and-iot" className="flex items-center gap-2 text-sky-600 hover:text-sky-700 text-xs font-semibold">
+                Explore Solution <img src="/image/home/arrow-right.svg" alt="Arrow" className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Card 5 */}
+            <div className="bg-white dark:bg-gray-900 rounded-[20px] p-8 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-6">
+                <img src="/image/home/telephone.svg" alt="Telephone" className="w-5 h-5" />
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-4">Enterprise & B2B Connectivity</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-6 flex-grow mb-8">
+                Support account hierarchies, pooled billing, SLA-linked charging, and enterprise commerce across complex organizational structures.
+              </p>
+              <Link href="/solutions" className="flex items-center gap-2 text-sky-600 hover:text-sky-700 text-xs font-semibold">
+                Explore Solution <img src="/image/home/arrow-right.svg" alt="Arrow" className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* Card 6 */}
+            <div className="bg-white dark:bg-gray-900 rounded-[20px] p-8 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col">
+              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-6">
+                <img src="/image/home/globe.svg" alt="Globe" className="w-5 h-5" />
+              </div>
+              <h3 className="text-gray-900 dark:text-white text-base font-bold mb-4">Network API Monetization</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-6 flex-grow mb-8">
+                Turn programmable network capabilities into monetized products with entitlements, metering, and developer-oriented controls.
+              </p>
+              <Link href="/networkapi" className="flex items-center gap-2 text-sky-600 hover:text-sky-700 text-xs font-semibold">
+                Explore Solution <img src="/image/home/arrow-right.svg" alt="Arrow" className="w-3 h-3" />
+              </Link>
+            </div>
+
+          </div>
+        </div>
+      </section>
+      
       <section className="py-16 md:py-10 bg-[#F8F9FB] dark:bg-slate-950">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -535,6 +716,84 @@ export default function WhyZoikoNexPage() {
           </div>
         </div>
       </section>
+
+      {/* Operator Outcomes Section */}
+      <section className="bg-[#1C1C2E] dark:bg-gray-900 py-16 md:py-20 border-y border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <p className="text-lime-400 text-xs font-bold uppercase tracking-widest mb-4">
+              Operator Outcomes
+            </p>
+            <h2 className="text-white text-3xl md:text-4xl font-bold leading-tight mb-4">
+              Built to Perform at Operator Scale
+            </h2>
+            <p className="text-white/60 text-lg font-normal leading-relaxed">
+              Executive-level outcomes, grounded in architecture — not aspiration.
+            </p>
+          </div>
+
+          {/* Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Card 1 */}
+            <div className="bg-white/5 rounded-[20px] p-8 border border-lime-500/50 hover:border-lime-500 transition-colors flex flex-col justify-start">
+              <div className="text-lime-400 text-2xl font-medium font-mono mb-4">01</div>
+              <div className="text-white text-base font-semibold leading-relaxed">
+                Launch a new market — no code.
+              </div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="bg-white/5 rounded-[20px] p-8 border border-lime-500/50 hover:border-lime-500 transition-colors flex flex-col justify-start">
+              <div className="text-lime-400 text-2xl font-medium font-mono mb-4">02</div>
+              <div className="text-white text-base font-semibold leading-relaxed">
+                Detect billing leakage within hours — not<br className="hidden lg:block"/> at month end.
+              </div>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-white/5 rounded-[20px] p-8 border border-lime-500/50 hover:border-lime-500 transition-colors flex flex-col justify-start">
+              <div className="text-lime-400 text-2xl font-medium font-mono mb-4">03</div>
+              <div className="text-white text-base font-semibold leading-relaxed">
+                Support real-time charging at sub-<br className="hidden lg:block"/>200ms class performance targets.
+              </div>
+            </div>
+
+            {/* Card 4 */}
+            <div className="bg-white/5 rounded-[20px] p-8 border border-lime-500/50 hover:border-lime-500 transition-colors flex flex-col justify-start">
+              <div className="text-lime-400 text-2xl font-medium font-mono mb-4">04</div>
+              <div className="text-white text-base font-semibold leading-relaxed">
+                Operate many markets from one<br className="hidden lg:block"/> deployment architecture.
+              </div>
+            </div>
+
+            {/* Card 5 */}
+            <div className="bg-white/5 rounded-[20px] p-8 border border-lime-500/50 hover:border-lime-500 transition-colors flex flex-col justify-start">
+              <div className="text-lime-400 text-2xl font-medium font-mono mb-4">05</div>
+              <div className="text-white text-base font-semibold leading-relaxed">
+                Keep every material financial decision<br className="hidden lg:block"/> provable and reviewable.
+              </div>
+            </div>
+
+            {/* Card 6 */}
+            <div className="bg-lime-500/10 rounded-[20px] p-8 border border-lime-500 transition-colors flex flex-col justify-between min-h-[200px]">
+              <div>
+                <div className="text-lime-400 text-2xl font-normal font-mono mb-4">06</div>
+                <div className="text-white/90 text-lg font-semibold leading-relaxed mb-6">
+                  See what ZoikoNex can do for your<br className="hidden lg:block"/> operation.
+                </div>
+              </div>
+              <Link href="/request-a-demo" className="w-full py-3.5 bg-lime-500 rounded-xl shadow-[0px_2px_12px_0px_rgba(109,192,47,0.30)] text-white text-sm font-semibold text-center hover:bg-lime-600 transition-colors block">
+                Request a Demo
+              </Link>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       <section className="bg-[#EEF5E8] dark:bg-[#101827] py-16 lg:py-10 overflow-hidden">
         <div className="container mx-auto px-4">
 
@@ -735,9 +994,9 @@ export default function WhyZoikoNexPage() {
                 <ChevronRight size={16} />
               </Link>
 
-              <button className="rounded-xl border border-white/20 bg-transparent px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+              <Link href="/technical-architecture" className="rounded-xl border border-white/20 bg-transparent px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
                 Start Technical Evaluation
-              </button>
+              </Link>
 
             </div>
           </div>

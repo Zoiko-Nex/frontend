@@ -101,53 +101,50 @@ export default function CoreInfraModules() {
           </p>
         </div>
 
-        {/* Grid — Row 1: 2 cols */}
         <div
-          className="grid grid-cols-2 gap-4 mb-4"
+          className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(40px)",
             transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
           }}
         >
-          {/* Multi-tenant card */}
-          <div
-            className="border rounded-xl p-9 bg-[#FAFAFA] relative overflow-hidden"
-            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            {/* Faint hierarchy visual bg */}
-            <div className="absolute top-4 right-4 opacity-[0.06]">
+          {/* Multi-tenant card (Wider: col-span-2) */}
+          <div className="lg:col-span-2 rounded-xl p-9 bg-[#F8F7F8] relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-8 right-8 opacity-[0.05]">
               <svg width="120" height="100" viewBox="0 0 120 100" fill="none">
                 <rect x="45" y="5" width="30" height="20" rx="3" fill="#111" />
                 <rect x="5" y="50" width="30" height="20" rx="3" fill="#111" />
                 <rect x="45" y="50" width="30" height="20" rx="3" fill="#111" />
                 <rect x="85" y="50" width="30" height="20" rx="3" fill="#111" />
-                <line x1="60" y1="25" x2="20" y2="50" stroke="#111" strokeWidth="2" />
-                <line x1="60" y1="25" x2="60" y2="50" stroke="#111" strokeWidth="2" />
-                <line x1="60" y1="25" x2="100" y2="50" stroke="#111" strokeWidth="2" />
+                <line x1="60" y1="25" x2="20" y2="50" stroke="#111" strokeWidth="3" />
+                <line x1="60" y1="25" x2="60" y2="50" stroke="#111" strokeWidth="3" />
+                <line x1="60" y1="25" x2="100" y2="50" stroke="#111" strokeWidth="3" />
               </svg>
             </div>
-
-            <div className="mb-5">{modules[0].icon}</div>
-            <h3 className="text-[#111111] text-[1.4rem] font-bold mb-3">
-              {modules[0].title}
-            </h3>
-            <p className="text-[#5E6775] text-[0.9rem] leading-7 mb-6">
-              {modules[0].desc}
-            </p>
-            <div className="flex gap-2 flex-wrap">
+            <div>
+                <div className="mb-5">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#65a30d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="6" height="6" rx="1" />
+                        <rect x="15" y="3" width="6" height="6" rx="1" />
+                        <rect x="15" y="15" width="6" height="6" rx="1" />
+                        <path d="M6 9v3a3 3 0 0 0 3 3h6" />
+                    </svg>
+                </div>
+                <h3 className="text-[#111111] text-[1.4rem] font-bold mb-3">{modules[0].title}</h3>
+                <p className="text-[#5E6775] text-[0.95rem] leading-[1.8] mb-10 max-w-lg">{modules[0].desc}</p>
+            </div>
+            {/* L1/L2 Tags */}
+            <div className="flex gap-4 flex-wrap mt-6">
               {modules[0].tags?.map((tag, i) => (
-                <div key={i} className="flex items-center gap-1.5">
+                <div key={i} className="flex items-center gap-3 bg-white px-3 py-2.5 rounded shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] border border-slate-100">
                   <span
-                    className="text-[0.65rem] font-bold px-1.5 py-0.5 rounded-sm"
-                    style={{ backgroundColor: tag.color, color: tag.textColor }}
+                    className="text-[0.9rem] font-bold w-7 h-7 flex items-center justify-center rounded-[3px]"
+                    style={{ backgroundColor: tag.color === "#C8F252" ? "#C8F252" : "#bae6fd", color: tag.color === "#C8F252" ? "#0C1628" : "#0284C7" }}
                   >
                     {tag.label}
                   </span>
-                  <span
-                    className="border rounded px-2.5 py-0.5 text-[0.75rem] text-[#374151]"
-                    style={{ border: "1px solid rgba(0,0,0,0.12)" }}
-                  >
+                  <span className="text-[0.85rem] text-[#111111] font-semibold pr-1">
                     {tag.text}
                   </span>
                 </div>
@@ -155,83 +152,68 @@ export default function CoreInfraModules() {
             </div>
           </div>
 
-          {/* Brand Isolation card */}
-          <div
-            className="rounded-xl p-9 bg-[#0F1C2E]"
-            style={{ border: "1px solid rgba(255,255,255,0.05)" }}
-          >
-            <div className="mb-5">{modules[1].icon}</div>
-            <h3 className="text-white text-[1.4rem] font-bold mb-3">
-              {modules[1].title}
-            </h3>
-            <p className="text-[#7B8FA6] text-[0.9rem] leading-7 mb-6">
-              {modules[1].desc}
-            </p>
-            <div className="flex flex-col gap-2.5">
+          {/* Brand Isolation card (Narrower: col-span-1) */}
+          <div className="lg:col-span-1 rounded-xl p-9 bg-[#1c1d25] flex flex-col justify-between">
+            <div>
+                <div className="mb-5">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#84cc16" strokeWidth="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                </div>
+                <h3 className="text-white text-[1.4rem] font-bold mb-3">{modules[1].title}</h3>
+                <p className="text-[#93A0B4] text-[0.95rem] leading-[1.8] mb-10">{modules[1].desc}</p>
+            </div>
+            <div className="flex flex-col gap-4 mt-auto">
               {modules[1].checks?.map((item, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="7" stroke="#2D9F6E" strokeWidth="1.2" />
-                    <path d="M4.5 8.5l2.5 2 4-4" stroke="#2D9F6E" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <div key={i} className="flex items-center gap-3">
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="7" stroke="#84CC16" strokeWidth="1.5" />
+                    <path d="M4.5 8.5l2.5 2 4-4" stroke="#84CC16" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="text-[#93A0B4] text-[0.85rem]">{item}</span>
+                  <span className="text-[#d1d5db] text-[0.9rem]">{item}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Grid — Row 2: 3 cols */}
-        <div
-          className="grid grid-cols-3 gap-4"
-          style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(40px)",
-            transition: "opacity 0.8s ease 0.35s, transform 0.8s ease 0.35s",
-          }}
-        >
-          {/* Wholesale Settlement */}
-          <div
-            className="rounded-xl p-9 bg-[#FAFAFA]"
-            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            <div className="mb-5">{modules[2].icon}</div>
-            <h3 className="text-[#111111] text-[1.25rem] font-bold mb-3">
-              {modules[2].title}
-            </h3>
-            <p className="text-[#5E6775] text-[0.88rem] leading-7">
-              {modules[2].desc}
-            </p>
-          </div>
-
-          {/* Partner Portals */}
-          <div
-            className="rounded-xl p-9 bg-[#FAFAFA]"
-            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            <div className="mb-5">{modules[3].icon}</div>
-            <h3 className="text-[#111111] text-[1.25rem] font-bold mb-3">
-              {modules[3].title}
-            </h3>
-            <p className="text-[#5E6775] text-[0.88rem] leading-7">
-              {modules[3].desc}
-            </p>
-          </div>
-
-          {/* Visual placeholder card */}
-          <div
-            className="rounded-xl p-8 bg-[#F4F4F4] flex flex-col gap-2.5 justify-center"
-            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            {/* Fake UI rows */}
-            <div className="h-2.5 bg-[#D1D5DB] rounded w-4/5" />
-            <div className="h-2.5 bg-[#D1D5DB] rounded w-3/5" />
-            <div className="flex gap-2">
-              <div className="h-7 bg-[#C8F252] rounded w-2/5" />
-              <div className="h-7 bg-[#D1D5DB] rounded flex-1" />
+          {/* Wholesale Settlement (Narrower: col-span-1) */}
+          <div className="lg:col-span-1 rounded-xl p-9 bg-[#F8F7F8]">
+            <div className="mb-5">
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.5">
+                 <rect x="2" y="7" width="20" height="14" rx="2" />
+                 <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                 <line x1="12" y1="12" x2="12" y2="16" />
+                 <line x1="10" y1="14" x2="14" y2="14" />
+               </svg>
             </div>
-            <div className="h-2.5 bg-[#D1D5DB] rounded w-11/12" />
-            <div className="h-2.5 bg-[#E5E7EB] rounded w-[70%]" />
+            <h3 className="text-[#111111] text-[1.4rem] font-bold mb-3">{modules[2].title}</h3>
+            <p className="text-[#5E6775] text-[0.95rem] leading-[1.8]">{modules[2].desc}</p>
+          </div>
+
+          {/* Partner Portals (Wider: col-span-2) */}
+          <div className="lg:col-span-2 rounded-xl p-9 bg-white outline outline-1 outline-slate-200 shadow-sm flex flex-col lg:flex-row gap-10 justify-between">
+            <div className="w-full lg:w-1/2">
+                <div className="mb-5">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#65A30D" strokeWidth="2.5">
+                      <rect x="3" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" />
+                      <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                </div>
+                <h3 className="text-[#111111] text-[1.4rem] font-bold mb-3">{modules[3].title}</h3>
+                <p className="text-[#5E6775] text-[0.95rem] leading-[1.8] pr-4">{modules[3].desc}</p>
+            </div>
+            <div className="w-full lg:w-1/2 bg-[#f3f4f6] border-l border-t border-slate-200 rounded p-6 flex flex-col gap-4 shadow-[inset_0px_2px_4px_0px_rgba(0,0,0,0.05)]">
+                {/* Mock UI graphic */}
+                <div className="w-4/5 h-4 bg-zinc-200 rounded-sm"></div>
+                <div className="w-full grid grid-cols-3 gap-3">
+                    <div className="h-12 bg-zinc-200/80 rounded-sm"></div>
+                    <div className="h-12 bg-zinc-200/80 rounded-sm"></div>
+                    <div className="h-12 bg-[#E4F8B3] rounded-sm"></div>
+                </div>
+                <div className="w-full bg-zinc-200/80 rounded-sm mt-2 flex-grow h-24"></div>
+            </div>
           </div>
         </div>
       </div>

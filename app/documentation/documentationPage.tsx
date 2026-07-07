@@ -20,13 +20,13 @@ export default function DocumentationPage() {
                             Structured documentation and technical resources for evaluation, implementation, and sovereign governance. Navigate the architecture of modern connectivity.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-2">
-                            <button className="px-6 py-3.5 bg-[#1a88bb] hover:bg-[#15719e] transition-colors text-white text-[13px] font-semibold flex items-center justify-center gap-2">
+                            <Link href="#" className="px-6 py-3.5 bg-[#1a88bb] hover:bg-[#15719e] transition-colors text-white text-[13px] font-semibold flex items-center justify-center gap-2">
                                 Explore Documentation
                                 <img src="/image/documen/Icon8.svg" alt="Arrow" className="w-3.5 h-3.5 object-contain" />
-                            </button>
-                            <button className="px-6 py-3.5 bg-transparent border border-[#3f404a] hover:bg-white/5 transition-colors text-white text-[13px] font-semibold flex items-center justify-center">
+                            </Link>
+                            <Link href="/contact" className="px-6 py-3.5 bg-transparent border border-[#3f404a] hover:bg-white/5 transition-colors text-white text-[13px] font-semibold flex items-center justify-center">
                                 Request Documentation Access
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -42,7 +42,7 @@ export default function DocumentationPage() {
                                 { title: 'Architectures', desc: 'Deployment blueprints', icon: 'Icon12.svg' },
                                 { title: 'Integrations', desc: 'Connect legacy systems', icon: 'Icon13.svg' }
                             ].map((item, i) => (
-                                <div key={i} className="p-5 bg-[#171821] border border-[#23242e] flex flex-col gap-3 hover:border-[#383a48] transition-colors cursor-pointer rounded-sm">
+                                <Link href="#" key={i} className="p-5 bg-[#171821] border border-[#23242e] flex flex-col gap-3 hover:border-[#383a48] transition-colors cursor-pointer rounded-sm">
                                     <div className="w-5 h-5 flex items-center justify-start">
                                         <img src={`/image/documen/${item.icon}`} alt={item.title} className="w-full h-full object-contain" />
                                     </div>
@@ -50,7 +50,7 @@ export default function DocumentationPage() {
                                         <h3 className="text-[#f1f1f4] text-[14px] font-semibold font-['Inter']">{item.title}</h3>
                                         <p className="text-[#6e6f78] text-[12px] font-normal">{item.desc}</p>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
@@ -70,13 +70,13 @@ export default function DocumentationPage() {
                     </div>
                     <div className="self-stretch inline-flex justify-center items-stretch gap-6 flex-wrap lg:flex-nowrap">
                         {[
-                            { role: 'FOUNDERS', title: 'Evaluate', desc: 'Understand the business logic and market fit of ZoikoNex.', link: 'View Guides' },
-                            { role: 'ARCHITECTS', title: 'Plan', desc: 'Map your existing legacy stacks to our modern infrastructure.', link: 'View Blueprints' },
-                            { role: 'DEVELOPERS', title: 'Integrate', desc: 'REST APIs, SDKs, and sandbox environments for testing.', link: 'API Docs' },
-                            { role: 'COMPLIANCE', title: 'Review', desc: 'Governance logs and regulatory evidence generation.', link: 'Trust Center' },
-                            { role: 'OPERATORS', title: 'Operate', desc: 'Daily administration, lifecycle management, and scaling.', link: 'Operations' }
+                            { role: 'FOUNDERS', title: 'Evaluate', desc: 'Understand the business logic and market fit of ZoikoNex.', link: 'View Guides', href: '#' },
+                            { role: 'ARCHITECTS', title: 'Plan', desc: 'Map your existing legacy stacks to our modern infrastructure.', link: 'View Blueprints', href: '#' },
+                            { role: 'DEVELOPERS', title: 'Integrate', desc: 'REST APIs, SDKs, and sandbox environments for testing.', link: 'API Docs', href: '#' },
+                            { role: 'COMPLIANCE', title: 'Review', desc: 'Governance logs and regulatory evidence generation.', link: 'Trust Center', href: '#' },
+                            { role: 'OPERATORS', title: 'Operate', desc: 'Daily administration, lifecycle management, and scaling.', link: 'Operations', href: '#' }
                         ].map((item, i) => (
-                            <div key={i} className="w-56 self-stretch p-8 bg-white outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                            <Link href={item.href} key={i} className="w-56 self-stretch p-8 bg-white outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
                                 <div className="pb-4 flex flex-col justify-start items-start">
                                     <div className="px-2 py-1 bg-zinc-100 flex flex-col justify-start items-start">
                                         <div className="justify-center text-slate-600 text-[10px] font-normal font-['JetBrains_Mono'] leading-4">{item.role}</div>
@@ -98,7 +98,7 @@ export default function DocumentationPage() {
                                         <svg className="w-3 h-3 text-sky-600 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

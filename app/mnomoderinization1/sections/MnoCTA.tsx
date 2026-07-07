@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-
+import Link from "next/link";
 export default function MnoCTA() {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -51,29 +51,19 @@ export default function MnoCTA() {
           </p>
 
           <div className="flex gap-4 justify-center flex-wrap">
-            <button
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f0f0f0";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#ffffff";
-              }}
-              className="bg-white text-[#1A4A7A] border-none px-8 py-4 font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.01em] transition-colors duration-200"
+            <Link
+              href="/request-a-demo"
+              className="bg-white hover:bg-[#f0f0f0] text-[#1A4A7A] border-none px-8 py-4 font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.01em] transition-colors duration-200 inline-block"
             >
               Schedule a Technical Walkthrough
-            </button>
-            <button
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.15)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-              }}
-              className="bg-transparent text-white px-8 py-4 font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.01em] transition-colors duration-200"
+            </Link>
+            <Link
+              href="/platform-architecture"
+              className="bg-transparent hover:bg-white/15 text-white px-8 py-4 font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.01em] transition-colors duration-200 inline-block"
               style={{ border: "2px solid rgba(255,255,255,0.6)" }}
             >
               View Platform Architecture
-            </button>
+            </Link>
           </div>
         </div>
       </div>

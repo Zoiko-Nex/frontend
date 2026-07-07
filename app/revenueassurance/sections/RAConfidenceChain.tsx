@@ -150,9 +150,9 @@ export default function RAConfidenceChain() {
       <div className="max-w-7xl mx-auto px-6 flex flex-col items-center gap-20">
 
         {/* Header */}
-        <div className="w-[672px] mx-auto mb-16">
+        <div className="w-full max-w-4xl mx-auto mb-16 text-center">
           <h2
-            className="text-white"
+            className="text-white whitespace-nowrap"
             style={{
               fontFamily: "Hanken Grotesk",
               fontSize: "48px",

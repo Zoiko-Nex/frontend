@@ -77,35 +77,18 @@ export default function MnoHero2() {
             </p>
 
             <div className="flex gap-4 flex-wrap">
-              <Link href="/request-a-demo">
-                <button
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3182B7";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D9AE3";
-                  }}
-                  className="px-8 py-[0.95rem] text-white font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
-                  style={{
-                    backgroundColor: "#2D9AE3",
-                    border: "2px solid #2D9AE3",
-                  }}
-                >
-                  Request a Demo
-                </button>
+              <Link 
+                href="/request-a-demo"
+                className="px-8 py-[0.95rem] text-white font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200 inline-block bg-[#2D9AE3] hover:bg-[#3182B7] border-2 border-[#2D9AE3]"
+              >
+                Request a Demo
               </Link>
-              <button
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                }}
-                className="bg-transparent text-white px-8 py-[0.95rem] font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200"
-                style={{ border: "2px solid rgba(255,255,255,0.4)" }}
+              <Link
+                href="/white-papers"
+                className="bg-transparent text-white hover:bg-white/10 px-8 py-[0.95rem] font-bold text-[0.9rem] cursor-pointer rounded-sm tracking-[0.02em] transition-all duration-200 inline-block border-2 border-white/40"
               >
                 Download Modernization Whitepaper
-              </button>
+              </Link>
             </div>
           </div>
 

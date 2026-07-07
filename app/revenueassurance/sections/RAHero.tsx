@@ -1,3 +1,5 @@
+import React from "react";
+import Link from "next/link";
 
 export default function RAHero() {
   return (
@@ -38,13 +40,13 @@ export default function RAHero() {
 
             {/* Buttons */}
             <div className="flex flex-wrap gap-4">
-              <button className="bg-[#1F6FA3] text-white px-7 py-3 rounded-lg font-semibold text-sm">
+              <Link href="/request-a-demo" className="bg-[#1F6FA3] text-white px-7 py-3 rounded-lg font-semibold text-sm inline-flex items-center justify-center">
                 Assure Your Revenue
-              </button>
+              </Link>
 
-              <button className="border border-[#1A2533] text-[#1A2533] px-7 py-3 rounded-lg font-semibold text-sm">
+              <Link href="/contact" className="border border-[#1A2533] text-[#1A2533] px-7 py-3 rounded-lg font-semibold text-sm inline-flex items-center justify-center">
                 Request a Technical Audit
-              </button>
+              </Link>
             </div>
           </div>
 

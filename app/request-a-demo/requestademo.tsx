@@ -55,7 +55,7 @@ export default function DeploymentPage() {
       <div className="absolute inset-0 bg-radial-[at_88%_-8%] from-lime-500/10 via-transparent to-transparent pointer-events-none" />
 
       {/* SECTION 1: HERO & MAIN FORM PANEL */}
-      <section className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-24">
+      <section id="demo-form-section" className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-24">
         <div className="grid lg:grid-cols-12 gap-12 items-start">
           
           {/* LEFT SIDE: Core Platform Context Card */}
@@ -398,7 +398,7 @@ export default function DeploymentPage() {
             {/* Dynamic Button Rows */}
             <div className="flex flex-wrap gap-4 pt-2">
               <Link
-                href="#"
+                href="#demo-form-section"
                 className="px-5 py-3.5 bg-sky-700 text-white text-sm font-bold rounded-xl shadow-[0_12px_24px_-12px_rgba(22,104,184,0.70)] hover:bg-sky-600 transition flex items-center gap-2"
               >
                 <span>Request a Demo</span>

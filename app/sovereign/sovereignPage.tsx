@@ -29,7 +29,7 @@ export default function SovereignDeploymentPage() {
                         </div>
                         <div className="w-full max-w-[672px] relative mb-10">
                             <div className="w-full flex flex-col justify-start items-start">
-                                <div className="justify-center text-white/60 text-[15px] font-normal font-['Inter'] leading-7">Strict data residency, customer-approved infrastructure, and regulated release governance for sovereign operators. Architected for the most demanding national security requirements.</div>
+                                <div className="justify-center text-white/90 text-[15px] font-normal font-['Inter'] leading-7">Strict data residency, customer-approved infrastructure, and regulated release governance for sovereign operators. Architected for the most demanding national security requirements.</div>
                             </div>
                         </div>
                         <div className="w-full flex justify-start items-start gap-4">
