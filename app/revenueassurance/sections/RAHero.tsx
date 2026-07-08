@@ -26,9 +26,7 @@ export default function RAHero() {
               className="text-[#0A0A0A] font-extrabold leading-[1.1] mb-5"
               style={{ fontSize: "clamp(2.5rem,4.5vw,3.8rem)" }}
             >
-              Zero Leakage.
-              <br />
-              Total Assurance.
+              Zero Leakage. Total Assurance.
             </h1>
 
             {/* Description */}
@@ -44,7 +42,7 @@ export default function RAHero() {
                 Assure Your Revenue
               </Link>
 
-              <Link href="/contact" className="border border-[#1A2533] text-[#1A2533] px-7 py-3 rounded-lg font-semibold text-sm inline-flex items-center justify-center">
+              <Link href="/contact-us" className="border border-[#1A2533] text-[#1A2533] px-7 py-3 rounded-lg font-semibold text-sm inline-flex items-center justify-center">
                 Request a Technical Audit
               </Link>
             </div>

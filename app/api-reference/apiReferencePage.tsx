@@ -22,13 +22,13 @@ export default function APIReferencePage() {
             </p>
           </div>
           <div className="w-full pt-2 flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button className="px-8 py-4 bg-[#21779F] hover:bg-cyan-600 transition-colors rounded-sm flex justify-center items-center gap-2 w-full sm:w-auto shadow-sm group">
-              <span className="text-center text-white text-sm font-semibold font-['Inter'] leading-4">Request Sandbox Access</span>
-              <svg className="w-3 h-3 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-            </button>
-            <button className="px-8 py-4 bg-transparent hover:bg-zinc-50 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-zinc-500 inline-flex flex-col justify-center items-center w-full sm:w-auto">
-              <span className="text-center justify-center text-zinc-900 text-sm font-semibold font-['Inter'] leading-4">Explore SDKs</span>
-            </button>
+            <Link href="/developer-portal" className="px-8 py-4 bg-[#21779F] hover:bg-cyan-600 transition-colors rounded-sm flex justify-center items-center gap-2 w-full sm:w-auto shadow-sm group">
+              <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Explore the API</span>
+              <img src="/image/case/Icon42.svg" alt="Arrow" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link href="#" className="px-8 py-4 bg-transparent hover:bg-zinc-50 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-zinc-500 inline-flex flex-col justify-center items-center w-full sm:w-auto">
+              <span className="text-center justify-center text-[#4a4b55] text-sm font-semibold font-['Inter'] leading-4">Get Postman Collection</span>
+            </Link>
           </div>
         </div>
       </section>
@@ -365,13 +365,13 @@ export default function APIReferencePage() {
                 </p>
               </div>
               <div className="pt-4 flex flex-col sm:flex-row justify-start items-center gap-4 w-full sm:w-auto">
-                <button className="px-8 py-4 bg-[#21779F] hover:bg-cyan-700 transition-colors rounded-sm flex justify-center items-center gap-2 w-full sm:w-auto shadow-sm group">
+                <Link href="/contact-us" className="px-8 py-4 bg-[#21779F] hover:bg-cyan-700 transition-colors rounded-sm flex justify-center items-center gap-2 w-full sm:w-auto shadow-sm group">
                   <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Platform Briefing</span>
                   <img src="/image/case/Icon42.svg" alt="Arrow" className="w-4 h-4 object-contain group-hover:translate-x-1 transition-transform" />
-                </button>
-                <button className="px-8 py-4 bg-transparent hover:bg-zinc-50 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 inline-flex flex-col justify-center items-center w-full sm:w-auto">
+                </Link>
+                <Link href="#" className="px-8 py-4 bg-transparent hover:bg-zinc-50 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 inline-flex flex-col justify-center items-center w-full sm:w-auto">
                   <span className="text-center justify-center text-black text-sm font-semibold font-['Inter'] leading-4">Download Portfolio PDF</span>
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -392,12 +392,12 @@ export default function APIReferencePage() {
               <h2 className="text-center justify-center text-white text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px]">Give your technical team a controlled<br className="hidden md:block" />path to evaluate ZoikoNex.</h2>
             </div>
             <div className="self-stretch flex flex-col sm:flex-row justify-center items-center gap-4">
-              <button className="px-8 py-4 bg-[#2f88b8] hover:bg-[#2377a4] transition-colors rounded-sm flex flex-col justify-center items-center">
+              <Link href="/contact-us" className="px-8 py-4 bg-[#2f88b8] hover:bg-[#2377a4] transition-colors rounded-sm flex flex-col justify-center items-center">
                 <span className="text-center justify-center text-white text-base font-bold font-['Inter'] leading-6">Request Sandbox Access</span>
-              </button>
-              <button className="px-8 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white/20 hover:bg-white/5 transition-colors flex flex-col justify-center items-center">
+              </Link>
+              <Link href="/contact-us" className="px-8 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white/20 hover:bg-white/5 transition-colors flex flex-col justify-center items-center">
                 <span className="text-center justify-center text-white text-base font-normal font-['Inter'] leading-6">Book an Integration Briefing</span>
-              </button>
+              </Link>
             </div>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function CategoryDefinitionSection() {
   return (
     <section className="bg-[#FAFBFC] dark:bg-gray-900 py-16 lg:py-10">
@@ -25,7 +27,7 @@ export default function CategoryDefinitionSection() {
               compliance, and AI-assisted operations simultaneously.
             </p>
 
-            <button className="mt-8 inline-flex items-center gap-2 px-5 py-3 border border-[#2B7EC1] rounded-lg text-[#2B7EC1] dark:text-sky-400 dark:border-sky-400 text-sm font-semibold transition hover:bg-[#2B7EC1] hover:text-white">
+            <Link href="/platform-architecture" className="mt-8 inline-flex items-center gap-2 px-5 py-3 border border-[#2B7EC1] rounded-lg text-[#2B7EC1] dark:text-sky-400 dark:border-sky-400 text-sm font-semibold transition hover:bg-[#2B7EC1] hover:text-white">
               Learn About GTMI
 
               <svg
@@ -42,7 +44,7 @@ export default function CategoryDefinitionSection() {
                   d="M5 12h14M13 6l6 6-6 6"
                 />
               </svg>
-            </button>
+            </Link>
           </div>
 
           {/* Right Card */}

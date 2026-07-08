@@ -35,6 +35,6 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col">
         <SiteChrome>{children}</SiteChrome>
       </body>
-      </html>
+    </html>
   );
 }

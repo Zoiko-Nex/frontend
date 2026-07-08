@@ -27,13 +27,13 @@ export default function GlobalJurisdiction() {
             </p>
           </div>
           <div className="pt-6 flex flex-col sm:flex-row justify-start items-start gap-4">
-            <button className="px-8 py-4 bg-[#2b7a9f] hover:bg-[#226382] flex justify-center items-center gap-2 rounded-sm transition">
+            <Link href="/contact-us" className="px-8 py-4 bg-[#2b7a9f] hover:bg-[#226382] flex justify-center items-center gap-2 rounded-sm transition">
               <span className="text-white text-sm font-bold font-['Inter'] leading-4">Request a Jurisdiction Briefing</span>
               <ArrowRight className="w-4 h-4 text-white" />
-            </button>
-            <button className="px-8 py-4 outline outline-1 outline-offset-[-1px] outline-stone-300/30 hover:bg-white/5 flex flex-col justify-center items-center rounded-sm transition">
+            </Link>
+            <Link href="/domain-details" className="px-8 py-4 outline outline-1 outline-offset-[-1px] outline-stone-300/30 hover:bg-white/5 flex flex-col justify-center items-center rounded-sm transition">
               <span className="text-white text-sm font-bold font-['Inter'] leading-4">Explore the 18 Domains</span>
-            </button>
+            </Link>
           </div>
         </div>
 

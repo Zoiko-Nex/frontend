@@ -5,6 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
+import { getSession } from "@/lib/admin/session";
+
+
 
 const platformPages = [
   {
@@ -136,11 +139,16 @@ export default function Header() {
   const [openSolutions, setOpenSolutions] = useState(false);
   const [openPlatform, setOpenPlatform] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const resourcesRef = useRef<HTMLDivElement | null>(null);
   const solutionsRef = useRef<HTMLDivElement | null>(null);
   const platformRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const session = getSession();
+    setIsLoggedIn(!!session);
+  }, []);
 
   const isActive = (path: string) =>
     pathname.startsWith(path) ? "text-sky-600" : "hover:text-sky-600";
@@ -165,7 +173,7 @@ export default function Header() {
       if (resourcesRef.current && !resourcesRef.current.contains(target)) {
         setOpenResources(false);
       }
-      
+
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -186,7 +194,7 @@ export default function Header() {
   return (
     <header className="w-full bg-white border-b border-slate-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
-        
+
         {/* Logo */}
         <Link href="/" onClick={closeAllMenus} className="flex items-center shrink-0">
           <Image
@@ -201,20 +209,19 @@ export default function Header() {
 
         {/* Desktop Navigation (Hidden on Mobile/Tablet screens below lg) */}
         <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-600">
-          
+
           {/* Platform Mega Menu */}
-          <div 
-            className="relative py-5" 
+          <div
+            className="relative py-5"
             ref={platformRef}
             onMouseEnter={() => setOpenPlatform(true)}
             onMouseLeave={() => setOpenPlatform(false)}
           >
-            <Link 
-              href="/platform" 
+            <Link
+              href="/platform"
               onClick={() => setOpenPlatform(false)}
-              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${
-                openPlatform || pathname.startsWith("/platform") ? "text-sky-600" : "hover:text-sky-600"
-              }`}
+              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${openPlatform || pathname.startsWith("/platform") ? "text-sky-600" : "hover:text-sky-600"
+                }`}
             >
               Platform
               <ChevronDown size={14} className={`transition-transform duration-300 ${openPlatform ? "rotate-180" : ""}`} />
@@ -254,7 +261,7 @@ export default function Header() {
                       <p className="text-slate-300 text-xs leading-normal mb-6">Explore our complete event-driven architectural blueprints built for real-time telecom engines.</p>
                     </div>
                     <Link href="/platform-architecture" onClick={closeAllMenus} className="text-xs font-semibold text-[#89D050] hover:underline flex items-center gap-1 group">
-                      View Platform Architecture 
+                      View Platform Architecture
                       <span className="transform translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
                     </Link>
                   </div>
@@ -264,8 +271,8 @@ export default function Header() {
           </div>
 
           {/* Solutions Mega Menu Container */}
-          <div 
-            className="relative py-5" 
+          <div
+            className="relative py-5"
             ref={solutionsRef}
             onMouseEnter={() => setOpenSolutions(true)}
             onMouseLeave={() => setOpenSolutions(false)}
@@ -273,9 +280,8 @@ export default function Header() {
             <Link
               href="/solutions"
               onClick={() => setOpenSolutions(false)}
-              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${
-                openSolutions || pathname.startsWith("/solutions") ? "text-sky-600" : "hover:text-sky-600"
-              }`}
+              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${openSolutions || pathname.startsWith("/solutions") ? "text-sky-600" : "hover:text-sky-600"
+                }`}
             >
               Solutions
               <ChevronDown size={14} className={`transition-transform duration-300 ${openSolutions ? "rotate-180" : ""}`} />
@@ -343,13 +349,13 @@ export default function Header() {
                           <Link href="/mnomoderinization1" onClick={closeAllMenus} className="w-full flex items-center justify-between">
                             <span>I run multiple brands</span>
                             <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[#89D050]">→</span>
-                          </Link>                        
+                          </Link>
                         </div>
                         <div className="border-t border-white/10 pt-3 text-slate-300 text-xs font-medium hover:text-[#89D050] transition flex items-center justify-between group">
                           <Link href="/esim-and-iot" onClick={closeAllMenus} className="w-full flex items-center justify-between">
                             <span>I'm scaling eSIM / IoT</span>
                             <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[#89D050]">→</span>
-                          </Link>                        
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -372,9 +378,8 @@ export default function Header() {
             <Link
               href="/resources"
               onClick={() => setOpenResources(false)}
-              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${
-                openResources || pathname.startsWith("/resources") ? "text-sky-600" : "hover:text-sky-600"
-              }`}
+              className={`flex items-center gap-1 transition-colors duration-200 outline-none select-none ${openResources || pathname.startsWith("/resources") ? "text-sky-600" : "hover:text-sky-600"
+                }`}
             >
               Resources
               <ChevronDown size={14} className={`transition-transform duration-300 ${openResources ? "rotate-180" : ""}`} />
@@ -435,7 +440,7 @@ export default function Header() {
                     </div>
                     <div className="pt-4">
                       <Link href="/white-papers" onClick={closeAllMenus} className="text-white text-xs font-semibold hover:text-[#89D050] transition flex items-center gap-1 group">
-                        Download White Paper 
+                        Download White Paper
                         <span className="transform translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
                       </Link>
                     </div>
@@ -445,9 +450,9 @@ export default function Header() {
             )}
           </div>
 
-          
-     <Link href="/plans-and-pricing" className={isActive("/plans-and-pricing")}>Pricing</Link>
-     <Link href="/login" className={`${isActive("/login")} ml-18`} >Sign in</Link>
+
+          <Link href="/plans-and-pricing" className={isActive("/plans-and-pricing")}>Pricing</Link>
+          <Link href="/login" className={`${isActive("/login")} ml-18`} >Sign in</Link>
 
         </nav>
 
@@ -459,12 +464,21 @@ export default function Header() {
           >
             Request a Demo
           </Link>
-          <Link
-            href="/register"
-            className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
-          >
-            Get Started
-          </Link>
+          {!isLoggedIn ? (
+            <Link
+              href="/register"
+              className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
+            >
+              Get Started
+            </Link>
+          ) : (
+            <Link
+              href="/dashboards"
+              className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
+            >
+              Dashboard
+            </Link>
+          )}
 
           {/* Hamburger Mobile Menu Toggle Button Button */}
           <button
@@ -481,10 +495,10 @@ export default function Header() {
       {mobileMenuOpen && (
         <div className="fixed inset-x-0 bottom-0 top-20 bg-white z-40 border-t border-slate-100 flex flex-col lg:hidden overflow-y-auto">
           <div className="p-4 space-y-3 flex-1 pb-12">
-            
+
             {/* Mobile Accordion - Platform */}
             <div className="border-b border-slate-100 pb-2">
-              <button 
+              <button
                 onClick={() => setOpenPlatform(!openPlatform)}
                 className="w-full flex items-center justify-between py-2 text-base font-bold text-[#162540]"
               >
@@ -510,7 +524,7 @@ export default function Header() {
 
             {/* Mobile Accordion - Solutions */}
             <div className="border-b border-slate-100 pb-2">
-              <button 
+              <button
                 onClick={() => setOpenSolutions(!openSolutions)}
                 className="w-full flex items-center justify-between py-2 text-base font-bold text-[#162540]"
               >
@@ -552,7 +566,7 @@ export default function Header() {
 
             {/* Mobile Accordion - Resources */}
             <div className="border-b border-slate-100 pb-2">
-              <button 
+              <button
                 onClick={() => setOpenResources(!openResources)}
                 className="w-full flex items-center justify-between py-2 text-base font-bold text-[#162540]"
               >

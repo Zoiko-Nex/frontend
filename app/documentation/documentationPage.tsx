@@ -20,11 +20,11 @@ export default function DocumentationPage() {
                             Structured documentation and technical resources for evaluation, implementation, and sovereign governance. Navigate the architecture of modern connectivity.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-2">
-                            <Link href="#" className="px-6 py-3.5 bg-[#1a88bb] hover:bg-[#15719e] transition-colors text-white text-[13px] font-semibold flex items-center justify-center gap-2">
+                            <Link href="/api-reference" className="px-6 py-3.5 bg-[#1a88bb] hover:bg-[#15719e] transition-colors text-white text-[13px] font-semibold flex items-center justify-center gap-2">
                                 Explore Documentation
                                 <img src="/image/documen/Icon8.svg" alt="Arrow" className="w-3.5 h-3.5 object-contain" />
                             </Link>
-                            <Link href="/contact" className="px-6 py-3.5 bg-transparent border border-[#3f404a] hover:bg-white/5 transition-colors text-white text-[13px] font-semibold flex items-center justify-center">
+                            <Link href="/contact-us" className="px-6 py-3.5 bg-transparent border border-[#3f404a] hover:bg-white/5 transition-colors text-white text-[13px] font-semibold flex items-center justify-center">
                                 Request Documentation Access
                             </Link>
                         </div>
@@ -37,12 +37,12 @@ export default function DocumentationPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {[
-                                { title: 'API Reference', desc: 'Integrate core services', icon: 'Icon10.svg' },
-                                { title: 'Compliance', desc: 'Sovereign audit trails', icon: 'Icon11.svg' },
-                                { title: 'Architectures', desc: 'Deployment blueprints', icon: 'Icon12.svg' },
-                                { title: 'Integrations', desc: 'Connect legacy systems', icon: 'Icon13.svg' }
+                                { title: 'API Reference', desc: 'Integrate core services', icon: 'Icon10.svg', href: '/api-reference' },
+                                { title: 'Compliance', desc: 'Sovereign audit trails', icon: 'Icon11.svg', href: '/evidence' },
+                                { title: 'Architectures', desc: 'Deployment blueprints', icon: 'Icon12.svg', href: '/platform-architecture' },
+                                { title: 'Integrations', desc: 'Connect legacy systems', icon: 'Icon13.svg', href: '/hybrid' }
                             ].map((item, i) => (
-                                <Link href="#" key={i} className="p-5 bg-[#171821] border border-[#23242e] flex flex-col gap-3 hover:border-[#383a48] transition-colors cursor-pointer rounded-sm">
+                                <Link href={item.href} key={i} className="p-5 bg-[#171821] border border-[#23242e] flex flex-col gap-3 hover:border-[#383a48] transition-colors cursor-pointer rounded-sm">
                                     <div className="w-5 h-5 flex items-center justify-start">
                                         <img src={`/image/documen/${item.icon}`} alt={item.title} className="w-full h-full object-contain" />
                                     </div>
@@ -70,11 +70,11 @@ export default function DocumentationPage() {
                     </div>
                     <div className="self-stretch inline-flex justify-center items-stretch gap-6 flex-wrap lg:flex-nowrap">
                         {[
-                            { role: 'FOUNDERS', title: 'Evaluate', desc: 'Understand the business logic and market fit of ZoikoNex.', link: 'View Guides', href: '#' },
-                            { role: 'ARCHITECTS', title: 'Plan', desc: 'Map your existing legacy stacks to our modern infrastructure.', link: 'View Blueprints', href: '#' },
-                            { role: 'DEVELOPERS', title: 'Integrate', desc: 'REST APIs, SDKs, and sandbox environments for testing.', link: 'API Docs', href: '#' },
-                            { role: 'COMPLIANCE', title: 'Review', desc: 'Governance logs and regulatory evidence generation.', link: 'Trust Center', href: '#' },
-                            { role: 'OPERATORS', title: 'Operate', desc: 'Daily administration, lifecycle management, and scaling.', link: 'Operations', href: '#' }
+                            { role: 'FOUNDERS', title: 'Evaluate', desc: 'Understand the business logic and market fit of ZoikoNex.', link: 'View Guides', href: '/white-papers' },
+                            { role: 'ARCHITECTS', title: 'Plan', desc: 'Map your existing legacy stacks to our modern infrastructure.', link: 'View Blueprints', href: '/request-a-demo' },
+                            { role: 'DEVELOPERS', title: 'Integrate', desc: 'REST APIs, SDKs, and sandbox environments for testing.', link: 'API Docs', href: '/api-reference' },
+                            { role: 'COMPLIANCE', title: 'Review', desc: 'Governance logs and regulatory evidence generation.', link: 'Trust Center', href: '/trust' },
+                            { role: 'OPERATORS', title: 'Operate', desc: 'Daily administration, lifecycle management, and scaling.', link: 'Operations', href: '/developer-portal' }
                         ].map((item, i) => (
                             <Link href={item.href} key={i} className="w-56 self-stretch p-8 bg-white outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
                                 <div className="pb-4 flex flex-col justify-start items-start">
