@@ -1,296 +1,405 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import React from "react";
+import Link from "next/link";
+import { Server, Shield, Zap, Layers, Cpu, Box, Database, Network, FileText, CheckCircle } from "lucide-react";
 
-const DOMAINS=[
- {num:'01',slug:'identity-tenancy-access',title:'Identity, Tenancy & Access',tag:'Govern who can do what, everywhere.',
-  ov:'A multi-tenant hierarchy with fine-grained access control that keeps every operator, brand, and partner isolated while giving your platform team a single governance surface.',
-  chips:['RBAC / ABAC','SSO · MFA','Evidence-logged'],
-  caps:['Platform → tenant → brand → market hierarchy with inherited policy','RBAC and ABAC enforced server-side; deny overrides allow','Approval workflows and just-in-time privilege elevation','Break-glass access with full session recording','SSO/OIDC and MFA for privileged roles','Access reviews and audit trails on every grant']},
- {num:'02',slug:'customer-account',title:'Customer & Account',tag:'One source of truth for every party.',
-  ov:'A unified model for party, subscriber, and billing account across consumer, SME, enterprise, and pooled structures — so identity, credit, and consent stay consistent everywhere.',
-  chips:['Party model','Consent-aware'],
-  caps:['Party, account, subscriber, and payer separation','Consumer, SME, enterprise, and pooled account models','Credit profile, limits, and risk signals per account','Consent and preference management with audit','Account and organizational hierarchies','360° view of usage, charges, invoices, and cases']},
- {num:'03',slug:'product-catalog-rules',title:'Product Catalog & Rules',tag:'Design and govern every offer.',
-  ov:'A versioned catalog for plans, bundles, promotions, roaming packs, and partner overlays, with eligibility logic that keeps commercial rules governed and auditable.',
-  chips:['Versioned','TM Forum-aligned'],
-  caps:['Versioned plans, bundles, add-ons, and boosters','Promotions, discounts, roaming packs, and ILD offers','Eligibility rules by segment, market, and jurisdiction','Partner and wholesale overlays','Catalog approval workflow and effective-dating','Revenue-recognition mapping per product']},
- {num:'04',slug:'order-management-provisioning',title:'Order Management & Provisioning',tag:'Capture to activation, safely.',
-  ov:'Order capture and decomposition with fulfillment orchestration across systems, SIM/eSIM assignment, and deterministic rollback when provisioning fails.',
-  chips:['Saga rollback','TM Forum-aligned'],
-  caps:['Order capture, decomposition, and orchestration','Fulfillment across network, billing, and partner systems','SIM / eSIM assignment and number allocation','Compensation saga with deterministic rollback','Provisioning failure queue with retry and escalation','End-to-end order status and SLA tracking']},
- {num:'05',slug:'customer-lifecycle-kyc',title:'Customer Lifecycle & KYC',tag:'Compliant onboarding to offboarding.',
-  ov:'Regulated onboarding with pluggable verification, SIM-registration compliance, activation approval, and controlled lifecycle-state transitions.',
-  chips:['KYC / KYB','Regulated'],
-  caps:['KYC/KYB onboarding with verification adapters','SIM registration and regulatory compliance','Activation approval and controlled state machine','Suspension, reactivation, and churn workflows','Consent capture and document verification','Evidence capture for regulated actions']},
- {num:'06',slug:'usage-ingestion-mediation',title:'Usage Ingestion & Mediation',tag:'Carrier-grade usage, correctly.',
-  ov:'High-volume ingestion, normalization, enrichment, and deduplication with replay-safe processing and explicit late-arrival policy — the pipeline behind accurate charging.',
-  chips:['Replay-safe','Pipeline'],
-  caps:['Carrier-grade CDR/UDR ingestion at scale','Normalization, enrichment, and correlation','Deduplication and replay-safe processing','Late-arrival and out-of-order policy enforcement','Suspense handling with clear ownership','Stage-by-stage evidence and reconciliation']},
- {num:'07',slug:'rating-charging-core',title:'Rating & Charging Core',tag:'Real-time and offline, one engine.',
-  ov:'Convergent charging across prepaid, postpaid, and hybrid — spanning roaming, wholesale, and interconnect — with deterministic tariff snapshots for reproducible results.',
-  chips:['Convergent','Deterministic'],
-  caps:['Online (OCS) and offline (OFCS) charging','Prepaid, postpaid, and hybrid balance control','Roaming, wholesale, and interconnect rating','Deterministic, versioned tariff snapshots','Real-time authorization and quota management','Rerating workflows with simulation and evidence']},
- {num:'08',slug:'billing-invoicing-disputes',title:'Billing, Invoicing & Disputes',tag:'Accurate bills, resolved disputes.',
-  ov:'Bill-run orchestration with multi-currency invoicing, credit/debit notes, dunning, payment plans, and structured dispute cases linked to their evidence.',
-  chips:['Multi-currency','TM Forum-aligned'],
-  caps:['Bill-run simulation, approval, and execution','Multi-currency invoices and credit/debit notes','Dunning and collections by jurisdiction','Payment-plan and instalment support','Structured dispute cases with financial impact','Exception review with immutable evidence']},
- {num:'09',slug:'payments-wallets-reconciliation',title:'Payments, Wallets & Reconciliation',tag:'Collect on any rail, reconcile all.',
-  ov:'Multi-rail collections across card, bank, mobile money, wallet, and voucher, with allocations, settlement, and chargeback handling that reconciles end-to-end.',
-  chips:['Multi-rail','Reconciled'],
-  caps:['Card, bank, mobile money, wallet, and voucher rails','Payment allocation and reconciliation','Retries, refunds, and gateway health','Settlement and payout handling','Chargeback and dispute linkage','Wallet balances and top-ups']},
- {num:'10',slug:'tax-jurisdiction-engine',title:'Tax & Jurisdiction Engine',tag:'Right tax, every market.',
-  ov:'Runtime jurisdiction routing with multi-engine tax orchestration, provider failover, exemption handling, and invoice-compliance templates per market.',
-  chips:['Multi-engine','Jurisdiction-aware'],
-  caps:['Runtime jurisdiction routing per transaction','Multi-engine tax orchestration with failover','Exemptions, holidays, and special rules','Regulatory fees and surcharges','Invoice-compliance templates by market','Versioned rule changes with evidence']},
- {num:'11',slug:'voice-ild-orchestration',title:'Voice / ILD Orchestration',tag:'Route, price, and protect voice.',
-  ov:'Rate-deck management and route economics with quality scoring, settlement logic, and detection of IRSF and call-pumping fraud.',
-  chips:['Least-cost routing','Fraud-aware'],
-  caps:['Rate-deck and route management','Least-cost routing and route economics','Quality (ASR/ACD) scoring','Interconnect settlement logic','IRSF and call-pumping fraud detection','Partner and carrier reconciliation']},
- {num:'12',slug:'device-protection-vas',title:'Device Protection & VAS',tag:'Value-added services, monetized.',
-  ov:'Enrollment and claims synchronization with revenue-share billing and white-label VAS orchestration tied to your commercial packages.',
-  chips:['Revenue-share','White-label'],
-  caps:['Device-protection enrollment and claims sync','Revenue-share billing with partners','White-label VAS orchestration','Bundling into commercial packages','Entitlement and activation management','Partner settlement and reporting']},
- {num:'13',slug:'esim-iot-lifecycle',title:'eSIM & IoT Lifecycle',tag:'Profiles and fleets at scale.',
-  ov:'GSMA-aligned eSIM profile management with IoT fleet orchestration, remote action flows, and usage aggregation at device-fleet scale.',
-  chips:['GSMA SGP.22','Fleet-scale'],
-  caps:['GSMA SGP.22 consumer eSIM lifecycle','SM-DP+ integration and profile management','IoT fleet orchestration and grouping','Remote actions: enable, disable, swap','Device-fleet usage aggregation','Bulk provisioning and policy control']},
- {num:'14',slug:'network-api-monetization',title:'Network API Monetization',tag:'Turn network capability into revenue.',
-  ov:'CAMARA / Open Gateway exposure with metering, entitlement management, QoS-on-demand billing, and developer-oriented monetization controls.',
-  chips:['CAMARA','Open Gateway'],
-  caps:['CAMARA / Open Gateway API exposure','Metering and usage-based billing','Entitlement and quota management','QoS-on-demand and slicing charges','Developer keys, plans, and rate limits','Partner and developer settlement']},
- {num:'15',slug:'revenue-assurance-fraud',title:'Revenue Assurance & Fraud',tag:'Protect every unit of revenue.',
-  ov:'Continuous usage-to-bill and bill-to-payment reconciliation with leakage detection, fraud rules, SIM-abuse detection, and case escalation.',
-  chips:['Reconciliation','Fraud rules'],
-  caps:['Usage-to-bill and bill-to-payment reconciliation','Leakage detection and root-cause analysis','Fraud rules and anomaly detection','SIM-abuse and velocity detection','Case management and escalation','Evidence-linked findings']},
- {num:'16',slug:'ai-decision-intelligence',title:'AI & Decision Intelligence',tag:'Governed intelligence, not black boxes.',
-  ov:'A model registry with online inference, explainability artifacts, drift monitoring, copilot assistance, and Policy Guardrail enforcement for every material decision.',
-  chips:['Explainable','Human-in-the-loop'],
-  caps:['Model registry and versioning','Online inference and scoring','Explainability artifacts per decision','Drift and performance monitoring','Copilot assistance for operators','Policy Guardrails with human-in-the-loop']},
- {num:'17',slug:'reporting-regulatory-exports',title:'Reporting & Regulatory Exports',tag:'From BI to regulator-ready.',
-  ov:'BI metrics and profitability reporting with scheduled exports, regulator-ready packages, evidence bundles, and self-service report controls.',
-  chips:['Regulator-ready','Evidence bundles'],
-  caps:['Operational and financial BI metrics','Profitability and margin reporting','Scheduled and on-demand exports','Regulator-ready packages and filings','Evidence bundles with integrity','Self-service reports with access control']},
- {num:'18',slug:'integration-ecosystem',title:'Integration & Ecosystem',tag:'Connect to everything, safely.',
-  ov:'A connector registry and capability matrix with SDKs, webhook orchestration, retries/DLQs, and an ecosystem sandbox for safe partner onboarding.',
-  chips:['SDKs','Webhooks · DLQ'],
-  caps:['Connector registry and capability matrix','SDKs and typed API clients','Webhook orchestration and event delivery','Retries, idempotency, and dead-letter queues','Ecosystem sandbox for partners','Integration evidence and observability']}
-];
+// EDIT IMAGE LINKS HERE
+const HERO_IMAGE_URL = "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2070&auto=format&fit=crop";
+const CHIP_IMAGE_URL = "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1470&auto=format&fit=crop";
 
-export default function DomainsOverview() {
-    const [activeIndex, setActiveIndex] = useState(0);
-    const tablistRef = useRef<HTMLDivElement>(null);
+export default function Domains() {
+  return (
+    <div className="bg-[#0f121b] text-white min-h-screen font-sans">
 
-    useEffect(() => {
-        const handleHashChange = () => {
-            const hash = window.location.hash.slice(1);
-            const idx = DOMAINS.findIndex(d => d.slug === hash);
-            if (idx !== -1) setActiveIndex(idx);
-        };
-        handleHashChange();
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
-
-    const selectTab = (idx: number, scroll: boolean) => {
-        setActiveIndex(idx);
-        const slug = DOMAINS[idx].slug;
-        if (window.location.hash.slice(1) !== slug) {
-            window.history.replaceState(null, '', window.location.pathname + '#' + slug);
-        }
-        if (scroll) {
-            if (window.matchMedia('(max-width:1024px)').matches) {
-                document.getElementById('pd-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        let n: number | null = null;
-        if (['ArrowDown', 'ArrowRight'].includes(e.key)) n = (activeIndex + 1) % DOMAINS.length;
-        else if (['ArrowUp', 'ArrowLeft'].includes(e.key)) n = (activeIndex - 1 + DOMAINS.length) % DOMAINS.length;
-        else if (e.key === 'Home') n = 0;
-        else if (e.key === 'End') n = DOMAINS.length - 1;
-        if (n !== null) {
-            e.preventDefault();
-            selectTab(n, true);
-        }
-    };
-
-    const d = DOMAINS[activeIndex];
-    const prev = DOMAINS[(activeIndex - 1 + DOMAINS.length) % DOMAINS.length];
-    const next = DOMAINS[(activeIndex + 1) % DOMAINS.length];
-
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#020817] pt-16 pb-24 font-['Plus_Jakarta_Sans']">
-            {/* Fonts */}
-            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-            <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
-                {/* Intro Section */}
-                <div className="mb-12">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm"></div>
-                        <span className="text-sky-700 dark:text-sky-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-widest">
-                            Platform capabilities
-                        </span>
-                    </div>
-                    <h1 className="text-slate-800 dark:text-white text-3xl sm:text-4xl lg:text-[40px] font-bold leading-tight sm:leading-[54.40px] mb-4 max-w-[1129px]">
-                        Eighteen governed domains, one telecom platform.
-                    </h1>
-                    <p className="text-slate-600 dark:text-slate-400 text-base font-normal leading-6 max-w-[816px]">
-                        Every ZoikoNex capability — from identity and catalog to charging, billing, tax, and assurance — is a governed, evidence-led domain. Select any domain to see what it does and how it fits together.
-                    </p>
-                </div>
-
-                {/* Main Grid: Sidebar + Panel */}
-                <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
-                    
-                    {/* Left Sidebar (Tabs) */}
-                    <div 
-                        className="w-full lg:w-72 shrink-0 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 sticky top-24 max-h-[calc(100vh-120px)] lg:overflow-y-auto hide-scrollbar"
-                        role="tablist"
-                        aria-orientation="vertical"
-                        aria-label="Platform domains"
-                        ref={tablistRef}
-                        onKeyDown={handleKeyDown}
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                        {DOMAINS.map((domain, i) => {
-                            const isActive = activeIndex === i;
-                            return (
-                                <button
-                                    key={domain.slug}
-                                    role="tab"
-                                    id={`tab-${domain.slug}`}
-                                    aria-controls="panel"
-                                    aria-selected={isActive}
-                                    tabIndex={isActive ? 0 : -1}
-                                    onClick={() => selectTab(i, true)}
-                                    className={`
-                                        flex items-center gap-3 w-full text-left rounded-xl px-4 py-3 transition-all duration-200 outline-none
-                                        focus-visible:ring-2 focus-visible:ring-sky-500
-                                        ${isActive 
-                                            ? "bg-white dark:bg-slate-800 outline outline-1 outline-slate-200 dark:outline-slate-700 shadow-[0px_10px_30px_-16px_rgba(11,60,99,0.20)] dark:shadow-[0px_10px_30px_-16px_rgba(0,0,0,0.5)]" 
-                                            : "hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border border-transparent"}
-                                    `}
-                                >
-                                    <span className={`text-xs font-semibold font-['IBM_Plex_Mono'] shrink-0 w-5 ${isActive ? "text-sky-700 dark:text-sky-400" : "text-slate-500 dark:text-slate-400"}`}>
-                                        {domain.num}
-                                    </span>
-                                    <span className={`text-sm font-semibold truncate flex-1 ${isActive ? "text-slate-800 dark:text-white" : "text-slate-600 dark:text-slate-400"}`}>
-                                        {domain.title}
-                                    </span>
-                                    <span className={`shrink-0 transition-opacity duration-200 ${isActive ? "opacity-100 text-sky-700 dark:text-sky-400" : "opacity-0"}`}>
-                                        <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none stroke-[2.2px] stroke-linecap-round stroke-linejoin-round">
-                                            <path d="M5 12h14M13 6l6 6-6 6"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Right Panel (Content) */}
-                    <div 
-                        className="flex-1 w-full bg-white dark:bg-slate-900 rounded-2xl outline outline-1 outline-slate-200 dark:outline-slate-800 shadow-[0px_10px_30px_-16px_rgba(11,60,99,0.20)] dark:shadow-none p-8 sm:p-10"
-                        role="tabpanel"
-                        id="pd-panel"
-                        tabIndex={0}
-                        aria-live="polite"
-                        aria-labelledby={`tab-${d.slug}`}
-                    >
-                        <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold font-['IBM_Plex_Mono'] leading-5 tracking-[0.15em] uppercase mb-2">
-                            DOMAIN {d.num}
-                        </div>
-                        <h2 className="text-slate-800 dark:text-white text-3xl sm:text-4xl font-bold leading-tight sm:leading-10 mb-3">
-                            {d.title}
-                        </h2>
-                        <div className="text-sky-700 dark:text-sky-400 text-base font-semibold leading-6 mb-4">
-                            {d.tag}
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 text-base font-normal leading-6 max-w-[740px]">
-                            {d.ov}
-                        </p>
-                        
-                        <div className="flex flex-wrap gap-3 mt-8">
-                            {d.chips.map((c, i) => (
-                                <div key={i} className="bg-slate-50 dark:bg-slate-800 rounded-full outline outline-1 outline-slate-300 dark:outline-slate-700 px-3.5 py-1.5 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm"></div>
-                                    <span className="text-slate-600 dark:text-slate-300 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">
-                                        {c}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        <div className="border-t border-slate-200 dark:border-slate-800 mt-10 pt-8">
-                            <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide mb-6">
-                                Key capabilities
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                                {d.caps.map((c, i) => (
-                                    <div key={i} className="flex items-start gap-3">
-                                        <div className="w-5 h-5 bg-stone-200 dark:bg-slate-700 rounded-md flex items-center justify-center shrink-0 mt-0.5">
-                                            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-lime-600 dark:stroke-lime-500 fill-none stroke-[3px] stroke-linecap-round stroke-linejoin-round">
-                                                <path d="M20 6 9 17l-5-5"/>
-                                            </svg>
-                                        </div>
-                                        <span className="text-slate-600 dark:text-slate-300 text-sm font-normal leading-6">
-                                            {c}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        
-                        <div className="border-t border-slate-200 dark:border-slate-800 mt-10 pt-8 flex flex-wrap gap-4">
-                            <Link href="/contact" className="bg-sky-700 hover:bg-sky-800 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-2 text-sm font-bold transition-colors">
-                                Request a briefing
-                                <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none stroke-[2.2px] stroke-linecap-round stroke-linejoin-round">
-                                    <path d="M5 12h14M13 6l6 6-6 6"/>
-                                </svg>
-                            </Link>
-                            <Link href="/platform" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl outline outline-1 outline-slate-300 dark:outline-slate-700 hover:outline-sky-500 hover:text-sky-700 dark:hover:text-sky-400 px-6 py-3 flex items-center justify-center text-sm font-bold transition-colors">
-                                See it in the platform
-                            </Link>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 mt-8">
-                            <button 
-                                className="group flex flex-col justify-center bg-slate-50 dark:bg-slate-800/50 rounded-xl outline outline-1 outline-slate-200 dark:outline-slate-700 hover:outline-sky-500 p-4 sm:p-5 flex-1 max-w-full sm:max-w-[48%] text-left transition-all"
-                                onClick={() => selectTab((activeIndex - 1 + DOMAINS.length) % DOMAINS.length, true)}
-                            >
-                                <span className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide mb-1 group-hover:text-sky-600 transition-colors">
-                                    ← Previous
-                                </span>
-                                <span className="text-slate-800 dark:text-white text-sm font-bold truncate w-full group-hover:text-sky-600 transition-colors">
-                                    {prev.num} · {prev.title}
-                                </span>
-                            </button>
-                            
-                            <button 
-                                className="group flex flex-col justify-center items-end bg-slate-50 dark:bg-slate-800/50 rounded-xl outline outline-1 outline-slate-200 dark:outline-slate-700 hover:outline-sky-500 p-4 sm:p-5 flex-1 max-w-full sm:max-w-[48%] text-right transition-all sm:ml-auto"
-                                onClick={() => selectTab((activeIndex + 1) % DOMAINS.length, true)}
-                            >
-                                <span className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide mb-1 group-hover:text-sky-600 transition-colors">
-                                    Next →
-                                </span>
-                                <span className="text-slate-800 dark:text-white text-sm font-bold truncate w-full group-hover:text-sky-600 transition-colors">
-                                    {next.num} · {next.title}
-                                </span>
-                            </button>
-                        </div>
-                        
-                    </div>
-                </div>
-            </div>
-            
-            <style jsx global>{`
-                .hide-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-            `}</style>
+      {/* HERO SECTION */}
+      <section className="max-w-7xl mx-auto px-6 pb-20 flex flex-col lg:flex-row justify-center items-center gap-16">
+        <div className="w-full lg:w-[671px] flex flex-col justify-start items-start gap-6">
+          <div className="text-sky-600 text-xs font-bold font-['JetBrains_Mono'] uppercase leading-3 tracking-wider">
+            SOVEREIGN ARCHITECTURE
+          </div>
+          <h1 className="text-white text-5xl lg:text-6xl font-bold font-['Hanken_Grotesk'] leading-[66px]">
+            18 domains. One<br />telecom operating<br />system.
+          </h1>
+          <p className="max-w-[576px] text-gray-500 text-lg font-normal font-['Inter'] leading-7">
+            ZoikoNex unifies the critical domains required to launch, monetize, manage, govern, and scale modern telecom services—from customer onboarding and product catalog to real-time charging, billing, taxation, eSIM lifecycle management, compliance, APIs, AI governance, and evidence-grade operational control.
+          </p>
+          <div className="flex flex-wrap items-center gap-6 mt-4">
+            <Link href="/contact-us" className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 rounded-xl flex justify-center items-center gap-2 transition">
+              <span className="text-white text-lg font-normal font-['Inter'] leading-7">Request a Platform Briefing</span>
+              <svg className="w-5 h-5 text-white ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </Link>
+            <Link href="#18-domains" className="px-8 py-4 rounded-xl outline outline-1 outline-offset-[-1px] outline-zinc-500 hover:outline-zinc-300 hover:bg-white/5 transition flex justify-center items-center">
+              <span className="text-white text-lg font-normal font-['Inter'] leading-7">Explore the 18 Domains</span>
+            </Link>
+          </div>
         </div>
-    );
+        <div className="flex-1 h-[600px] lg:h-[688px] relative flex justify-center items-center w-full lg:w-auto mt-12 lg:mt-0">
+          <div className="absolute inset-0 bg-gradient-to-tr from-sky-600/10 to-sky-600/0 rounded-xl blur-[50px]"></div>
+          <div className="w-full max-w-[575px] h-full max-h-[600px] relative flex justify-center items-center">
+            <div className="w-72 h-72 absolute rounded-xl outline outline-1 outline-offset-[-1px] outline-stone-300/20 flex justify-center items-center">
+              <div className="w-4 h-4 absolute -top-2 bg-sky-600 rounded-full"></div>
+              <div className="w-4 h-4 absolute -bottom-2 bg-sky-600 rounded-full"></div>
+            </div>
+            <div className="w-96 h-96 absolute rounded-xl outline outline-1 outline-offset-[-1px] outline-stone-300/10 flex justify-center items-center">
+              <div className="w-4 h-4 absolute -right-2 top-1/4 bg-lime-300 rounded-full"></div>
+              <div className="w-4 h-4 absolute -left-2 bottom-1/4 bg-lime-300 rounded-full"></div>
+            </div>
+            <div className="w-full h-full max-w-[600px] max-h-[600px] absolute rounded-xl border border-stone-300/5 hidden md:block"></div>
+            <div className="w-48 h-48 bg-gray-800 rounded-xl shadow-[0px_0px_50px_0px_rgba(191,243,101,0.20)] outline outline-4 outline-offset-[-4px] outline-lime-300 flex justify-center items-center relative z-10">
+              <div className="text-lime-300 text-2xl font-bold font-['Hanken_Grotesk'] tracking-wider">CORE</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4 CARDS */}
+      <section className="w-full bg-[#161a25] border-t border-b border-gray-800 py-24">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col justify-center items-center gap-16">
+          <div className="w-full max-w-5xl flex flex-col justify-start items-center gap-6 text-center">
+            <h2 className="text-white text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px]">
+              Telecom growth breaks when critical domains are fragmented.
+            </h2>
+            <p className="max-w-3xl text-gray-500 text-lg font-normal font-['Inter'] leading-7">
+              Legacy telecom stacks often separate billing, charging, SIM management, and compliance<br className="hidden md:block" />across disconnected tools. That fragmentation creates revenue leakage and integration<br className="hidden md:block" />debt.
+            </p>
+          </div>
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-8 bg-gray-900/60 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex flex-col justify-start items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/image/18domain/icon8.svg" alt="Launch Faster" className="w-8 h-8 mb-2" />
+              <div className="text-white text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Launch Faster</div>
+              <div className="text-gray-500 text-sm font-normal font-['Inter'] leading-5">Unified catalogs and automated<br />workflows reduce time-to-market<br />from months to days.</div>
+            </div>
+            <div className="p-8 bg-gray-900/60 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex flex-col justify-start items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/image/18domain/icon9.svg" alt="Monetize Accurately" className="w-8 h-8 mb-2" />
+              <div className="text-white text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Monetize Accurately</div>
+              <div className="text-gray-500 text-sm font-normal font-['Inter'] leading-5">Real-time charging across all<br />event types ensures zero<br />revenue leakage.</div>
+            </div>
+            <div className="p-8 bg-gray-900/60 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex flex-col justify-start items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/image/18domain/icon10.svg" alt="Retain More" className="w-8 h-8 mb-2" />
+              <div className="text-white text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Retain More</div>
+              <div className="text-gray-500 text-sm font-normal font-['Inter'] leading-5">Predictive CX and sovereign data<br />control build lasting institutional<br />trust.</div>
+            </div>
+            <div className="p-8 bg-gray-900/60 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex flex-col justify-start items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/image/18domain/icon11.svg" alt="Govern Confidence" className="w-8 h-8 mb-2" />
+              <div className="text-white text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Govern Confidence</div>
+              <div className="text-gray-500 text-sm font-normal font-['Inter'] leading-5">Automated evidence ledgers and<br />AI-driven compliance mitigate<br />global risks.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DOMAINS GRID */}
+      <section id="18-domains" className="max-w-7xl mx-auto px-6 py-24">
+        <div className="mb-16">
+          <div className="text-sky-600 text-[10px] font-bold font-['JetBrains_Mono'] uppercase tracking-wider mb-2">THE ARCHITECTURE</div>
+          <h2 className="text-white text-3xl font-semibold font-['Hanken_Grotesk']">A Unified Sovereign Ecosystem</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+
+          {/* Layer 01 */}
+          <div className="space-y-2">
+            <div className="bg-[#161a25] border-l-2 border-[#0088cc] p-4 flex flex-col justify-center">
+              <div className="text-[#0088cc] text-[8px] font-bold uppercase tracking-wider mb-1">LAYER 01</div>
+              <div className="text-white text-xs font-medium">Commercial & Customer Ops</div>
+            </div>
+            {["1|Customer Management", "2|Product Catalog", "3|Order Management"].map((t, i) => (
+              <div key={i} className="bg-[#161a25]/60 p-3 flex items-center rounded-sm">
+                <div className="w-6 h-6 bg-[#0088cc]/10 text-[#0088cc] flex items-center justify-center text-[10px] font-bold mr-4 rounded-sm">{t.split('|')[0]}</div>
+                <div className="text-xs font-semibold text-gray-200">{t.split('|')[1]}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Layer 02 */}
+          <div className="space-y-2">
+            <div className="bg-[#161a25] border-l-2 border-[#a3e635] p-4 flex flex-col justify-center">
+              <div className="text-[#a3e635] text-[8px] font-bold uppercase tracking-wider mb-1">LAYER 02</div>
+              <div className="text-white text-xs font-medium">Monetization & Revenue</div>
+            </div>
+            {["4|Real-Time Charging", "5|Billing & Invoicing", "6|Payments & Wallets", "7|Taxation Engine", "8|Revenue Assurance"].map((t, i) => (
+              <div key={i} className="bg-[#161a25]/60 p-3 flex items-center rounded-sm">
+                <div className="w-6 h-6 bg-[#a3e635]/10 text-[#a3e635] flex items-center justify-center text-[10px] font-bold mr-4 rounded-sm">{t.split('|')[0]}</div>
+                <div className="text-xs font-semibold text-gray-200">{t.split('|')[1]}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Layer 03 */}
+          <div className="space-y-2">
+            <div className="bg-[#161a25] border-l-2 border-gray-400 p-4 flex flex-col justify-center">
+              <div className="text-gray-400 text-[8px] font-bold uppercase tracking-wider mb-1">LAYER 03</div>
+              <div className="text-white text-xs font-medium">Network & Service Lifecycle</div>
+            </div>
+            {["9|SIM/eSIM Lifecycle", "10|Network Integration", "11|Usage/Event Processing"].map((t, i) => (
+              <div key={i} className="bg-[#161a25]/60 p-3 flex items-center rounded-sm">
+                <div className="w-6 h-6 bg-gray-400/10 text-gray-400 flex items-center justify-center text-[10px] font-bold mr-4 rounded-sm">{t.split('|')[0]}</div>
+                <div className="text-xs font-semibold text-gray-200">{t.split('|')[1]}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Layer 04 */}
+          <div className="space-y-2">
+            <div className="bg-[#161a25] border-l-2 border-red-600 p-4 flex flex-col justify-center">
+              <div className="text-red-600 text-[8px] font-bold uppercase tracking-wider mb-1">LAYER 04</div>
+              <div className="text-white text-xs font-medium">Compliance & Evidence</div>
+            </div>
+            {["12|Compliance Controls", "13|Evidence Ledger", "14|AI Governance"].map((t, i) => (
+              <div key={i} className="bg-[#161a25]/60 p-3 flex items-center rounded-sm">
+                <div className="w-6 h-6 bg-red-600/10 text-red-600 flex items-center justify-center text-[10px] font-bold mr-4 rounded-sm">{t.split('|')[0]}</div>
+                <div className="text-xs font-semibold text-gray-200">{t.split('|')[1]}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Layer 05 */}
+          <div className="space-y-2">
+            <div className="bg-[#161a25] border-l-2 border-[#b48238] p-4 flex flex-col justify-center">
+              <div className="text-[#b48238] text-[8px] font-bold uppercase tracking-wider mb-1">LAYER 05</div>
+              <div className="text-white text-xs font-medium">Experience & Ops</div>
+            </div>
+            {["15|CX Support", "16|Analytics Intelligence"].map((t, i) => (
+              <div key={i} className="bg-[#161a25]/60 p-3 flex items-center rounded-sm">
+                <div className="w-6 h-6 bg-[#b48238]/10 text-[#b48238] flex items-center justify-center text-[10px] font-bold mr-4 rounded-sm">{t.split('|')[0]}</div>
+                <div className="text-xs font-semibold text-gray-200">{t.split('|')[1]}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Layer 06 */}
+          <div className="space-y-2">
+            <div className="bg-[#161a25] border-l-2 border-[#00e5ff] p-4 flex flex-col justify-center">
+              <div className="text-[#00e5ff] text-[8px] font-bold uppercase tracking-wider mb-1">LAYER 06</div>
+              <div className="text-white text-xs font-medium">Ecosystem & APIs</div>
+            </div>
+            {["17|API/Integration Layer", "18|Partner/Wholesale Ops"].map((t, i) => (
+              <div key={i} className="bg-[#161a25]/60 p-3 flex items-center rounded-sm">
+                <div className="w-6 h-6 bg-[#00e5ff]/10 text-[#00e5ff] flex items-center justify-center text-[10px] font-bold mr-4 rounded-sm">{t.split('|')[0]}</div>
+                <div className="text-xs font-semibold text-gray-200">{t.split('|')[1]}</div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* TABLE */}
+      <section className="w-full bg-[#191a21] py-24 border-t border-gray-800">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-white text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px] mb-4">Value Architecture</h2>
+            <p className="text-gray-500 text-[11px] font-medium">Strategic impact mapped by institutional role.</p>
+          </div>
+
+          <div className="w-full">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-[#2d303f]/70">
+                  <th className="pb-6 font-['JetBrains_Mono'] font-medium text-[#a3e635] text-[11px] w-[35%] tracking-wide">Stakeholder</th>
+                  <th className="pb-6 font-['JetBrains_Mono'] font-medium text-[#a3e635] text-[11px] w-[35%] tracking-wide">Primary Domain Focus</th>
+                  <th className="pb-6 font-['JetBrains_Mono'] font-medium text-[#a3e635] text-[11px] w-[30%] tracking-wide">Core Value Metric</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Founder / CEO", "Ecosystem & Experience", "Valuation & Market Expansion"],
+                  ["CTO / Architect", "APIs & Network Integration", "Infrastructure Stability & Scalability"],
+                  ["CFO / Finance", "Monetization & Revenue", "Zero Revenue Leakage & DSO"],
+                  ["Compliance / Legal", "Compliance & Evidence Ledger", "Regulatory De-risking"],
+                  ["Commercial Director", "Product Catalog & Order Management", "Time-to-Market & ARPU Growth"],
+                  ["CX / Operations", "Customer Mgmt & Support", "Churn Reduction & NPS"]
+                ].map((row, idx) => (
+                  <tr key={idx} className="border-b border-[#2d303f]/50">
+                    <td className="py-7 font-bold text-white text-xs">{row[0]}</td>
+                    <td className="py-7 text-slate-300 text-xs">{row[1]}</td>
+                    <td className="py-7 text-slate-200 text-xs">{row[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* JOURNEY */}
+      <section className="w-full max-w-7xl mx-auto px-6 py-28 flex flex-col justify-center items-center gap-12 overflow-hidden">
+        <div className="w-full flex flex-col justify-start items-center">
+          <div className="text-center text-white text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px]">Unified Lifecycle Journey</div>
+        </div>
+        <div className="w-full py-12 relative flex flex-col justify-start items-center">
+          <div className="hidden md:block w-full max-w-[1024px] h-[2px] absolute top-[80px] bg-stone-300/20 z-0"></div>
+
+          <div className="w-full flex flex-col md:flex-row justify-center items-start gap-8 z-10">
+            {/* Step 1 */}
+            <div className="w-full md:w-56 pb-2 flex flex-col justify-start items-center gap-2">
+              <div className="w-16 h-16 bg-[#161a25] rounded-xl outline outline-2 outline-offset-[-2px] outline-[#0088cc] flex justify-center items-center bg-[#0f121b]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon12.svg" alt="Plan Creation" className="w-6 h-6" />
+              </div>
+              <div className="pt-2 flex flex-col justify-start items-center">
+                <div className="text-center text-white text-base font-bold font-['Inter'] leading-6">Plan Creation</div>
+              </div>
+              <div className="flex flex-col justify-start items-center">
+                <div className="text-center text-gray-500 text-xs font-normal font-['Inter'] leading-4">Domain 2: Catalog</div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="w-full md:w-56 pb-2 flex flex-col justify-start items-center gap-2">
+              <div className="w-16 h-16 bg-[#161a25] rounded-xl outline outline-2 outline-offset-[-2px] outline-[#0088cc] flex justify-center items-center bg-[#0f121b]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon13.svg" alt="Subscriber Sync" className="w-6 h-6" />
+              </div>
+              <div className="pt-2 flex flex-col justify-start items-center">
+                <div className="text-center text-white text-base font-bold font-['Inter'] leading-6">Subscriber Sync</div>
+              </div>
+              <div className="flex flex-col justify-start items-center">
+                <div className="text-center text-gray-500 text-xs font-normal font-['Inter'] leading-4">Domain 1 & 9: CRM/eSIM</div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="w-full md:w-56 flex flex-col justify-start items-center gap-2">
+              <div className="w-16 h-16 bg-[#161a25] rounded-xl outline outline-2 outline-offset-[-2px] outline-[#0088cc] flex justify-center items-center bg-[#0f121b]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon14.svg" alt="Live Usage" className="w-6 h-6" />
+              </div>
+              <div className="pt-2 flex flex-col justify-start items-center">
+                <div className="text-center text-white text-base font-bold font-['Inter'] leading-6">Live Usage</div>
+              </div>
+              <div className="flex flex-col justify-start items-center">
+                <div className="text-center text-gray-500 text-xs font-normal font-['Inter'] leading-4">Domain 4: Charging</div>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="w-full md:w-56 pb-2 flex flex-col justify-start items-center gap-2">
+              <div className="w-16 h-16 bg-[#161a25] rounded-xl outline outline-2 outline-offset-[-2px] outline-[#0088cc] flex justify-center items-center bg-[#0f121b]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon15.svg" alt="Audit & Verify" className="w-6 h-6" />
+              </div>
+              <div className="pt-2 flex flex-col justify-start items-center">
+                <div className="text-center text-white text-base font-bold font-['Inter'] leading-6">Audit & Verify</div>
+              </div>
+              <div className="flex flex-col justify-start items-center">
+                <div className="text-center text-gray-500 text-xs font-normal font-['Inter'] leading-4">Domain 13: Evidence</div>
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="w-full md:w-56 pb-2 flex flex-col justify-start items-center gap-2">
+              <div className="w-16 h-16 bg-[#161a25] rounded-xl outline outline-2 outline-offset-[-2px] outline-lime-400 flex justify-center items-center bg-[#0f121b]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon16.svg" alt="Exec Visibility" className="w-6 h-6" />
+              </div>
+              <div className="pt-2 flex flex-col justify-start items-center">
+                <div className="text-center text-white text-base font-bold font-['Inter'] leading-6">Exec Visibility</div>
+              </div>
+              <div className="flex flex-col justify-start items-center">
+                <div className="text-center text-gray-500 text-xs font-normal font-['Inter'] leading-4">Domain 16: Analytics</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BOTTOM SECTION */}
+      <section className="w-full max-w-7xl mx-auto px-6 py-28 flex flex-col justify-start items-start">
+        <div className="w-full flex flex-col lg:flex-row justify-center items-center gap-20">
+          <div className="flex-1 flex flex-col justify-center items-start gap-10">
+            {/* Item 1 */}
+            <div className="flex justify-start items-start gap-4">
+              <div className="flex flex-col justify-start items-start pt-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon17.svg" alt="Modular by Design" className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col justify-start items-start gap-1">
+                <div className="text-white text-sm font-bold font-['Inter'] leading-5">Modular by Design</div>
+                <div className="text-gray-500 text-xs font-normal font-['Inter'] leading-5">
+                  Deploy only what you need. Each domain operates independently or as a unified<br className="hidden lg:block" />swarm.
+                </div>
+              </div>
+            </div>
+
+            {/* Item 2 */}
+            <div className="flex justify-start items-start gap-4">
+              <div className="flex flex-col justify-start items-start pt-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon18.svg" alt="API-First Integration" className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col justify-start items-start gap-1">
+                <div className="text-white text-sm font-bold font-['Inter'] leading-5">API-First Integration</div>
+                <div className="text-gray-500 text-xs font-normal font-['Inter'] leading-5">
+                  Every domain is exposed via high-performance gRPC/REST APIs for seamless<br className="hidden lg:block" />stack injection.
+                </div>
+              </div>
+            </div>
+
+            {/* Item 3 */}
+            <div className="flex justify-start items-start gap-4">
+              <div className="flex flex-col justify-start items-start pt-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon19.svg" alt="Evidence-Aware Operations" className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col justify-start items-start gap-1">
+                <div className="text-white text-sm font-bold font-['Inter'] leading-5">Evidence-Aware Operations</div>
+                <div className="text-gray-500 text-xs font-normal font-['Inter'] leading-5">
+                  Every system state change is hashed and written to a secure immutable<br className="hidden lg:block" />evidence ledger.
+                </div>
+              </div>
+            </div>
+
+            {/* Item 4 */}
+            <div className="flex justify-start items-start gap-4">
+              <div className="flex flex-col justify-start items-start pt-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/image/18domain/icon20.svg" alt="AI Under Governance" className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col justify-start items-start gap-1">
+                <div className="text-white text-sm font-bold font-['Inter'] leading-5">AI Under Governance</div>
+                <div className="text-gray-500 text-xs font-normal font-['Inter'] leading-5">
+                  Automated reasoning is constrained by human-defined legal and technical<br className="hidden lg:block" />guardrails.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 w-full relative flex flex-col justify-center items-center mt-12 lg:mt-0">
+            <div className="absolute inset-[-4px] opacity-25 bg-gradient-to-r from-sky-600 to-lime-300 rounded-lg blur-[2px] pointer-events-none z-0"></div>
+            <div className="w-full p-8 bg-gray-900/60 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200/10 backdrop-blur-[6px] flex justify-center items-center overflow-hidden relative z-10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/image/18domain/eight.png" alt="Microchip" className="w-full h-auto object-cover rounded-sm shadow-2xl opacity-80" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA SECTION */}
+      <section className="w-full max-w-7xl mx-auto px-6 py-28 flex justify-center items-center">
+        <div className="w-full max-w-[896px] p-8 md:p-12 bg-gray-900/60 rounded-3xl border border-white/10 backdrop-blur-[6px] flex flex-col justify-center items-center gap-8">
+          <div className="flex flex-col justify-center items-center">
+            <h2 className="text-center text-white text-3xl md:text-5xl font-normal font-['Hanken_Grotesk'] leading-tight md:leading-[58px]">
+              Map ZoikoNex to your telecom<br className="hidden md:block"/>operating model.
+            </h2>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 w-full">
+            <Link href="/contact-us" className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-xl flex justify-center items-center">
+              <span className="text-center text-white text-lg md:text-xl font-normal font-['Inter'] leading-7">Request a Platform Briefing</span>
+            </Link>
+            <Link href="/api-reference" className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 rounded-xl border border-zinc-500 hover:bg-white/5 transition-colors flex justify-center items-center">
+              <span className="text-center text-white text-lg md:text-xl font-normal font-['Inter'] leading-7">View API Reference</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  );
 }
