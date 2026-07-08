@@ -214,3 +214,100 @@ export async function fetchTenantUsers(tenantId: string): Promise<TenantUser[]> 
   const data = await authedRequest("GET", "/v1/users", undefined, { "x-tenant-id": tenantId });
   return (data?.users ?? []) as TenantUser[];
 }
+
+/**
+ * Platform staff management. Zoiko's own team, not a customer tenant's
+ * users — these accounts live in the synthetic platform tenant (see
+ * migrations/000009_bootstrap_platform_tenant) and are managed through the
+ * exact same generic identity endpoints as any tenant's users, just with
+ * X-Tenant-ID pinned to the platform tenant.
+ *
+ * Only two tiers are meaningful given how the backend actually enforces
+ * access (see identity-tenancy API.INTEGRATION.md gotcha on X-Tenant-ID):
+ *   - "admin": a wildcard AccessPolicy (role_platform_admin) - full access,
+ *     including drilling into any single tenant's users/audit trail.
+ *   - "viewer": a scoped policy granting only platform:admin:read - can see
+ *     the tenant list/counts (GET /v1/tenants), but CANNOT view any single
+ *     tenant's users or audit trail. That drill-down is gated by
+ *     RequireTenantMatchOrPlatformAdmin, which only recognizes the full
+ *     role_platform_admin role, not a scoped grant - there is currently no
+ *     backend concept of "read-only access to every tenant's own data."
+ */
+export type PlatformStaffRole = "admin" | "viewer";
+
+let cachedPlatformTenant: { tenantId: string; brandId: string } | null = null;
+
+async function resolvePlatformTenantAndBrand(): Promise<{ tenantId: string; brandId: string }> {
+  if (cachedPlatformTenant) return cachedPlatformTenant;
+  const tenants = await fetchTenants();
+  const platform = tenants.find((t) => t.domain_suffix === PLATFORM_DOMAIN);
+  if (!platform || !platform.brands?.[0]?.id) {
+    throw new ApiException(500, {
+      code: "PLATFORM_TENANT_MISCONFIGURED",
+      message: "Platform tenant or its brand could not be resolved. Confirm migrations/000009 has run.",
+    });
+  }
+  cachedPlatformTenant = { tenantId: platform.tenant_id, brandId: platform.brands[0].id };
+  return cachedPlatformTenant;
+}
+
+export interface CreatePlatformStaffInput {
+  email: string;
+  full_name: string;
+  password: string;
+  role: PlatformStaffRole;
+}
+
+export async function createPlatformStaffUser(input: CreatePlatformStaffInput): Promise<{ user_id: string; email: string }> {
+  const { tenantId, brandId } = await resolvePlatformTenantAndBrand();
+  const rules =
+    input.role === "admin"
+      ? [{ effect: "allow", action_pattern: "*", resource_pattern: "*" }]
+      : [{ effect: "allow", action_pattern: "platform:admin:read", resource_pattern: "*" }];
+
+  return authedRequest(
+    "POST",
+    "/v1/users",
+    { email: input.email, full_name: input.full_name, password: input.password, brand_id: brandId, rules },
+    { "x-tenant-id": tenantId },
+  );
+}
+
+export async function fetchPlatformStaff(): Promise<TenantUser[]> {
+  const { tenantId } = await resolvePlatformTenantAndBrand();
+  return fetchTenantUsers(tenantId);
+}
+
+export interface AuditTrailEntry {
+  id: string;
+  tenant_id: string;
+  event_type: string;
+  actor_id: string;
+  actor_type: string;
+  client_ip: string;
+  user_agent: string;
+  payload: string;
+  timestamp: string;
+}
+
+export interface FetchAuditTrailsParams {
+  actorId?: string;
+  eventType?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+/** Fetches a specific tenant's audit history. Drilling into any tenant OTHER
+ *  than the platform tenant itself requires the caller to hold full
+ *  role_platform_admin - see the module docstring above. */
+export async function fetchAuditTrails(tenantId: string, params: FetchAuditTrailsParams = {}): Promise<{ trails: AuditTrailEntry[]; nextCursor: string }> {
+  const q = new URLSearchParams();
+  if (params.actorId) q.set("actor_id", params.actorId);
+  if (params.eventType) q.set("event_type", params.eventType);
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.cursor) q.set("cursor", params.cursor);
+  const qs = q.toString();
+
+  const data = await authedRequest("GET", `/v1/audit-trails${qs ? `?${qs}` : ""}`, undefined, { "x-tenant-id": tenantId });
+  return { trails: (data?.audit_trails ?? []) as AuditTrailEntry[], nextCursor: data?.next_cursor ?? "" };
+}
