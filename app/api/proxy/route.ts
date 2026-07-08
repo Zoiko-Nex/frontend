@@ -19,6 +19,7 @@ const portToUrl: Record<number, string> = {
   8096: "https://payments.api.zoikonex.com",
   8097: "https://integration.api.zoikonex.com",
   8098: "https://reporting.api.zoikonex.com",
+  8099: "https://forms.api.zoikonex.com",
 };
 
 export async function POST(request: Request) {
