@@ -82,24 +82,20 @@ export default function MVNOLaunchHero() {
 
             {/* CTA */}
 
-            <Link href="/request-a-demo">
-              <button
-                className="
-      mt-10
-      inline-flex
-      items-center
-      gap-3
-      px-8
-      py-4
-      bg-[#2B7EC1]
-      text-white
-      text-sm
-      font-semibold
-    "
-              >
+            <Link href="/request-a-demo" className="
+              mt-10
+              inline-flex
+              items-center
+              gap-3
+              px-8
+              py-4
+              bg-[#2B7EC1]
+              text-white
+              text-sm
+              font-semibold
+            ">
                 Request a Demo
                 <ArrowRight size={16} />
-              </button>
             </Link>
           </div>
 

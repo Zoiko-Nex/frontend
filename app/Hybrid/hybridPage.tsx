@@ -26,11 +26,11 @@ export default function HybridDeploymentPage() {
                 Coexistence without compromise. Keep your legacy mediation while activating cloud-native monetization. Bridge the gap between legacy reliability and cloud agility.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
-                <Link href="#" className="bg-cyan-700 hover:bg-cyan-600 text-white px-8 py-4 rounded font-semibold transition-colors flex items-center gap-2">
+                <Link href="/request-a-demo" className="bg-cyan-700 hover:bg-cyan-600 text-white px-8 py-4 rounded font-semibold transition-colors flex items-center gap-2">
                   Book a Demo
                   <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="#" className="border border-zinc-700 hover:border-zinc-500 text-white px-8 py-4 rounded font-semibold transition-colors flex items-center justify-center">
+                <Link href="/api-reference" className="border border-zinc-700 hover:border-zinc-500 text-white px-8 py-4 rounded font-semibold transition-colors flex items-center justify-center">
                   Technical Specs
                 </Link>
               </div>
@@ -235,10 +235,10 @@ export default function HybridDeploymentPage() {
                </div>
             </div>
             <div className="self-stretch pt-4 inline-flex flex-col sm:flex-row justify-center items-center gap-6">
-               <Link href="#" className="w-64 px-10 pt-5 pb-6 bg-white inline-flex flex-col justify-center items-center hover:bg-gray-50 transition-colors">
+               <Link href="/request-a-demo" className="w-64 px-10 pt-5 pb-6 bg-white inline-flex flex-col justify-center items-center hover:bg-gray-50 transition-colors">
                   <div className="text-center justify-center text-cyan-700 text-lg font-semibold font-['Inter'] leading-7">Book a Demo</div>
                </Link>
-               <Link href="#" className="px-10 py-5 outline outline-2 outline-offset-[-2px] outline-white inline-flex flex-col justify-center items-center hover:bg-white/10 transition-colors">
+               <Link href="/contact-us" className="px-10 py-5 outline outline-2 outline-offset-[-2px] outline-white inline-flex flex-col justify-center items-center hover:bg-white/10 transition-colors">
                   <div className="text-center justify-center text-white text-lg font-semibold font-['Inter'] leading-7">Contact Architect</div>
                </Link>
             </div>

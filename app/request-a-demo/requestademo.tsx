@@ -293,7 +293,7 @@ export default function DeploymentPage() {
                   </button>
                   <p className="text-center text-[11px] text-slate-500 leading-normal">
                     By submitting this form, you agree that ZoikoNex may contact you about your request. See{" "}
-                    <Link href="#" className="text-sky-700 hover:underline">Privacy Notice</Link>.
+                    <Link href="/privacy-policy" className="text-sky-700 hover:underline">Privacy Notice</Link>.
                   </p>
                 </div>
 

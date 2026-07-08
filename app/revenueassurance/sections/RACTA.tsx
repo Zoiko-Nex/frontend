@@ -23,7 +23,7 @@ export default function RACTA() {
           </Link>
 
           <Link
-            href="/contact"
+            href="/contact-us"
             className="bg-transparent text-white px-8 py-3.5 font-semibold text-[0.9rem] rounded cursor-pointer inline-flex items-center justify-center"
             style={{ border: "1.5px solid #3A4456" }}
           >

@@ -565,10 +565,10 @@ export default function EvidenceLedger() {
           </div>
           
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-6">
-            <Link href="#" className="px-8 py-3.5 bg-white hover:bg-gray-50 transition-colors text-[#3182a4] text-xs font-semibold tracking-wide flex justify-center items-center">
+            <Link href="/contact-us" className="px-8 py-3.5 bg-white hover:bg-gray-50 transition-colors text-[#3182a4] text-xs font-semibold tracking-wide flex justify-center items-center">
               Request Architecture Briefing
             </Link>
-            <Link href="#" className="px-8 py-3.5 bg-transparent border border-white hover:bg-white/10 transition-colors text-white text-xs font-semibold tracking-wide flex justify-center items-center">
+            <Link href="/request-a-demo" className="px-8 py-3.5 bg-transparent border border-white hover:bg-white/10 transition-colors text-white text-xs font-semibold tracking-wide flex justify-center items-center">
               Schedule Technical Demo
             </Link>
           </div>

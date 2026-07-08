@@ -19,9 +19,7 @@ export default function ResourcesPage() {
                         </div>
                     </div>
                     <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
-                        <Link href="/request-a-demo">
-                            <button className="w-full sm:w-auto px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm text-white text-sm font-semibold shadow-lg">Request a Demo</button>
-                        </Link>
+                        <Link href="/request-a-demo" className="w-full sm:w-auto px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm text-white text-sm font-semibold shadow-lg text-center">Request a Demo</Link>
                         <Link href="/technical-architecture" className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/20 transition-colors rounded-sm border border-white/20 text-white text-sm font-semibold block text-center">Start Technical Evaluation</Link>
                     </div>
                 </div>
@@ -100,7 +98,7 @@ export default function ResourcesPage() {
                                 <span className="px-3 py-1 bg-lime-300 rounded-xl text-lime-950 text-[10px] font-bold font-['JetBrains_Mono'] self-start shadow-sm tracking-wider">WHITE PAPER</span>
                                 <h3 className="text-white text-3xl font-normal font-['Hanken_Grotesk'] mt-2 leading-tight">Governed Telecom Monetization Infrastructure: A Sovereign Blueprint</h3>
                                 <p className="text-white/70 text-base font-normal max-w-[672px] mt-1 leading-relaxed">Explore the mathematical precision required for Tier-1 settlement in a cloud-native ecosystem.</p>
-                                <button className="mt-4 text-lime-300 text-base font-medium flex items-center gap-2 hover:underline group-hover:translate-x-1 transition-transform">Download White Paper <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></button>
+                                <Link href="#" className="mt-4 text-lime-300 text-base font-medium flex items-center gap-2 hover:underline group-hover:translate-x-1 transition-transform">Download White Paper <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></Link>
                             </div>
                         </div>
                         <div className="flex flex-col gap-6">
@@ -251,7 +249,7 @@ export default function ResourcesPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="p-8 bg-white rounded-xl border border-slate-100 flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 cursor-pointer">
+                        <Link href="/white-papers" className="block p-8 bg-white rounded-xl border border-slate-100 flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 cursor-pointer">
                             <div className="flex flex-col gap-5">
                                 <div className="flex justify-between items-center">
                                     <span className="px-3 py-1 bg-[#eae9e8] text-gray-800 text-[9px] tracking-widest uppercase rounded-full font-['JetBrains_Mono'] font-bold">WHITE PAPER</span>
@@ -266,9 +264,9 @@ export default function ResourcesPage() {
                                 <span className="text-sky-600 text-[9px] tracking-widest font-['JetBrains_Mono'] font-bold uppercase">AUDIENCE: ARCHITECTS</span>
                                 <div className="w-8 h-8 flex justify-center items-center group-hover:bg-slate-50 rounded transition-colors"><svg className="w-4 h-4 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></div>
                             </div>
-                        </div>
+                        </Link>
 
-                        <div className="p-8 bg-white rounded-xl border border-slate-100 flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 cursor-pointer">
+                        <Link href="/casestudies" className="block p-8 bg-white rounded-xl border border-slate-100 flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 cursor-pointer">
                             <div className="flex flex-col gap-5">
                                 <div className="flex justify-between items-center">
                                     <span className="px-3 py-1 bg-[#e0dceb] text-gray-800 text-[9px] tracking-widest uppercase rounded-full font-['JetBrains_Mono'] font-bold">CASE STUDY</span>
@@ -283,9 +281,9 @@ export default function ResourcesPage() {
                                 <span className="text-sky-600 text-[9px] tracking-widest font-['JetBrains_Mono'] font-bold uppercase">AUDIENCE: EXECUTIVES</span>
                                 <div className="w-8 h-8 flex justify-center items-center group-hover:bg-slate-50 rounded transition-colors"><svg className="w-5 h-5 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></div>
                             </div>
-                        </div>
+                        </Link>
 
-                        <div className="p-8 bg-white rounded-xl border border-slate-100 flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 cursor-pointer">
+                        <Link href="/white-papers" className="block p-8 bg-white rounded-xl border border-slate-100 flex flex-col justify-between hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 cursor-pointer">
                             <div className="flex flex-col gap-5">
                                 <div className="flex justify-between items-center">
                                     <span className="px-3 py-1 bg-[#d5e0f7] text-gray-800 text-[9px] tracking-widest uppercase rounded-full font-['JetBrains_Mono'] font-bold">GUIDE</span>
@@ -300,11 +298,11 @@ export default function ResourcesPage() {
                                 <span className="text-sky-600 text-[9px] tracking-widest font-['JetBrains_Mono'] font-bold uppercase">AUDIENCE: COMMERCIAL</span>
                                 <div className="w-8 h-8 flex justify-center items-center group-hover:bg-slate-50 rounded transition-colors"><svg className="w-4 h-4 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></div>
                             </div>
-                        </div>
+                        </Link>
                     </div>
 
                     <div className="w-full flex justify-center mt-6">
-                        <button className="px-8 py-3.5 bg-transparent border border-zinc-900 rounded text-zinc-900 text-sm font-semibold hover:bg-zinc-900 hover:text-white transition-all shadow-sm">View All Resources</button>
+                        <Link href="/resources" className="px-8 py-3.5 bg-transparent border border-zinc-900 rounded text-zinc-900 text-sm font-semibold hover:bg-zinc-900 hover:text-white transition-all shadow-sm">View All Resources</Link>
                     </div>
                 </div>
             </section>
@@ -315,10 +313,10 @@ export default function ResourcesPage() {
                     <div className="lg:col-span-4 flex flex-col gap-6 pr-4">
                         <h2 className="text-zinc-900 text-4xl lg:text-5xl font-semibold font-['Hanken_Grotesk'] leading-tight">Priority Glossary<br className="hidden lg:block" />Terms</h2>
                         <p className="text-slate-600 text-base font-normal leading-relaxed mt-2">Understanding the terminology of sovereign telecom infrastructure and governed monetization.</p>
-                        <div className="mt-4 text-sky-600 text-sm font-bold flex items-center gap-2 cursor-pointer hover:text-sky-700 transition-colors group">
+                        <Link href="/resources" className="mt-4 text-sky-600 text-sm font-bold flex items-center gap-2 cursor-pointer hover:text-sky-700 transition-colors group">
                             Full Industry Glossary
                             <svg className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        </div>
+                        </Link>
                     </div>
 
                     <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
