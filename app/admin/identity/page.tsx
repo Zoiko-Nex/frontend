@@ -14,26 +14,28 @@ import {
 import StatusBadge from "../_components/StatusBadge";
 import { buildInvite, CopyButton, generatePassword } from "../_components/invite";
 
-type Tab = "users" | "sessions" | "roles" | "policies";
+type Tab = "users" | "sessions" | "roles" | "groups" | "policies";
 
 interface User { user_id?: string; id?: string; email?: string; full_name?: string; status?: string; brand_id?: string; }
 interface Session { session_id?: string; id?: string; user_id?: string; status?: string; created_at?: string; device_fingerprint?: string; ip_address?: string; }
 interface Role { role_id?: string; id?: string; name?: string; description?: string; }
+interface Group { group_id?: string; id?: string; name?: string; }
 interface PolicyRule { effect: string; action_pattern: string; resource_pattern: string; }
 
 export default function IdentityPage() {
   const [tab, setTab] = useState<Tab>("users");
   return (
     <div>
-      <SectionHeader title="Identity & Tenancy" subtitle="Operators, sessions, roles and access policies for this tenant." />
+      <SectionHeader title="Identity & Tenancy" subtitle="Operators, sessions, roles, groups and access policies for this tenant." />
       <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: "1px solid var(--ax-border)" }}>
-        {(["users", "sessions", "roles", "policies"] as Tab[]).map((t) => (
+        {(["users", "sessions", "roles", "groups", "policies"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={tabStyle(tab === t)}>{t[0].toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
       {tab === "users" && <UsersTab />}
       {tab === "sessions" && <SessionsTab />}
       {tab === "roles" && <RolesTab />}
+      {tab === "groups" && <GroupsTab />}
       {tab === "policies" && <PoliciesTab />}
     </div>
   );
@@ -354,6 +356,178 @@ function RoleManageModal({ role, onClose }: { role: Role; onClose: () => void })
               })}
             </Select>
             <Button variant="default" disabled={!assignId} loading={assign.isPending} onClick={() => assign.mutate()}>Assign</Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ───────── Groups ───────── */
+function GroupsTab() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [managing, setManaging] = useState<Group | null>(null);
+
+  const q = useQuery({
+    queryKey: ["identity", "groups"],
+    queryFn: () => api.get<{ groups?: Group[] }>("identity", "/v1/groups"),
+  });
+  const groups = q.data?.groups ?? [];
+
+  const create = useMutation({
+    mutationFn: () => api.post("identity", "/v1/groups", { name }),
+    onSuccess: () => { toast.success("Group created"); setOpen(false); setName(""); qc.invalidateQueries({ queryKey: ["identity", "groups"] }); },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create group"),
+  });
+
+  return (
+    <div>
+      <Card style={{ padding: 18, marginBottom: 14 }}>
+        <p style={{ fontSize: 13, color: "var(--ax-text-dim)", lineHeight: 1.6 }}>
+          A group is a team you add people to — for example &quot;Order Managers&quot; or
+          &quot;Support Team&quot;. Pick which dashboard sections the group can access, then
+          add whoever needs that access. Everyone in the group gets the same access
+          automatically, and removing someone from the group removes their access too.
+          Groups are for people only — service accounts and integrations get access a
+          different way, from the Policies tab.
+        </p>
+      </Card>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <Button variant="primary" onClick={() => setOpen(true)}>+ New group</Button>
+      </div>
+
+      {q.isError ? <ErrorBanner error={q.error} /> : (
+        <Table>
+          <thead><tr><Th>Group</Th><Th /></tr></thead>
+          <tbody>
+            {q.isLoading ? <LoadingRows cols={2} /> : groups.length === 0 ? (
+              <tr><Td style={{ padding: 0 }}><EmptyState title="No groups yet" hint="Create one to start bundling access for a team." /></Td><Td /></tr>
+            ) : groups.map((g) => (
+              <Tr key={g.group_id || g.id}>
+                <Td style={{ fontWeight: 500 }}>{g.name}</Td>
+                <Td style={{ textAlign: "right" }}><Button variant="default" onClick={() => setManaging(g)}>Manage</Button></Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="New group"
+        footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button variant="primary" disabled={!name.trim()} loading={create.isPending} onClick={() => create.mutate()}>Create</Button></>}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Field label="Group name" hint="A short, recognizable name for the team, e.g. &quot;Order Managers&quot;.">
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Order Managers" />
+          </Field>
+        </div>
+      </Modal>
+
+      {managing && <GroupManageModal group={managing} onClose={() => setManaging(null)} />}
+    </div>
+  );
+}
+
+/* ───────── Group permission + member management ───────── */
+function GroupManageModal({ group, onClose }: { group: Group; onClose: () => void }) {
+  const qc = useQueryClient();
+  const groupId = (group.group_id || group.id)!;
+  const domains = permissionDomains();
+
+  const permsQ = useQuery({
+    queryKey: ["identity", "groups", groupId, "permissions"],
+    queryFn: () => api.get<{ rules?: PolicyRule[] }>("identity", `/v1/groups/${groupId}/permissions`),
+  });
+  const membersQ = useQuery({
+    queryKey: ["identity", "groups", groupId, "members"],
+    queryFn: () => api.get<{ user_ids?: string[] }>("identity", `/v1/groups/${groupId}/members`),
+  });
+  const usersQ = useQuery({
+    queryKey: ["identity", "users"],
+    queryFn: () => api.get<{ users?: User[]; items?: User[] }>("identity", "/v1/users"),
+  });
+  const users = usersQ.data?.users ?? usersQ.data?.items ?? [];
+  const emailFor = (userId: string) => users.find((u) => (u.user_id || u.id) === userId)?.email || userId;
+
+  const [checked, setChecked] = useState<Set<string> | null>(null);
+  const grantedDomains = checked ?? new Set(
+    (permsQ.data?.rules ?? [])
+      .filter((rule) => rule.effect?.toLowerCase() === "allow")
+      .flatMap((rule) => domains.filter((d) => rule.action_pattern === "*" || rule.action_pattern.startsWith(`${d.domain}:`)).map((d) => d.domain)),
+  );
+
+  const toggle = (domain: string) => {
+    const next = new Set(grantedDomains);
+    if (next.has(domain)) next.delete(domain); else next.add(domain);
+    setChecked(next);
+  };
+
+  const savePermissions = useMutation({
+    mutationFn: () => api.put("identity", `/v1/groups/${groupId}/permissions`, {
+      rules: Array.from(grantedDomains).map((domain) => ({ effect: "allow", action_pattern: `${domain}:*`, resource_pattern: "*" })),
+    }),
+    onSuccess: () => { toast.success("Permissions saved"); qc.invalidateQueries({ queryKey: ["identity", "groups", groupId, "permissions"] }); },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to save permissions"),
+  });
+
+  const [assignId, setAssignId] = useState("");
+  const assign = useMutation({
+    mutationFn: () => api.post("identity", `/v1/groups/${groupId}/members`, { user_id: assignId }),
+    onSuccess: () => { toast.success("User added"); setAssignId(""); qc.invalidateQueries({ queryKey: ["identity", "groups", groupId, "members"] }); },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to add user — service accounts can't join groups, see Policies tab instead"),
+  });
+  const unassign = useMutation({
+    mutationFn: (userId: string) => api.del("identity", `/v1/groups/${groupId}/members/${userId}`),
+    onSuccess: () => { toast.success("User removed"); qc.invalidateQueries({ queryKey: ["identity", "groups", groupId, "members"] }); },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to remove user"),
+  });
+
+  return (
+    <Modal open onClose={onClose} title={`Manage "${group.name}"`} width={560}
+      footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button variant="primary" loading={savePermissions.isPending} onClick={() => savePermissions.mutate()}>Save permissions</Button></>}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ax-text-dim)", marginBottom: 10 }}>
+            Dashboard access
+          </div>
+          {permsQ.isLoading ? <div style={{ fontSize: 13, color: "var(--ax-text-faint)" }}>Loading…</div> : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+              {domains.map((d) => (
+                <label key={d.domain} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={grantedDomains.has(d.domain)} onChange={() => toggle(d.domain)} />
+                  {d.label}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ax-text-dim)", marginBottom: 10 }}>
+            People in this group
+          </div>
+          {membersQ.isLoading ? <div style={{ fontSize: 13, color: "var(--ax-text-faint)" }}>Loading…</div> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+              {(membersQ.data?.user_ids ?? []).length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "var(--ax-text-faint)" }}>Nobody in this group yet.</div>
+              ) : membersQ.data!.user_ids!.map((userId) => (
+                <div key={userId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--ax-border)" }}>
+                  <span style={{ fontSize: 13 }}>{emailFor(userId)}</span>
+                  <Button variant="ghost" onClick={() => unassign.mutate(userId)} loading={unassign.isPending}>Remove</Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <Select value={assignId} onChange={(e) => setAssignId(e.target.value)} style={{ flex: 1 }}>
+              <option value="">Select a person to add…</option>
+              {users.map((u) => {
+                const id = u.user_id || u.id;
+                return <option key={id} value={id}>{u.email || id}</option>;
+              })}
+            </Select>
+            <Button variant="default" disabled={!assignId} loading={assign.isPending} onClick={() => assign.mutate()}>Add</Button>
           </div>
         </div>
       </div>
