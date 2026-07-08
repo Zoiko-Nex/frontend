@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   fetchTenants, provisionTenant, createTenantAdmin, updateTenantLifecycle, fetchTenantUsers,
-  fetchPlatformStaff, createPlatformStaffUser, fetchAuditTrails,
+  fetchPlatformStaff, createPlatformStaffUser, fetchAuditTrails, fetchTenantOrders,
   type PlatformTenant, type TenantLifecycleAction, type PlatformStaffRole,
 } from "@/lib/admin/platform/auth";
 import { ApiException } from "@/lib/admin/client";
@@ -58,6 +58,7 @@ function TenantsTab() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [addAdminFor, setAddAdminFor] = useState<PlatformTenant | null>(null);
   const [viewUsersFor, setViewUsersFor] = useState<PlatformTenant | null>(null);
+  const [viewOrdersFor, setViewOrdersFor] = useState<PlatformTenant | null>(null);
 
   const tenants = useQuery({
     queryKey: ["platform", "tenants"],
@@ -141,6 +142,7 @@ function TenantsTab() {
                       <Td>
                         <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                           <Button variant="ghost" onClick={() => setViewUsersFor(t)}>Users</Button>
+                          <Button variant="ghost" onClick={() => setViewOrdersFor(t)}>Orders</Button>
                           <Button variant="ghost" onClick={() => setAddAdminFor(t)}>+ Admin user</Button>
                           {t.status === "Provisioned" && (
                             <Button variant="default" loading={lifecycle.isPending} onClick={() => lifecycle.mutate({ tenantId: t.tenant_id, action: "ACTIVATE" })}>Activate</Button>
@@ -168,7 +170,40 @@ function TenantsTab() {
       {onboardOpen && <OnboardTenantModal onClose={() => setOnboardOpen(false)} onDone={invalidate} />}
       {addAdminFor && <AddAdminUserModal tenant={addAdminFor} onClose={() => setAddAdminFor(null)} onDone={invalidate} />}
       {viewUsersFor && <TenantUsersModal tenant={viewUsersFor} onClose={() => setViewUsersFor(null)} />}
+      {viewOrdersFor && <TenantOrdersModal tenant={viewOrdersFor} onClose={() => setViewOrdersFor(null)} />}
     </div>
+  );
+}
+
+/* ───────── View a tenant's recent order activity (cross-service, platform-admin only) ───────── */
+function TenantOrdersModal({ tenant, onClose }: { tenant: PlatformTenant; onClose: () => void }) {
+  const orders = useQuery({
+    queryKey: ["platform", "tenant-orders", tenant.tenant_id],
+    queryFn: () => fetchTenantOrders(tenant.tenant_id),
+  });
+  const list = orders.data ?? [];
+
+  return (
+    <Modal open onClose={onClose} title={`Recent orders — ${tenant.name}`} width={620}
+      footer={<Button variant="ghost" onClick={onClose}>Close</Button>}>
+      {orders.isError ? <ErrorBanner error={orders.error} /> : (
+        <Table>
+          <thead><tr><Th>Order</Th><Th>Type</Th><Th>Status</Th><Th>Created</Th></tr></thead>
+          <tbody>
+            {orders.isLoading ? <LoadingRows cols={4} /> : list.length === 0 ? (
+              <tr><td colSpan={4} style={{ padding: 0 }}><EmptyState title="No orders yet" hint="Nothing has been placed by this tenant." /></td></tr>
+            ) : list.map((o) => (
+              <Tr key={o.id}>
+                <Td><CopyId value={o.id} /></Td>
+                <Td style={{ color: "var(--ax-text-dim)" }}>{o.order_type || "—"}</Td>
+                <Td><StatusBadge status={o.status} /></Td>
+                <Td className="mono" style={{ fontSize: 12 }}>{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </Modal>
   );
 }
 

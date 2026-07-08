@@ -1,10 +1,13 @@
 "use client";
 
 /**
- * Auth + data access for the platform-wide super-admin console. Talks to
- * identity-tenancy only, via the same `/api/proxy` route the tenant-scoped
- * admin panel uses (see lib/admin/client.ts) — direct browser calls to the
- * backend hit CORS/mixed-content in dev, so everything goes through it.
+ * Auth + data access for the platform-wide super-admin console. Mostly talks
+ * to identity-tenancy (auth, tenants, staff, audit), plus explicit
+ * cross-service calls for platform-level views into a specific tenant's data
+ * (e.g. order-management-provisioning for the Order Activity view) — all via
+ * the same `/api/proxy` route the tenant-scoped admin panel uses (see
+ * lib/admin/client.ts), since direct browser calls hit CORS/mixed-content in
+ * dev.
  *
  * Flow:
  *   1. Resolve the synthetic platform tenant's id from its domain slug
@@ -13,8 +16,8 @@
  *   2. POST /v1/sessions with that tenant id — identical to a normal login,
  *      except the account must carry `role_platform_admin` (granted to the
  *      bootstrap super-admin via its wildcard access policy).
- *   3. GET /v1/tenants (requires `platform:admin` scope) lists every tenant
- *      on the platform for the dashboard.
+ *   3. GET /v1/tenants (requires `platform:admin:read` scope) lists every
+ *      tenant on the platform for the dashboard.
  */
 
 import { decodeJwt } from "../session";
@@ -27,6 +30,11 @@ import {
 } from "./session";
 
 const IDENTITY_PORT = 8080;
+// order-management-provisioning (see services.ts SERVICES.order.port). Kept
+// as a literal here rather than importing the tenant-panel's service
+// registry, since this module intentionally has its own minimal port list
+// for the handful of cross-service platform views it needs.
+const ORDER_PORT = 8083;
 const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN_SUFFIX || "platform.zoikonex.io";
 
 interface ProxyPayload {
@@ -35,16 +43,17 @@ interface ProxyPayload {
   data: any;
 }
 
-async function proxy(method: string, path: string, opts: { headers?: Record<string, string>; body?: unknown } = {}): Promise<ProxyPayload> {
+async function proxy(method: string, path: string, opts: { headers?: Record<string, string>; body?: unknown; port?: number } = {}): Promise<ProxyPayload> {
+  const port = opts.port ?? IDENTITY_PORT;
   let res: Response;
   try {
     res = await fetch("/api/proxy", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ port: IDENTITY_PORT, method, path, headers: opts.headers, body: opts.body }),
+      body: JSON.stringify({ port, method, path, headers: opts.headers, body: opts.body }),
     });
   } catch {
-    throw new ApiException(502, { code: "SERVICE_UNREACHABLE", message: "Identity service unreachable via proxy.", retryable: true });
+    throw new ApiException(502, { code: "SERVICE_UNREACHABLE", message: "Backend service unreachable via proxy.", retryable: true });
   }
   if (!res.ok) throw new ApiException(502, { code: "SERVICE_UNREACHABLE", message: "Proxy request failed.", retryable: true });
   return res.json();
@@ -140,19 +149,26 @@ export interface PlatformTenant {
   updated_at: string;
 }
 
-/** Authenticated request against identity-tenancy, with one silent
- *  refresh-and-retry on a 401 (refresh tokens rotate). Every platform-admin
- *  API call shares this so the retry logic lives in exactly one place.
+/** Authenticated request, with one silent refresh-and-retry on a 401 (refresh
+ *  tokens rotate). Every platform-admin API call shares this so the retry
+ *  logic lives in exactly one place. Defaults to identity-tenancy; pass
+ *  `port` to reach a different backend (e.g. order-management-provisioning)
+ *  — the platform admin's JWT is valid everywhere since every service
+ *  verifies against the same identity-tenancy JWKS.
  *
  *  extraHeaders lets a platform-admin operate on a SPECIFIC tenant's
- *  tenant-scoped routes (e.g. listing that tenant's users) by setting
- *  X-Tenant-ID directly — those routes read tenant from the header, not the
- *  caller's own JWT, and role_platform_admin bypasses their scope check. */
-async function authedRequest(method: string, path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<any> {
+ *  tenant-scoped routes (e.g. listing that tenant's users or orders) by
+ *  setting X-Tenant-ID directly — identity-tenancy's tenant-scoped routes
+ *  read tenant from the header for role_platform_admin (see its
+ *  RequireTenantMatchOrPlatformAdmin); other services' JWT-scoped routes
+ *  recognize the same role via their own explicit override (see e.g.
+ *  order-management-provisioning's resolveTenantAndBrand). Ordinary callers
+ *  without that role never get either override. */
+async function authedRequest(method: string, path: string, body?: unknown, extraHeaders?: Record<string, string>, port?: number): Promise<any> {
   let session = getPlatformSession();
   if (!session) throw new ApiException(401, { code: "UNAUTHENTICATED", message: "Not signed in." });
 
-  const doFetch = (s: PlatformSession) => proxy(method, path, { headers: { authorization: `Bearer ${s.accessToken}`, ...extraHeaders }, body });
+  const doFetch = (s: PlatformSession) => proxy(method, path, { headers: { authorization: `Bearer ${s.accessToken}`, ...extraHeaders }, body, port });
 
   let payload = await doFetch(session);
   if (payload.status === 401) {
@@ -310,4 +326,31 @@ export async function fetchAuditTrails(tenantId: string, params: FetchAuditTrail
 
   const data = await authedRequest("GET", `/v1/audit-trails${qs ? `?${qs}` : ""}`, undefined, { "x-tenant-id": tenantId });
   return { trails: (data?.audit_trails ?? []) as AuditTrailEntry[], nextCursor: data?.next_cursor ?? "" };
+}
+
+export interface TenantOrder {
+  id: string;
+  status: string;
+  order_type: string;
+  customer_id: string;
+  account_id: string;
+  currency_code?: string;
+  failure_reason?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+/** Fetches a specific tenant's recent order activity from
+ *  order-management-provisioning (a different service, different port, than
+ *  everything else in this file). Requires the caller to hold
+ *  role_platform_admin - see that service's resolveTenantAndBrand. */
+export async function fetchTenantOrders(tenantId: string, limit = 50): Promise<TenantOrder[]> {
+  const data = await authedRequest(
+    "GET",
+    `/v1/orders?limit=${limit}`,
+    undefined,
+    { "x-tenant-id": tenantId },
+    ORDER_PORT,
+  );
+  return (data?.items ?? []) as TenantOrder[];
 }
