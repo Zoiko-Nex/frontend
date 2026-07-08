@@ -170,7 +170,7 @@ export default function DomainArchitecturePage() {
                 {domain.description}
               </p>
 
-              <Link href={`/18domains#${domain.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-sky-600 dark:text-sky-400">
+              <Link href={`/domain-details#${domain.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-sky-600 dark:text-sky-400">
                 Learn More
                 <span>→</span>
               </Link>
