@@ -6,9 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { setSession, decodeJwt } from '@/lib/admin/session';
 
+const DEFAULT_TENANT_ID = '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d';
+
 const LoginPage = () => {
     const router = useRouter();
     const [email, setEmail] = useState('');
+    const [tenantId, setTenantId] = useState(DEFAULT_TENANT_ID);
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -27,7 +30,7 @@ const LoginPage = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
+                    'X-Tenant-ID': tenantId,
                 },
                 body: JSON.stringify({ email, password }),
             });
@@ -48,7 +51,7 @@ const LoginPage = () => {
                 accessToken: data.access_token,
                 refreshToken: data.refresh_token || '',
                 expiresAt: Date.now() + (data.expires_in || 900) * 1000,
-                tenantId: payload?.tenant_id || '',
+                tenantId: payload?.tenant_id || tenantId,
                 brandId: payload?.brand_id || '',
                 email: payload?.email || email,
                 userId: payload?.sub || '',
@@ -166,6 +169,23 @@ const LoginPage = () => {
                                 </div>
                             </div>
 
+                            <div>
+                                <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                    TenantID <span className="text-red-500 font-bold">*</span>
+                                </label>
+                                <input
+                                    id="login-tenant-id"
+                                    type="text"
+                                    placeholder="Enter Your TenantID"
+                                    value={tenantId}
+                                    onChange={(e) => setTenantId(e.target.value)}
+                                    className="w-full h-12 bg-white rounded-xl border border-slate-300 px-4 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-[#1664B1] transition-colors"
+                                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                                    required
+                                    disabled={loading}
+                                />
+                            </div>
+
                             <button
                                 id="login-submit-btn"
                                 type="submit"
@@ -181,11 +201,6 @@ const LoginPage = () => {
                                 ) : 'Login'}
                             </button>
                         </form>
-
-                        <div className="mt-6 text-center text-sm font-semibold">
-                            <span className="text-slate-400">Don&apos;t have an account? </span>
-                            <Link href="/register" className="text-[#1664B1] hover:underline">Sign Up</Link>
-                        </div>
                     </div>
                 </div>
             </div>

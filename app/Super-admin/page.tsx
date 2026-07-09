@@ -1,12 +1,14 @@
 // @ts-nocheck
 "use client";
-import React, { useEffect, useRef } from 'react';
+import * as React from 'react';
 import './super-admin.css';
 
-export default function SuperAdminPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
+const DEFAULT_TENANT_ID = '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d';
 
-  useEffect(() => {
+export default function SuperAdminPage() {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
     if (!containerRef.current) return;
 
     // We scope the query selectors to the container
@@ -17,24 +19,47 @@ export default function SuperAdminPage() {
     "use strict";
 
     window.adminToken = '';
+    window.adminTenantId = DEFAULT_TENANT_ID;
+    window.adminUserEmail = '';
+
+    function setUserChrome(session) {
+      const email = session && session.email ? session.email : 'Super Admin';
+      const initials = email.split('@')[0].split(/[.\s_-]+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || 'SA';
+      const nameEl = document.getElementById('super-admin-user-name');
+      const roleEl = document.getElementById('super-admin-user-role');
+      const avEl = document.getElementById('super-admin-user-avatar');
+      if (nameEl) nameEl.textContent = email;
+      if (roleEl) roleEl.textContent = session && session.roles && session.roles.length ? session.roles.join(', ') : 'Global Super Admin';
+      if (avEl) avEl.textContent = initials;
+    }
+
+    window.doLogout = function () {
+      window.adminToken = '';
+      window.adminTenantId = DEFAULT_TENANT_ID;
+      localStorage.removeItem('zx_admin_session');
+      window.dispatchEvent(new Event('zx-auth-change'));
+      toast('Logged out');
+      window.location.href = '/login';
+    }
 
     // Auto-load token from the /login page session (stored under zx_admin_session)
-    (function () {
-      try {
-        const raw = localStorage.getItem('zx_admin_session');
-        if (raw) {
-          const session = JSON.parse(raw);
-          if (session && session.accessToken) {
-            window.adminToken = session.accessToken;
-            // Hide the login overlay immediately — user already authenticated via /login
-            const overlay = document.getElementById('login-overlay');
-            if (overlay) overlay.style.display = 'none';
-            // Start health polling
-            if (typeof window.pollServicesHealth === 'function') window.pollServicesHealth();
-          }
+    try {
+      const raw = localStorage.getItem('zx_admin_session');
+      if (raw) {
+        const session = JSON.parse(raw);
+        if (session && session.accessToken) {
+          window.adminToken = session.accessToken;
+          window.adminTenantId = session.tenantId || DEFAULT_TENANT_ID;
+          window.adminUserEmail = session.email || '';
+          setUserChrome(session);
+          // Hide the login overlay immediately — user already authenticated via /login
+          const overlay = document.getElementById('login-overlay');
+          if (overlay) overlay.style.display = 'none';
+          // Start health polling
+          if (typeof window.pollServicesHealth === 'function') window.pollServicesHealth();
         }
-      } catch (e) { /* ignore */ }
-    })();
+      }
+    } catch (e) { /* ignore */ }
 
     window.doLogin = async function (e) {
       e.preventDefault();
@@ -50,7 +75,7 @@ export default function SuperAdminPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d'
+            'X-Tenant-ID': DEFAULT_TENANT_ID
           },
           body: JSON.stringify({
             email: emailVal || 'admin@acme.com',
@@ -67,6 +92,20 @@ export default function SuperAdminPage() {
           console.error('Session response:', data);
           throw new Error('No access_token in response.');
         }
+        window.adminTenantId = data.tenant_id || DEFAULT_TENANT_ID;
+        const session = {
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token || '',
+          sessionId: data.session_id,
+          expiresAt: Date.now() + (data.expires_in || 900) * 1000,
+          tenantId: window.adminTenantId,
+          brandId: data.brand_id || '',
+          email: emailVal || 'admin@acme.com',
+          roles: []
+        };
+        localStorage.setItem('zx_admin_session', JSON.stringify(session));
+        window.dispatchEvent(new Event('zx-auth-change'));
+        setUserChrome(session);
         document.getElementById('login-overlay').style.display = 'none';
         toast('Logged in as ' + (emailVal || 'admin@acme.com'));
         window.pollServicesHealth();
@@ -85,7 +124,8 @@ export default function SuperAdminPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + window.adminToken
+            'Authorization': 'Bearer ' + window.adminToken,
+            'X-Tenant-ID': window.adminTenantId || DEFAULT_TENANT_ID
           },
           body: JSON.stringify({
             name: document.getElementById('t-name').value,
@@ -156,7 +196,13 @@ export default function SuperAdminPage() {
           const controller = new AbortController();
           const tid = setTimeout(() => controller.abort(), 5000);
           const proxyUrl = s.url.replace('https://', '/api/').replace('.api.zoikonex.com', '');
-          const res = await fetch(proxyUrl + '/health', { signal: controller.signal });
+          const res = await fetch(proxyUrl + '/health', {
+            signal: controller.signal,
+            headers: {
+              'Authorization': 'Bearer ' + window.adminToken,
+              'X-Tenant-ID': window.adminTenantId || DEFAULT_TENANT_ID
+            }
+          });
           clearTimeout(tid);
           if (res.ok) {
             card.innerHTML = "<span class='strong'>" + s.name + "</span>" + chip('c-green', IC.check, 'Live');
@@ -735,7 +781,8 @@ export default function SuperAdminPage() {
     <button class="alertpill" id="alertPill"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 4l-7 12a2 2 0 0 0 1.7 3h14a2 2 0 0 0 1.7-3l-7-12a2 2 0 0 0-3.4 0Z"/></svg><b class="cr" id="alCrit">3</b><b class="wa" id="alWarn">4</b></button>
     <span class="clock" id="clock">--:--:-- UTC</span>
     <button class="iconbtn" id="themeToggle" aria-label="Theme"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
-    <div class="role"><div class="rt"><b>A. Mercer</b><span>Global Super Admin</span></div><div class="av">AM</div></div>
+    <div class="role"><div class="rt"><b id="super-admin-user-name">Super Admin</b><span id="super-admin-user-role">Global Super Admin</span></div><div class="av" id="super-admin-user-avatar">SA</div></div>
+    <button class="iconbtn logoutbtn" id="logoutBtn" onclick="doLogout()" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 3v18"/></svg></button>
   </div>
 </header>
 <div class="envbanner" id="envBanner"></div>
@@ -808,19 +855,19 @@ export default function SuperAdminPage() {
     <div class="modal-body">
       <div class="group">
         <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Tenant Name</label>
-        <input type="text" id="t-name" required style="width:100%;background:var(--surf);border:1px solid var(--border);color:var(--tx);padding:0.5rem;box-sizing:border-box;">
+        <input type="text" id="t-name" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
       </div>
       <div class="group" style="margin-top:0.8rem;">
         <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Domain Suffix</label>
-        <input type="text" id="t-domain" required style="width:100%;background:var(--surf);border:1px solid var(--border);color:var(--tx);padding:0.5rem;box-sizing:border-box;">
+        <input type="text" id="t-domain" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
       </div>
       <div class="group" style="margin-top:0.8rem;">
         <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand Name</label>
-        <input type="text" id="t-brandname" required style="width:100%;background:var(--surf);border:1px solid var(--border);color:var(--tx);padding:0.5rem;box-sizing:border-box;">
+        <input type="text" id="t-brandname" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
       </div>
       <div class="group" style="margin-top:0.8rem;">
         <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand Code</label>
-        <input type="text" id="t-brandcode" required style="width:100%;background:var(--surf);border:1px solid var(--border);color:var(--tx);padding:0.5rem;box-sizing:border-box;">
+        <input type="text" id="t-brandcode" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
       </div>
     </div>
     <div class="modal-footer" style="margin-top:1.5rem;display:flex;justify-content:flex-end;gap:0.5rem;">
@@ -838,4 +885,3 @@ export default function SuperAdminPage() {
 ` }} />
   );
 }
-
