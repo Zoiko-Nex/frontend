@@ -17,8 +17,9 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   const isAdmin = pathname?.startsWith("/admin");
   const isPlatformAdmin = pathname?.startsWith("/platform-admin");
   const isDashboard = pathname?.startsWith("/dashboards");
+  const isSuperAdmin = pathname?.startsWith("/Super-admin");
 
-  if (isAdmin || isPlatformAdmin || isDashboard) {
+  if (isAdmin || isPlatformAdmin || isDashboard || isSuperAdmin) {
     return <>{children}</>;
   }
 

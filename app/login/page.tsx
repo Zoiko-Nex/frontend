@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { setSession, decodeJwt } from '@/lib/admin/session';
 
 const LoginPage = () => {
     const router = useRouter();
@@ -21,57 +22,43 @@ const LoginPage = () => {
         setSuccess('');
 
         try {
-            const res = await fetch('/api/proxy', {
+            // Use POST /v1/sessions — the real human login endpoint
+            const res = await fetch('/api/identity/v1/sessions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
                 },
-                body: JSON.stringify({
-                    port: 8080,
-                    method: 'POST',
-                    path: '/v1/sessions',
-                    headers: {
-                        'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
-                        'X-Brand-ID': 'b1a2b3c4-d5e6-47a8-89c0-d1e2f3a4b5c6'
-                    },
-                    body: {
-                        email: email,
-                        password: password,
-                        device_fingerprint: 'browser-chrome-windows-12345'
-                    }
-                })
+                body: JSON.stringify({ email, password }),
             });
 
-            const result = await res.json();
+            const data = await res.json();
 
-            // --- POC Bypass ---
-            // Allow any @acme.com test accounts to bypass the live backend rejection
-            // This ensures you can still access the dashboard for demonstrations even if the backend is down (502)
-            if (email.endsWith('@acme.com') && result.status !== 200) {
-                console.warn(`Bypassing live authentication for POC test account: ${email} (Status: ${result.status})`);
-                localStorage.setItem('access_token', 'mock_token_for_poc_demonstration');
-                setSuccess('Test account accepted. Redirecting to dashboard...');
-                setTimeout(() => {
-                    router.push('/dashboards');
-                }, 1200);
-                return;
+            if (!res.ok || !data.access_token) {
+                throw new Error(
+                    data.message || data.error_description || 'Authentication failed. Please check your credentials.'
+                );
             }
 
-            if (!res.ok || result.status !== 200) {
-                const errMsg = result.data?.message || result.error || 'Authentication failed. Please check your credentials.';
-                throw new Error(errMsg);
-            }
+            // Decode the JWT payload to extract user details (display only, not for authz)
+            const payload = decodeJwt(data.access_token) as Record<string, any>;
 
-            const token = result.data?.access_token;
-            if (!token) {
-                throw new Error('No access token returned from identity server.');
-            }
+            // Save session using the shared utility (same key the Header navbar reads)
+            setSession({
+                accessToken: data.access_token,
+                refreshToken: data.refresh_token || '',
+                expiresAt: Date.now() + (data.expires_in || 900) * 1000,
+                tenantId: payload?.tenant_id || '',
+                brandId: payload?.brand_id || '',
+                email: payload?.email || email,
+                userId: payload?.sub || '',
+                roles: payload?.roles || [],
+            });
 
-            localStorage.setItem('access_token', token);
-            setSuccess('Login successful! Redirecting to dashboard...');
+            setSuccess('Login successful! Redirecting to Super Admin...');
             setTimeout(() => {
-                router.push('/dashboards');
-            }, 1200);
+                router.push('/Super-admin');
+            }, 800);
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred.');
         } finally {
@@ -85,7 +72,7 @@ const LoginPage = () => {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_92%_8%,rgba(132,204,22,0.08),transparent_60%)] pointer-events-none" />
 
             <div className="relative w-[983px] h-[604px] flex rounded-2xl overflow-hidden border border-slate-800 shadow-2xl z-10">
-                {/* Left Panel (Image & Hero Text Overlay) */}
+                {/* Left Panel */}
                 <div className="w-[483px] h-full relative">
                     <Image
                         src="/image/login/login.jpg"
@@ -95,12 +82,9 @@ const LoginPage = () => {
                         priority
                     />
                     <div className="absolute inset-0 bg-gradient-to-tr from-cyan-950/95 via-cyan-900/50 to-transparent rounded-tl-2xl rounded-bl-2xl" />
-
                     <div className="absolute left-[32px] bottom-[40px] max-w-[360px]">
                         <h2 className="text-blue-50 text-3xl font-bold leading-9 mb-4" style={{ fontFamily: "'Inter', sans-serif" }}>
-                            Intelligent <br />
-                            Infrastructure <br />
-                            Starts Here
+                            Intelligent <br />Infrastructure <br />Starts Here
                         </h2>
                         <p className="text-blue-100/90 text-sm font-normal leading-6" style={{ fontFamily: "'Inter', sans-serif" }}>
                             Sign in to manage networks, services, and business operations.
@@ -108,32 +92,34 @@ const LoginPage = () => {
                     </div>
                 </div>
 
-                {/* Right Panel (Login Form Card) */}
+                {/* Right Panel */}
                 <div className="w-[500px] h-full bg-white text-slate-800 px-[30px] py-[37px] flex flex-col justify-center rounded-r-2xl">
                     <div className="w-full max-w-[400px] mx-auto">
-                        <h2 className="text-[28px] font-bold text-slate-800 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Welcome Back!</h2>
-                        <p className="text-slate-500 text-sm font-medium mb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Log in to manage your telecom operations seamlessly.</p>
+                        <h2 className="text-[28px] font-bold text-slate-800 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                            Welcome Back!
+                        </h2>
+                        <p className="text-slate-500 text-sm font-medium mb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                            Log in to manage your telecom operations seamlessly.
+                        </p>
 
-                        {/* Status Messages */}
                         {error && (
-                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold">
                                 {error}
                             </div>
                         )}
                         {success && (
-                            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 text-xs font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 text-xs font-semibold">
                                 {success}
                             </div>
                         )}
 
-                        {/* Credentials Fields */}
                         <form className="space-y-5" onSubmit={handleLogin}>
-                            {/* Email */}
                             <div>
                                 <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                     Email <span className="text-red-500 font-bold">*</span>
                                 </label>
                                 <input
+                                    id="login-email"
                                     type="email"
                                     placeholder="Enter Your Email"
                                     value={email}
@@ -145,14 +131,14 @@ const LoginPage = () => {
                                 />
                             </div>
 
-                            {/* Password */}
                             <div>
                                 <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                     Password <span className="text-red-500 font-bold">*</span>
                                 </label>
                                 <div className="relative">
                                     <input
-                                        type={showPassword ? "text" : "password"}
+                                        id="login-password"
+                                        type={showPassword ? 'text' : 'password'}
                                         placeholder="**********"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
@@ -174,26 +160,30 @@ const LoginPage = () => {
                                     </button>
                                 </div>
                                 <div className="flex justify-end mt-2">
-                                    <Link href="/password-reset" className="text-slate-400 hover:text-slate-600 text-sm font-semibold transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                    <Link href="/password-reset" className="text-slate-400 hover:text-slate-600 text-sm font-semibold transition-colors">
                                         Forgot Password?
                                     </Link>
                                 </div>
                             </div>
 
-                            {/* Login Button */}
                             <button
+                                id="login-submit-btn"
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 bg-[#1664B1] hover:bg-[#125394] transition-colors text-white text-base font-semibold rounded-xl mt-4 cursor-pointer disabled:bg-slate-400 flex items-center justify-center"
+                                className="w-full h-12 bg-[#1664B1] hover:bg-[#125394] transition-colors text-white text-base font-semibold rounded-xl mt-4 cursor-pointer disabled:bg-slate-400 flex items-center justify-center gap-2"
                                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                             >
-                                {loading ? "Authenticating..." : "Login"}
+                                {loading ? (
+                                    <>
+                                        <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                                        Authenticating...
+                                    </>
+                                ) : 'Login'}
                             </button>
                         </form>
 
-                        {/* Sign Up Link */}
-                        <div className="mt-6 text-center text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            <span className="text-slate-400">Don't have an account? </span>
+                        <div className="mt-6 text-center text-sm font-semibold">
+                            <span className="text-slate-400">Don&apos;t have an account? </span>
                             <Link href="/register" className="text-[#1664B1] hover:underline">Sign Up</Link>
                         </div>
                     </div>

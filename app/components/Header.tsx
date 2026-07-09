@@ -9,6 +9,7 @@ import { getSession } from "@/lib/admin/session";
 
 
 
+
 const platformPages = [
   {
     name: "Architecture Overview",
@@ -452,7 +453,7 @@ export default function Header() {
 
 
           <Link href="/plans-and-pricing" className={isActive("/plans-and-pricing")}>Pricing</Link>
-          <Link href="/login" className={`${isActive("/login")} ml-18`} >Sign in</Link>
+          <Link href="/login" className={`${isActive("/login")} ml-18`}>Sign in</Link>
 
         </nav>
 
@@ -464,19 +465,19 @@ export default function Header() {
           >
             Request a Demo
           </Link>
-          {!isLoggedIn ? (
+          {isLoggedIn ? (
+            <Link
+              href="/Super-admin"
+              className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
+            >
+              Super Admin
+            </Link>
+          ) : (
             <Link
               href="/register"
               className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
             >
               Get Started
-            </Link>
-          ) : (
-            <Link
-              href="/dashboards"
-              className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
-            >
-              Dashboard
             </Link>
           )}
 
