@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { getSession } from "@/lib/admin/session";
+import { useRouter } from "next/navigation";
+import { getSession, clearSession } from "@/lib/admin/session";
 
 interface DomainService {
   id: string;
@@ -37,9 +38,15 @@ const docGuides = [
 ];
 
 export default function DashboardsPage() {
+  const router = useRouter();
   const [sessionData, setSessionData] = useState<{ email?: string; tenantId?: string }>({});
   const [onlineCount, setOnlineCount] = useState(18);
   const [logs, setLogs] = useState<string[]>([]);
+
+  const handleLogout = () => {
+    clearSession();
+    router.push('/login');
+  };
 
   // Modal states for API client
   const [selectedService, setSelectedService] = useState<DomainService | null>(null);
@@ -621,7 +628,9 @@ export default function DashboardsPage() {
           <div className="flex items-center gap-4">
             <div className="h-10 px-3 py-1.5 bg-white/10 rounded-[10px] outline outline-1 outline-white/20 flex items-center gap-2 cursor-pointer hover:bg-white/20 transition">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-              <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">Helios Mobile</div>
+              <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">
+                Helios Mobile {sessionData.tenantId && `(${sessionData.tenantId.substring(0, 6)})`}
+              </div>
             </div>
 
             <div className="h-10 px-4 py-2.5 bg-lime-500/20 rounded-[10px] outline outline-1 outline-lime-500/40 flex items-center gap-2">
@@ -650,8 +659,22 @@ export default function DashboardsPage() {
             <div className="w-2 h-2 absolute top-1.5 right-1.5 bg-lime-500 rounded-full border border-sky-950"></div>
           </button>
 
+          {sessionData.email && (
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
+              <div className="text-xs text-white font-medium">{sessionData.email}</div>
+              <button 
+                onClick={handleLogout}
+                className="text-xs text-red-300 hover:text-red-400 font-bold transition cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+
           <button className="w-9 h-9 bg-gradient-to-br from-sky-700 to-lime-600 rounded-full outline outline-1 outline-white/20 flex justify-center items-center cursor-pointer">
-            <div className="text-white text-xs font-bold font-['Plus_Jakarta_Sans']">AM</div>
+            <div className="text-white text-xs font-bold font-['Plus_Jakarta_Sans']">
+              {sessionData.email ? sessionData.email.substring(0, 2).toUpperCase() : 'AM'}
+            </div>
           </button>
         </div>
       </div>
@@ -877,24 +900,6 @@ export default function DashboardsPage() {
                         </span>
                       </div>
                     )}
-                  </div>
-
-                  {/* View Switcher dropdown */}
-                  <div className="absolute right-0 top-[20px] inline-flex items-center gap-2.5 z-10">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Console View:</span>
-                    <select
-                      value={currentConsole}
-                      onChange={(e) => {
-                        setCurrentConsole(e.target.value as any);
-                        setApiResponse(null);
-                        setSelectedService(null);
-                      }}
-                      className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-bold bg-white text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                    >
-                      <option value="tenant-admin">Tenant Admin Console</option>
-                      <option value="super-admin">Super Admin Console</option>
-                      <option value="customer-portal">Customer Self-Service</option>
-                    </select>
                   </div>
                 </div>
               </div>

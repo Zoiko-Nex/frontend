@@ -5,26 +5,26 @@ import { ArrowRight } from "lucide-react"; // or wherever your icon set lives
 
 // Mock Data for the 18 API Domains
 const apiDomains = [
-  { id: 1, name: 'Billing & Charging', endpoints: 12, desc: 'Real-time rating engines and convergent billing architectures for global connectivity.', icon: "/image/developer/Icon.png" },
-  { id: 2, name: 'Inventory Ops', endpoints: 8, desc: 'Automated resource lifecycle management from allocation to decommissioning.', icon: "/image/developer/Icon (1).png" },
-  { id: 3, name: 'Identity & Security', endpoints: 24, desc: 'Zero-trust authentication and sovereign identity management across network edges.', icon: "/image/developer/Icon (2).png" },
-  { id: 4, name: 'Network Orchestration', endpoints: 16, desc: 'SDN-integrated provisioning and traffic shaping for dynamic demand shifts.', icon: "/image/developer/Icon (3).png" },
-  { id: 5, name: 'Customer Management', endpoints: 14, desc: 'Unified profile orchestration with deep loyalty integration and churn analytics.', icon: "/image/developer/Icon (4).png" },
-  { id: 6, name: 'Revenue Evidence', endpoints: 21, desc: 'Immutable ledger tracking for cross-carrier reconciliation and settlement.', icon: "/image/developer/Icon (5).png" },
-  { id: 7, name: 'Product Catalog', endpoints: 10, desc: 'Centralized offer management with flexible discounting and dynamic pricing.', icon: "/image/developer/Icon (6).png" },
-  { id: 8, name: 'Order Management', endpoints: 15, desc: 'Orchestrating complex fulfillment workflows from capture to activation.', icon: "/image/developer/Icon (7).png" },
-  { id: 9, name: 'Real-Time Charging', endpoints: 18, desc: 'Ultra-low latency rating for data, voice, and VAS event processing.', icon: "/image/developer/Icon (8).png" },
-  { id: 10, name: 'Payments & Wallets', endpoints: 12, desc: 'Stored value management and multi-method gateway integrations.', icon: "/image/developer/Icon (9).png" },
-  { id: 11, name: 'Taxation Engine', endpoints: 6, desc: 'Global tax compliance with real-time jurisdiction-based calculations.', icon: "/image/developer/Icon (10).png" },
-  { id: 12, name: 'Revenue Assurance', endpoints: 11, desc: 'Continuous audit and leak detection across the entire billing chain.', icon: "/image/developer/Icon (11).png" },
-  { id: 13, name: 'SIM/eSIM Lifecycle', endpoints: 14, desc: 'Remote provisioning and state management for digital credentials.', icon: "/image/developer/Icon (12).png" },
-  { id: 14, name: 'Network Integration', endpoints: 20, desc: 'Direct mediation and signaling hooks for multi-vendor core networks.', icon: "/image/developer/Icon (13).png" },
-  { id: 15, name: 'Usage/Event Processing', endpoints: 13, desc: 'High-throughput ingestion and normalization of network event streams.', icon: "/image/developer/Icon (14).png" },
-  { id: 16, name: 'Compliance Controls', endpoints: 9, desc: 'Automated regulatory reporting and multi-region data sovereignty policy enforcement.', icon: "/image/developer/Icon (15).png" },
-  { id: 17, name: 'CX Support', endpoints: 17, desc: 'Omnichannel support tools with deep integration into customer billing history.', icon: "/image/developer/Icon (16).png" },
-  { id: 18, name: 'Analytics Intelligence', endpoints: 22, desc: 'AI-driven insights for network optimization and revenue forecasting.', icon: "/image/developer/Icon (17).png" },
-  { id: 19, name: 'Partner/Wholesale Ops', endpoints: 14, desc: 'Settlement engines and portal access for carrier and reseller ecosystems.', icon: "/image/developer/Icon (18).png" },
-  { id: 20, name: 'API/Integration Layer', endpoints: 30, desc: 'Unified gateway with advanced rate-limiting and security standards.', icon: "/image/developer/Icon (19).png" }
+  { id: 1, name: 'Billing & Charging', endpoints: 12, desc: 'Real-time rating engines and convergent billing architectures for global connectivity.', icon: "/image/developer/Icon.png", slug: 'billing-charging' },
+  { id: 2, name: 'Inventory Ops', endpoints: 8, desc: 'Automated resource lifecycle management from allocation to decommissioning.', icon: "/image/developer/Icon (1).png", slug: 'inventory-ops' },
+  { id: 3, name: 'Identity & Security', endpoints: 24, desc: 'Zero-trust authentication and sovereign identity management across network edges.', icon: "/image/developer/Icon (2).png", slug: 'identity-security' },
+  { id: 4, name: 'Network Orchestration', endpoints: 16, desc: 'SDN-integrated provisioning and traffic shaping for dynamic demand shifts.', icon: "/image/developer/Icon (3).png", slug: 'network-orchestration' },
+  { id: 5, name: 'Customer Management', endpoints: 14, desc: 'Unified profile orchestration with deep loyalty integration and churn analytics.', icon: "/image/developer/Icon (4).png", slug: 'customer-management' },
+  { id: 6, name: 'Revenue Evidence', endpoints: 21, desc: 'Immutable ledger tracking for cross-carrier reconciliation and settlement.', icon: "/image/developer/Icon (5).png", slug: 'revenue-evidence' },
+  { id: 7, name: 'Product Catalog', endpoints: 10, desc: 'Centralized offer management with flexible discounting and dynamic pricing.', icon: "/image/developer/Icon (6).png", slug: 'product-catalog' },
+  { id: 8, name: 'Order Management', endpoints: 15, desc: 'Orchestrating complex fulfillment workflows from capture to activation.', icon: "/image/developer/Icon (7).png", slug: 'order-management' },
+  { id: 9, name: 'Real-Time Charging', endpoints: 18, desc: 'Ultra-low latency rating for data, voice, and VAS event processing.', icon: "/image/developer/Icon (8).png", slug: 'billing-charging' },
+  { id: 10, name: 'Payments & Wallets', endpoints: 12, desc: 'Stored value management and multi-method gateway integrations.', icon: "/image/developer/Icon (9).png", slug: 'payments-wallets' },
+  { id: 11, name: 'Taxation Engine', endpoints: 6, desc: 'Global tax compliance with real-time jurisdiction-based calculations.', icon: "/image/developer/Icon (10).png", slug: 'tax-jurisdiction' },
+  { id: 12, name: 'Revenue Assurance', endpoints: 11, desc: 'Continuous audit and leak detection across the entire billing chain.', icon: "/image/developer/Icon (11).png", slug: 'revenue-evidence' },
+  { id: 13, name: 'SIM/eSIM Lifecycle', endpoints: 14, desc: 'Remote provisioning and state management for digital credentials.', icon: "/image/developer/Icon (12).png", slug: 'esim-sim' },
+  { id: 14, name: 'Network Integration', endpoints: 20, desc: 'Direct mediation and signaling hooks for multi-vendor core networks.', icon: "/image/developer/Icon (13).png", slug: 'network-orchestration' },
+  { id: 15, name: 'Usage/Event Processing', endpoints: 13, desc: 'High-throughput ingestion and normalization of network event streams.', icon: "/image/developer/Icon (14).png", slug: 'usage-mediation' },
+  { id: 16, name: 'Compliance Controls', endpoints: 9, desc: 'Automated regulatory reporting and multi-region data sovereignty policy enforcement.', icon: "/image/developer/Icon (15).png", slug: 'billing-charging' },
+  { id: 17, name: 'CX Support', endpoints: 17, desc: 'Omnichannel support tools with deep integration into customer billing history.', icon: "/image/developer/Icon (16).png", slug: 'customer-management' },
+  { id: 18, name: 'Analytics Intelligence', endpoints: 22, desc: 'AI-driven insights for network optimization and revenue forecasting.', icon: "/image/developer/Icon (17).png", slug: 'analytics-reporting' },
+  { id: 19, name: 'Partner/Wholesale Ops', endpoints: 14, desc: 'Settlement engines and portal access for carrier and reseller ecosystems.', icon: "/image/developer/Icon (18).png", slug: 'partner-settlement' },
+  { id: 20, name: 'API/Integration Layer', endpoints: 30, desc: 'Unified gateway with advanced rate-limiting and security standards.', icon: "/image/developer/Icon (19).png", slug: 'webhooks-events' }
 ];
 
 const guides = [
@@ -135,7 +135,7 @@ export default function ZoikoNexPage() {
                   <h3 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white mb-2">{domain.name}</h3>
                   <p className="text-sm text-zinc-600 dark:text-gray-400 leading-relaxed mb-6">{domain.desc}</p>
                 </div>
-                <Link href="/domain-details" className="group flex items-center gap-1.5 text-sm font-semibold text-sky-600 dark:text-cyan-400 hover:text-sky-700 dark:hover:text-cyan-300">
+                <Link href={`/portal-connection#${domain.slug || 'billing-charging'}`} className="group flex items-center gap-1.5 text-sm font-semibold text-sky-600 dark:text-cyan-400 hover:text-sky-700 dark:hover:text-cyan-300">
                   Explore Domain &rarr;
                 </Link>
               </div>

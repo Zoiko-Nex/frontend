@@ -467,10 +467,10 @@ export default function Header() {
           </Link>
           {isLoggedIn ? (
             <Link
-              href="/Super-admin"
+              href="/dashboards"
               className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
             >
-              Super Admin
+              Dashboard
             </Link>
           ) : (
             <Link
