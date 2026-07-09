@@ -23,7 +23,7 @@ const TELECOM_MARKETS = [
   "India"
 ];
 
-const FORMS_API_URL = "https://forms.api.zoikonex.com";
+const FORMS_API_URL = "http://localhost:8099";
 
 const MAX_REQUIREMENTS = 1500;
 
