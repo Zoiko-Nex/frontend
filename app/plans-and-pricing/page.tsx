@@ -210,11 +210,10 @@ const PlansAndPricing = () => {
                     {pathways.map((path, idx) => (
                         <div
                             key={idx}
-                            className={`relative rounded-xl p-6 flex flex-col justify-between transition-all border ${
-                                path.isPopular
+                            className={`relative rounded-xl p-6 flex flex-col justify-between transition-all border ${path.isPopular
                                     ? 'bg-slate-900 border-sky-600/50 shadow-xl shadow-sky-950/20'
                                     : 'bg-[#090d16] border-slate-800/60 hover:border-slate-700/80'
-                            }`}
+                                }`}
                         >
                             <div>
                                 <div className="flex justify-between items-center mb-4">
@@ -248,11 +247,10 @@ const PlansAndPricing = () => {
                             </div>
 
                             <button
-                                className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
-                                    path.isPopular
+                                className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
                                         ? 'bg-sky-600 hover:bg-sky-500 text-white'
                                         : 'outline outline-1 outline-slate-800 text-slate-300 hover:bg-white/5'
-                                }`}
+                                    }`}
                             >
                                 {path.buttonText}
                             </button>
@@ -262,36 +260,69 @@ const PlansAndPricing = () => {
             </section>
 
             {/* ─── TCO TCO TCO SECTION ─── */}
-            <section className="relative max-w-[1040px] mx-auto py-16 px-6 border-t border-slate-800/80">
+            {/* ─── TCO SECTION ─── */}
+            <section className="max-w-[992px] mx-auto py-20 border-t border-slate-800">
                 <div className="text-center mb-12">
-                    <span className="text-slate-500 text-xs font-bold uppercase tracking-[0.15em] block mb-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-600 mb-5">
                         Total cost of ownership
-                    </span>
-                    <h2 className="text-blue-50 text-3xl font-bold mb-4">
+                    </p>
+
+                    <h2 className="text-[36px] leading-[44px] font-semibold text-blue-50">
                         How ZoikoNex compares
                     </h2>
-                    <p className="text-slate-400 text-sm sm:text-base max-w-[650px] mx-auto">
+
+                    <p className="mt-3 text-base text-slate-400">
                         Compared against legacy on-prem BSS and building in-house.
                     </p>
                 </div>
 
-                <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
                         <thead>
                             <tr className="border-b border-slate-800">
-                                <th className="py-4 pr-4 text-slate-500 text-2xs font-extrabold uppercase tracking-wider w-1/4">Factor</th>
-                                <th className="py-4 px-4 text-slate-500 text-2xs font-extrabold uppercase tracking-wider w-1/4 text-center">ZoikoNex</th>
-                                <th className="py-4 px-4 text-slate-500 text-2xs font-extrabold uppercase tracking-wider w-1/4 text-center">Legacy on-prem BSS</th>
-                                <th className="py-4 pl-4 text-slate-500 text-2xs font-extrabold uppercase tracking-wider w-1/4 text-center">In-house build</th>
+                                <th className="w-[30%] py-3 pl-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                    Factor
+                                </th>
+
+                                <th className="w-[24%] py-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                    ZoikoNex
+                                </th>
+
+                                <th className="w-[26%] py-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                    Legacy on-prem BSS
+                                </th>
+
+                                <th className="w-[20%] py-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                    In-house build
+                                </th>
                             </tr>
                         </thead>
+
                         <tbody>
-                            {tcoComparison.map((row, idx) => (
-                                <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-900/10 transition-colors">
-                                    <td className="py-4 pr-4 text-blue-50 text-xs font-medium">{row.factor}</td>
-                                    <td className="py-4 px-4 text-slate-300 text-xs text-center font-semibold">{row.zoiko}</td>
-                                    <td className="py-4 px-4 text-slate-400 text-xs text-center">{row.legacy}</td>
-                                    <td className="py-4 pl-4 text-slate-400 text-xs text-center">{row.inhouse}</td>
+                            {tcoComparison.map((row, index) => (
+                                <tr
+                                    key={row.factor}
+                                    className={
+                                        index !== tcoComparison.length - 1
+                                            ? "border-b border-slate-800"
+                                            : ""
+                                    }
+                                >
+                                    <td className="py-[18px] pl-4 text-xs font-medium text-blue-50">
+                                        {row.factor}
+                                    </td>
+
+                                    <td className="py-[18px] text-center text-xs font-semibold text-slate-400">
+                                        {row.zoiko}
+                                    </td>
+
+                                    <td className="py-[18px] text-center text-xs font-normal text-slate-400">
+                                        {row.legacy}
+                                    </td>
+
+                                    <td className="py-[18px] text-center text-xs font-normal text-slate-400">
+                                        {row.inhouse}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
