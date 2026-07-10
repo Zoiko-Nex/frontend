@@ -19,6 +19,7 @@ const PORT_TO_LIVE_URL: Record<number, string> = {
   8096: "https://payments.api.zoikonex.com",
   8097: "https://integration.api.zoikonex.com",
   8098: "https://reporting.api.zoikonex.com",
+  8099: "https://forms.api.zoikonex.com",
 };
 
 const PORT_TO_ENV_VAR: Record<number, string> = {

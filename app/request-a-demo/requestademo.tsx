@@ -23,11 +23,30 @@ const TELECOM_MARKETS = [
   "India"
 ];
 
+const FORMS_API_URL = "http://localhost:8099";
+
+const MAX_REQUIREMENTS = 1500;
+
 export default function DeploymentPage() {
   // --- Country Search Dropdown State ---
   const [isCountryOpen, setIsCountryOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
   const countryContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Form Field State ---
+  const [fullName, setFullName] = useState("");
+  const [workEmail, setWorkEmail] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [operatorType, setOperatorType] = useState("");
+  const [projectRequirements, setProjectRequirements] = useState("");
+
+  // --- Submission State ---
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">(
+    "idle"
+  );
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Close dropdown menu automatically on clicking outside the selection container
   useEffect(() => {
@@ -47,6 +66,81 @@ export default function DeploymentPage() {
   const filteredCountries = TELECOM_MARKETS.filter((country) =>
     country.toLowerCase().includes(countrySearch.toLowerCase())
   );
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (submitting) return;
+
+    // Client-side required-field guard (server validates authoritatively).
+    const name = fullName.trim();
+    const email = workEmail.trim();
+    const org = organization.trim();
+    const country = countrySearch.trim();
+
+    if (!name || !email || !org || !country || !operatorType) {
+      setSubmitStatus("error");
+      setErrorMessage("Please complete all required fields marked with *.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setSubmitStatus("error");
+      setErrorMessage("Please enter a valid work email address.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitStatus("idle");
+    setErrorMessage("");
+
+    try {
+      const res = await fetch(`${FORMS_API_URL}/v1/demo-requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: name,
+          work_email: email,
+          organization: org,
+          job_title: jobTitle.trim(),
+          country: country,
+          operator_type: operatorType,
+          project_requirements: projectRequirements.trim(),
+          source_page: "/request-a-demo"
+        })
+      });
+
+      if (!res.ok) {
+        let message = "Something went wrong submitting your request.";
+        try {
+          const data = await res.json();
+          if (data && typeof data.message === "string") message = data.message;
+        } catch {
+          // non-JSON error body; keep the default message
+        }
+        setSubmitStatus("error");
+        setErrorMessage(message);
+        return;
+      }
+
+      // 201 Created — the submission is persisted. We intentionally do not
+      // surface mail_status to the lead: even if the admin notification failed,
+      // their request was saved and will be picked up.
+      setSubmitStatus("success");
+      setFullName("");
+      setWorkEmail("");
+      setOrganization("");
+      setJobTitle("");
+      setOperatorType("");
+      setProjectRequirements("");
+      setCountrySearch("");
+    } catch {
+      setSubmitStatus("error");
+      setErrorMessage(
+        "We couldn't reach the server. Please check your connection and try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden font-sans">
@@ -136,7 +230,31 @@ export default function DeploymentPage() {
                 Tell us what you are building, migrating, or modernizing. ZoikoNex will route your request to the right deployment, infrastructure, and commercial architecture team.
               </p>
 
-              <form className="mt-8 space-y-5" onSubmit={(e) => e.preventDefault()}>
+              {submitStatus === "success" ? (
+                /* Success Confirmation Panel */
+                <div className="mt-8 rounded-2xl border border-lime-500/40 bg-lime-50 p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm shadow-[0_0_0_4px_rgba(123,193,68,0.18)]" />
+                    <span className="text-lime-700 text-xs font-semibold font-mono uppercase tracking-widest">
+                      REQUEST RECEIVED
+                    </span>
+                  </div>
+                  <h3 className="text-slate-800 text-lg font-bold">
+                    Thanks — your request is in.
+                  </h3>
+                  <p className="mt-2 text-slate-600 text-sm leading-relaxed">
+                    We've logged your deployment request and routed it to the team matched to your operator model. Expect to hear from a ZoikoNex architect shortly.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSubmitStatus("idle")}
+                    className="mt-5 px-5 py-3 bg-sky-700 text-white text-sm font-bold rounded-xl hover:bg-sky-800 transition"
+                  >
+                    Submit another request
+                  </button>
+                </div>
+              ) : (
+                <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
                 
                 {/* Row 1: Name & Email */}
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -146,6 +264,8 @@ export default function DeploymentPage() {
                     </label>
                     <input
                       type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
                       placeholder="Jordan Mensah"
                       className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
                     />
@@ -157,6 +277,8 @@ export default function DeploymentPage() {
                     </label>
                     <input
                       type="email"
+                      value={workEmail}
+                      onChange={(e) => setWorkEmail(e.target.value)}
                       placeholder="jordan@operator.com"
                       className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
                     />
@@ -171,6 +293,8 @@ export default function DeploymentPage() {
                     </label>
                     <input
                       type="text"
+                      value={organization}
+                      onChange={(e) => setOrganization(e.target.value)}
                       placeholder="Operator, MVNE, enterprise, or partner"
                       className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
                     />
@@ -185,6 +309,8 @@ export default function DeploymentPage() {
                     </div>
                     <input
                       type="text"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
                       placeholder="CTO, Head of Product, Founder…"
                       className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 focus:border-sky-600 transition"
                     />
@@ -247,7 +373,8 @@ export default function DeploymentPage() {
                   </label>
                   <div className="relative">
                     <select 
-                      defaultValue=""
+                      value={operatorType}
+                      onChange={(e) => setOperatorType(e.target.value)}
                       className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 appearance-none focus:border-sky-600 transition"
                     >
                       <option value="" disabled>Select your operator model…</option>
@@ -276,20 +403,34 @@ export default function DeploymentPage() {
                   </div>
                   <textarea
                     rows={3}
+                    value={projectRequirements}
+                    onChange={(e) =>
+                      setProjectRequirements(e.target.value.slice(0, MAX_REQUIREMENTS))
+                    }
                     placeholder="Briefly describe your deployment objective, current platform, target launch timeline, migration need, or integration requirements."
                     className="w-full px-3.5 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none text-slate-800 placeholder-slate-400 resize-none focus:border-sky-600 transition"
                   />
-                  <span className="block text-right text-[10px] text-slate-400 mt-1">0 / 1500</span>
+                  <span className="block text-right text-[10px] text-slate-400 mt-1">
+                    {projectRequirements.length} / {MAX_REQUIREMENTS}
+                  </span>
                 </div>
+
+                {/* Inline Error Message */}
+                {submitStatus === "error" && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                    <p className="text-sm text-red-700">{errorMessage}</p>
+                  </div>
+                )}
 
                 {/* Submit Block */}
                 <div className="pt-4 space-y-3">
                   <button
                     type="submit"
-                    className="w-full bg-sky-700 text-white font-bold py-4 rounded-xl shadow-[0_10px_22px_-10px_rgba(22,104,184,0.60)] hover:bg-sky-800 transition flex items-center justify-center gap-2"
+                    disabled={submitting}
+                    className="w-full bg-sky-700 text-white font-bold py-4 rounded-xl shadow-[0_10px_22px_-10px_rgba(22,104,184,0.60)] hover:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <span>Schedule Deployment Consultation</span>
-                    <span>→</span>
+                    <span>{submitting ? "Submitting…" : "Schedule Deployment Consultation"}</span>
+                    {!submitting && <span>→</span>}
                   </button>
                   <p className="text-center text-[11px] text-slate-500 leading-normal">
                     By submitting this form, you agree that ZoikoNex may contact you about your request. See{" "}
@@ -298,6 +439,7 @@ export default function DeploymentPage() {
                 </div>
 
               </form>
+              )}
             </div>
 
           </div>
