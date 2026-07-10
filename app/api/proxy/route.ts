@@ -21,13 +21,36 @@ const PORT_TO_LIVE_URL: Record<number, string> = {
   8098: "https://reporting.api.zoikonex.com",
 };
 
+const PORT_TO_ENV_VAR = {
+  8080: "NEXT_PUBLIC_SVC_IDENTITY",
+  8081: "NEXT_PUBLIC_SVC_CUSTOMER",
+  8082: "NEXT_PUBLIC_SVC_CATALOGUE",
+  8083: "NEXT_PUBLIC_SVC_ORDER",
+  8084: "NEXT_PUBLIC_SVC_FINANCE",
+  8085: "NEXT_PUBLIC_SVC_RATING",
+  8086: "NEXT_PUBLIC_SVC_PARTNER",
+  8087: "NEXT_PUBLIC_SVC_REVENUE_ASSURANCE",
+  8089: "NEXT_PUBLIC_SVC_TAX",
+  8090: "NEXT_PUBLIC_SVC_FRAUD",
+  8091: "NEXT_PUBLIC_SVC_KYC",
+  8092: "NEXT_PUBLIC_SVC_BILLING",
+  8093: "NEXT_PUBLIC_SVC_EVIDENCE",
+  8094: "NEXT_PUBLIC_SVC_USAGE",
+  8095: "NEXT_PUBLIC_SVC_DUNNING",
+  8096: "NEXT_PUBLIC_SVC_PAYMENTS",
+  8097: "NEXT_PUBLIC_SVC_INTEGRATION",
+  8098: "NEXT_PUBLIC_SVC_REPORTING",
+};
+
+
 const BLOCKED_HEADERS = new Set(["connection", "content-length", "cookie", "host", "origin", "referer"]);
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     const port = Number(payload.port);
-    const baseUrl = PORT_TO_LIVE_URL[port];
+    const envVar = PORT_TO_ENV_VAR[port];
+    const baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
     const method = String(payload.method || "GET").toUpperCase();
     const path = String(payload.path || "/");
 
