@@ -62,11 +62,10 @@ export default function LatestAnnouncements() {
             <button
               key={tab}
               onClick={() => setActive(tab)}
-              className={`rounded-full px-5 py-[9px] text-[13px] font-semibold transition ${
-                active === tab
+              className={`rounded-full px-5 py-[9px] text-[13px] font-semibold transition ${active === tab
                   ? "bg-[#111827] text-white"
                   : "text-[#4B5563] hover:text-[#1A2B4A]"
-              }`}
+                }`}
             >
               {tab}
             </button>

@@ -4,13 +4,13 @@ import FinalCTASection from "./components/last-cta-section";
 import TechnicalArchitectureHero from "./components/technical-architecturhero";
 import TechnicalSpecsSection from "./components/technicalspecs";
 
-export default function(){
-    return(
+export default function () {
+    return (
         <>
-            <TechnicalArchitectureHero/>
-            <EvaluationRoadmap/>
-            <TechnicalSpecsSection/>
-            <FinalCTASection/>
+            <TechnicalArchitectureHero />
+            <EvaluationRoadmap />
+            <TechnicalSpecsSection />
+            <FinalCTASection />
         </>
     )
 }
