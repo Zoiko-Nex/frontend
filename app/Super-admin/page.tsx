@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 import * as React from 'react';
 import './super-admin.css';
@@ -36,15 +36,15 @@ export default function SuperAdminPage() {
     window.doLogout = function () {
       window.adminToken = '';
       window.adminTenantId = DEFAULT_TENANT_ID;
-      localStorage.removeItem('zx_admin_session');
-      window.dispatchEvent(new Event('zx-auth-change'));
+      localStorage.removeItem('zx_platform_session');
+      window.dispatchEvent(new Event('zx-platform-auth-change'));
       toast('Logged out');
-      window.location.href = '/login';
+      window.location.href = '/Super-admin/login';
     }
 
-    // Auto-load token from the /login page session (stored under zx_admin_session)
+    // Auto-load token from the platform session (stored under zx_platform_session)
     try {
-      const raw = localStorage.getItem('zx_admin_session');
+      const raw = localStorage.getItem('zx_platform_session');
       if (raw) {
         const session = JSON.parse(raw);
         if (session && session.accessToken) {
@@ -52,14 +52,26 @@ export default function SuperAdminPage() {
           window.adminTenantId = session.tenantId || DEFAULT_TENANT_ID;
           window.adminUserEmail = session.email || '';
           setUserChrome(session);
-          // Hide the login overlay immediately — user already authenticated via /login
+          // Hide the login overlay immediately
           const overlay = document.getElementById('login-overlay');
           if (overlay) overlay.style.display = 'none';
-          // Start health polling
+          // Start health polling and load tenants
           if (typeof window.pollServicesHealth === 'function') window.pollServicesHealth();
+          if (typeof window.loadTenants === 'function') window.loadTenants();
+        } else {
+          // No valid session, redirect to login
+          window.location.href = '/Super-admin/login';
+          return;
         }
+      } else {
+        // No session at all, redirect to login
+        window.location.href = '/Super-admin/login';
+        return;
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      window.location.href = '/Super-admin/login';
+      return;
+    }
 
     window.doLogin = async function (e) {
       e.preventDefault();
@@ -118,36 +130,129 @@ export default function SuperAdminPage() {
     window.doCreateTenant = async function (e) {
       e.preventDefault();
       const btn = document.getElementById('t-submit-btn');
-      btn.textContent = 'Creating...';
+      btn.textContent = 'Onboarding...';
       try {
-        const res = await fetch('/api/identity/v1/tenants', {
+        // Step 1: Provision tenant via /api/proxy
+        const proxyRes1 = await fetch('/api/proxy', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + window.adminToken,
-            'X-Tenant-ID': window.adminTenantId || DEFAULT_TENANT_ID
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: document.getElementById('t-name').value,
-            domain_suffix: document.getElementById('t-domain').value,
-            brand_name: document.getElementById('t-brandname').value,
-            brand_code: document.getElementById('t-brandcode').value
+            port: 8080,
+            method: 'POST',
+            path: '/v1/tenants',
+            headers: { 'authorization': 'Bearer ' + window.adminToken },
+            body: {
+              name: document.getElementById('t-name').value,
+              domain_suffix: document.getElementById('t-domain').value,
+              brand_name: document.getElementById('t-brandname').value,
+              brand_code: document.getElementById('t-brandcode').value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+            }
           })
         });
-        const respText = await res.text();
-        if (!res.ok) {
-          let errMsg = res.statusText;
-          try { const errJson = JSON.parse(respText); errMsg = errJson.message || errMsg; } catch (_) { }
-          throw new Error('Failed: ' + errMsg);
+        const payload1 = await proxyRes1.json();
+        if (!payload1.ok || !payload1.data) throw new Error(payload1.data?.message || 'Failed to provision tenant');
+        const tenantId = payload1.data.tenant_id;
+        const brandId = payload1.data.brand_id;
+
+        // Step 2: Create admin user via /api/proxy
+        const adminEmail = document.getElementById('t-admin-email').value;
+        const adminName = document.getElementById('t-admin-name').value;
+        const adminPass = document.getElementById('t-admin-pass').value;
+        if (adminEmail && adminName && adminPass) {
+          const proxyRes2 = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/tenants/' + tenantId + '/admin-user',
+              headers: { 'authorization': 'Bearer ' + window.adminToken },
+              body: {
+                email: adminEmail,
+                full_name: adminName,
+                password: adminPass,
+                brand_id: brandId
+              }
+            })
+          });
+          const payload2 = await proxyRes2.json();
+          if (!payload2.ok) {
+            toast('Tenant created but admin user failed: ' + (payload2.data?.message || 'Unknown error'));
+          }
         }
-        toast('Tenant created successfully!');
+
+        // Show credential block
+        const tenantName = document.getElementById('t-name').value;
+        const loginUrl = window.location.origin + '/admin';
+        const credBlock = 'ZoikoNex Operations Console login\n' +
+          'URL: ' + loginUrl + '\n' +
+          'Tenant ID: ' + tenantId + '\n' +
+          'Email: ' + (adminEmail || 'N/A') + '\n' +
+          'Temporary password: ' + (adminPass || 'N/A');
+
         document.getElementById('invite-modal').style.display = 'none';
         e.target.reset();
-        window.renderTenants();
+
+        // Show credential modal
+        openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24">${IC.check}</svg></div><div><h3>${tenantName} is onboarded</h3><p>This is the only time the temporary password is shown. Copy it now and share it securely.</p></div></div>
+  <div class="modal-b">
+    <pre class="envcode" style="white-space:pre-wrap;font-size:12px;background:var(--bg-l);border:1px solid var(--border);border-radius:8px;padding:14px;">${credBlock}</pre>
+    <button class="btn btn-sec" id="copyCredBtn" style="margin-top:10px;">Copy login details</button>
+  </div>
+  <div class="modal-f"><button class="btn btn-primary" data-close>Done</button></div>`);
+        document.getElementById('copyCredBtn').addEventListener('click', () => {
+          navigator.clipboard.writeText(credBlock).then(() => toast('Copied to clipboard')).catch(() => toast('Copy failed'));
+        });
+
+        toast(tenantName + ' onboarded successfully!');
+        if (typeof window.loadTenants === 'function') window.loadTenants();
       } catch (err) {
         toast('Error: ' + err.message);
       } finally {
-        btn.textContent = 'Create';
+        btn.textContent = 'Onboard';
+      }
+    }
+
+    // Dynamic tenant loading from backend
+    window.loadTenants = async function () {
+      try {
+        const res = await fetch('/api/proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            port: 8080,
+            method: 'GET',
+            path: '/v1/tenants',
+            headers: { 'authorization': 'Bearer ' + window.adminToken }
+          })
+        });
+        const payload = await res.json();
+        if (payload.ok && payload.data && payload.data.tenants) {
+          const liveTenants = payload.data.tenants;
+          // Merge with seed data - live tenants go first, then seed data that doesn't overlap
+          const liveNames = new Set(liveTenants.map(t => t.name));
+          const seedOnly = TENANTS.filter(t => !liveNames.has(t.n));
+          const merged = liveTenants.map(t => ({
+            n: t.name,
+            mkt: t.domain_suffix || 'Global',
+            sub: String(t.user_count || 0),
+            bill: t.status === 'Active' ? 'Healthy' : t.status === 'Suspended' ? 'Disabled' : 'Preview',
+            pack: 'Default',
+            intg: t.status === 'Active' ? 'Healthy' : 'Not configured',
+            risk: t.status === 'Active' ? 'Low' : t.status === 'Suspended' ? 'High' : 'Medium',
+            st: t.status === 'Active' ? 'Live' : t.status === 'Suspended' ? 'Blocked' : 'Preview'
+          }));
+          // Replace TENANTS array contents
+          TENANTS.length = 0;
+          merged.forEach(t => TENANTS.push(t));
+          seedOnly.forEach(t => TENANTS.push(t));
+          renderTenants();
+          console.log('[superadmin] Loaded', liveTenants.length, 'tenants from backend');
+        } else {
+          console.error('List tenants request failed:', payload.data?.message || 'Unknown error');
+        }
+      } catch (err) {
+        console.error('Failed to load tenants:', err.message);
       }
     }
 
@@ -769,12 +874,12 @@ export default function SuperAdminPage() {
   }, []);
 
   return (
-    <div ref={containerRef} dangerouslySetInnerHTML={{
+    <div ref={containerRef} suppressHydrationWarning dangerouslySetInnerHTML={{
       __html: `
 
 <header class="top">
   <button class="hamb" id="hamb" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <div class="brand"><img class="logo" src="data:image/png;base64,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" alt="ZoikoNex" width="150" height="30"></div>
+  <div class="brand"><img class="logo" src="data:image/png;base64,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" alt="ZoikoNex" width="150" height="30"></div>
   <span class="env env-prod" id="envPill"><i></i><select id="envSel" aria-label="Environment"><option value="prod">Production</option><option value="sandbox">Sandbox</option><option value="staging">Staging</option><option value="demo">Demo</option></select></span>
   <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search" type="text" placeholder="Search tenants, MSISDN, ICCID, orders, invoices, evidence IDs…" autocomplete="off" aria-label="Global search"><div class="searchpop" id="searchPop"></div></div>
   <div class="topright">
@@ -832,51 +937,69 @@ export default function SuperAdminPage() {
   <aside class="queue" id="queue" aria-label="Global action queue">
     <div class="queue-h">
       <h3><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 4l-7 12a2 2 0 0 0 1.7 3h14a2 2 0 0 0 1.7-3l-7-12a2 2 0 0 0-3.4 0Z"/></svg>Action Queue</h3>
-      <span class="qc" id="qCount"></span>
+      <span class="qc" id="qCount">0 items</span>
       <button class="collapse" id="qCollapse" aria-label="Collapse queue"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
-    <div class="queue-full" id="queueList"></div>
-    <div class="qmini" id="qMini"></div>
+    <div id="queueList"></div>
+    <div id="qMini"></div>
   </aside>
-</div>
 
-<!-- STATUS BAR -->
-<div class="statusbar" id="statusbar"></div>
+  <!-- ONBOARD TENANT MODAL -->
+  <div id="invite-modal" class="modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;display:none;background:var(--bg);border:1px solid var(--border);padding:1.5rem;width:520px;max-width:92%;box-shadow:0 10px 30px rgba(0,0,0,0.5);border-radius:12px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-content">
+      <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:1.1rem;">Onboard tenant</h2>
+        <button type="button" class="icon-btn" onclick="document.getElementById('invite-modal').style.display='none'" style="background:transparent;border:none;color:var(--tx);cursor:pointer;font-size:1.2rem;">&times;</button>
+      </div>
+      <form onsubmit="doCreateTenant(event)" style="margin-top:1rem;">
+        <div class="modal-body">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);margin-bottom:10px;">Company</div>
+          <div class="group">
+            <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Tenant name</label>
+            <input type="text" id="t-name" required placeholder="Globex Mobile Ltd" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+          </div>
+          <div class="group" style="margin-top:0.8rem;">
+            <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Domain suffix</label>
+            <input type="text" id="t-domain" required placeholder="globex.zoikonex.com" class="mono" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;font-size:12px;">
+            <div style="font-size:10px;color:var(--ink-faint);margin-top:3px;">A stable slug, e.g. globex.zoikonex.com</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:0.8rem;">
+            <div class="group">
+              <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand name</label>
+              <input type="text" id="t-brandname" required placeholder="Globex Mobile" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            </div>
+            <div class="group">
+              <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand code</label>
+              <input type="text" id="t-brandcode" required placeholder="globex-mobile" pattern="[a-zA-Z0-9-]+" title="Alphanumeric and hyphens only" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            </div>
+          </div>
 
-
-<!-- CREATE TENANT MODAL -->
-<div id="invite-modal" class="modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;display:none;background:var(--bg);border:1px solid var(--border);padding:1.5rem;width:400px;max-width:90%;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-  <div class="modal-content">
-    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
-      <h2 style="margin:0;">Create Tenant</h2>
-      <button type="button" class="icon-btn" onclick="document.getElementById('invite-modal').style.display='none'" style="background:transparent;border:none;color:var(--tx);cursor:pointer;font-size:1.2rem;">×</button>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);margin-top:18px;margin-bottom:10px;">First admin user</div>
+          <div class="group">
+            <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Email</label>
+            <input type="email" id="t-admin-email" required placeholder="admin@globex.com" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+          </div>
+          <div class="group" style="margin-top:0.8rem;">
+            <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Full name</label>
+            <input type="text" id="t-admin-name" required placeholder="Jane Doe" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+          </div>
+          <div class="group" style="margin-top:0.8rem;">
+            <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Temporary password</label>
+            <input type="password" id="t-admin-pass" required minlength="12" placeholder="At least 12 characters" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            <div style="font-size:10px;color:var(--ink-faint);margin-top:3px;">At least 12 characters &mdash; shown once after creation, so save it.</div>
+          </div>
+        </div>
+        <div class="modal-footer" style="margin-top:1.5rem;display:flex;justify-content:flex-end;gap:0.5rem;">
+          <button type="button" class="btn btn-sec" onclick="document.getElementById('invite-modal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="t-submit-btn">Onboard</button>
+        </div>
+      </form>
     </div>
-    <form onsubmit="doCreateTenant(event)" style="margin-top:1rem;">
-    <div class="modal-body">
-      <div class="group">
-        <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Tenant Name</label>
-        <input type="text" id="t-name" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
-      </div>
-      <div class="group" style="margin-top:0.8rem;">
-        <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Domain Suffix</label>
-        <input type="text" id="t-domain" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
-      </div>
-      <div class="group" style="margin-top:0.8rem;">
-        <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand Name</label>
-        <input type="text" id="t-brandname" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
-      </div>
-      <div class="group" style="margin-top:0.8rem;">
-        <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand Code</label>
-        <input type="text" id="t-brandcode" required style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
-      </div>
-    </div>
-    <div class="modal-footer" style="margin-top:1.5rem;display:flex;justify-content:flex-end;gap:0.5rem;">
-      <button type="button" class="btn btn-sec" onclick="document.getElementById('invite-modal').style.display='none'">Cancel</button>
-      <button type="submit" class="btn btn-primary" id="t-submit-btn">Create</button>
-    </div>
-    </form>
   </div>
 </div>
+
+<div class="statusbar" id="statusbar"></div>
+
 <!-- modal + toasts -->
 
 <div class="scrim2" id="scrim2"><div class="modal" id="modal"></div></div>
