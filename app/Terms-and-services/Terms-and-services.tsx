@@ -1,7 +1,171 @@
-import React from 'react';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+"use client";
 
-export default function TermsAndServicesPage() {
+import React, { useRef, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+
+const FORMS_API_URL = "http://localhost:8099";
+
+type FormState = {
+  company: string;
+  role: string;
+  email: string;
+  companyType: string;
+  launchMarket: string;
+  reviewNeed: string;
+  timeline: string;
+  message: string;
+  consent: boolean;
+};
+
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+const INITIAL_STATE: FormState = {
+  company: "",
+  role: "",
+  email: "",
+  companyType: "",
+  launchMarket: "",
+  reviewNeed: "",
+  timeline: "",
+  message: "",
+  consent: false,
+};
+
+// E.164-adjacent is not needed here (no phone field); email uses a pragmatic RFC-safe check.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function TermsAndServicesPage() {
+  const [form, setForm] = useState<FormState>(INITIAL_STATE);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [submitError, setSubmitError] = useState<string>("");
+
+  const formSectionRef = useRef<HTMLElement | null>(null);
+
+  const scrollToForm = () => {
+    formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const validate = (values: FormState): FormErrors => {
+    const next: FormErrors = {};
+
+    if (!values.company.trim()) {
+      next.company = "Company name is required.";
+    }
+    if (!values.role.trim()) {
+      next.role = "Your role is required.";
+    }
+    if (!values.email.trim()) {
+      next.email = "Work email is required.";
+    } else if (!EMAIL_REGEX.test(values.email.trim())) {
+      next.email = "Enter a valid email address.";
+    }
+    if (!values.companyType) {
+      next.companyType = "Select a company type.";
+    }
+    if (!values.reviewNeed) {
+      next.reviewNeed = "Select a review need.";
+    }
+    if (!values.consent) {
+      next.consent = "Please confirm before submitting.";
+    }
+
+    return next;
+  };
+
+  const handleChange =
+    (field: keyof FormState) =>
+    (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => {
+      const target = e.target as HTMLInputElement;
+      const value = target.type === "checkbox" ? target.checked : target.value;
+
+      setForm((prev) => ({ ...prev, [field]: value }));
+
+      // Clear a field's error as soon as the user edits it.
+      setErrors((prev) => {
+        if (!prev[field]) return prev;
+        const nextErrors = { ...prev };
+        delete nextErrors[field];
+        return nextErrors;
+      });
+    };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const validationErrors = validate(form);
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      const firstField = Object.keys(validationErrors)[0];
+      const el = document.getElementById(`legal-${firstField}`);
+      el?.focus({ preventScroll: false });
+      return;
+    }
+
+    if (!FORMS_API_URL) {
+      setStatus("error");
+      setSubmitError("Form service is not configured. Please set NEXT_PUBLIC_FORMS_API_URL.");
+      return;
+    }
+
+    setStatus("submitting");
+    setSubmitError("");
+
+    try {
+      const res = await fetch(`${FORMS_API_URL}/v1/terms-and-services`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company: form.company.trim(),
+          role: form.role.trim(),
+          email: form.email.trim(),
+          company_type: form.companyType,
+          launch_market: form.launchMarket.trim() || null,
+          review_need: form.reviewNeed,
+          timeline: form.timeline || null,
+          message: form.message.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        let detail = "";
+        try {
+          const data = await res.json();
+          detail = data?.message || data?.detail || "";
+        } catch {
+          /* response had no JSON body */
+        }
+        throw new Error(detail || `Request failed (status ${res.status}).`);
+      }
+
+      setForm(INITIAL_STATE);
+      setStatus("success");
+    } catch (err) {
+      setStatus("error");
+      setSubmitError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      );
+    }
+  };
+
+  const inputBase =
+    "w-full h-11 bg-white rounded-[10px] border px-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700";
+  const selectBase =
+    "w-full h-10 bg-white rounded-[10px] border pl-[14px] pr-8 text-sm text-slate-800 appearance-none focus:outline-none focus:ring-1 focus:ring-sky-700 cursor-pointer";
+
+  const borderFor = (field: keyof FormState) =>
+    errors[field] ? "border-red-400" : "border-slate-300";
+
+  const FieldError = ({ field }: { field: keyof FormState }) =>
+    errors[field] ? (
+      <p className="text-red-600 text-xs mt-1 leading-4" role="alert">
+        {errors[field]}
+      </p>
+    ) : null;
+
   return (
     <main className="min-h-screen bg-slate-50 font-sans relative overflow-hidden">
       {/* Background Gradient */}
@@ -54,7 +218,7 @@ export default function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Order Form / MSA</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">Enterprise & procurement</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">The signed commercial agreement and order form that define your subscription and precedence.</p>
-              <button className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request document <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <button onClick={scrollToForm} className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request document <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
             </div>
 
             {/* Card 3 */}
@@ -90,7 +254,7 @@ export default function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Data Processing Addendum</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">Legal & privacy reviewers</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">Processing terms, roles, and subprocessor handling for regulated data.</p>
-              <button className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request DPA <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <button onClick={scrollToForm} className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request DPA <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
             </div>
 
             {/* Card 6 */}
@@ -102,7 +266,7 @@ export default function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Security & Compliance</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">Security reviewers</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">Security controls, evidence, and compliance documentation shared under review.</p>
-              <button className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request security pack <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <button onClick={scrollToForm} className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request security pack <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
             </div>
           </div>
         </section>
@@ -238,7 +402,7 @@ export default function TermsAndServicesPage() {
         </section>
 
         {/* Enterprise contracting pathway */}
-        <section className="py-16">
+        <section ref={formSectionRef} id="request-legal-pack" className="py-16 scroll-mt-24">
           <h2 className="text-slate-800 text-3xl font-extrabold mb-4">Enterprise contracting pathway.</h2>
           <p className="text-slate-600 text-base font-normal mb-12 max-w-3xl">
             A clear route for procurement, legal, security, and compliance reviewers — no hunting through footer pages.
@@ -263,133 +427,247 @@ export default function TermsAndServicesPage() {
           </div>
 
           <div className="bg-white rounded-[20px] shadow-[0px_18px_48px_-22px_rgba(11,60,99,0.28),_0px_1px_2px_0px_rgba(11,60,99,0.04)] border border-slate-200 p-[27px] max-w-[1012px]">
-            <form className="flex flex-col gap-[15px]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-[13px] gap-y-[15px]">
-                {/* Row 1 */}
-                <div>
-                  <label className="flex items-center gap-1 mb-[7px]">
-                    <span className="text-slate-800 text-xs font-semibold leading-5">Company</span>
-                    <span className="text-sky-700 text-xs font-bold">*</span>
-                  </label>
-                  <input type="text" placeholder="Operator, MVNE, enterprise, or partner" className="w-full h-11 bg-white rounded-[10px] border border-slate-300 px-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700" />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1 mb-[7px]">
-                    <span className="text-slate-800 text-xs font-semibold leading-5">Your role</span>
-                    <span className="text-sky-700 text-xs font-bold">*</span>
-                  </label>
-                  <input type="text" placeholder="Procurement, Counsel, Security, CTO…" className="w-full h-11 bg-white rounded-[10px] border border-slate-300 px-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700" />
-                </div>
-
-                {/* Row 2 */}
-                <div>
-                  <label className="flex items-center gap-1 mb-[7px]">
-                    <span className="text-slate-800 text-xs font-semibold leading-5">Work email</span>
-                    <span className="text-sky-700 text-xs font-bold">*</span>
-                  </label>
-                  <input type="email" placeholder="you@company.com" className="w-full h-11 bg-white rounded-[10px] border border-slate-300 px-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700" />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1 mb-[7px]">
-                    <span className="text-slate-800 text-xs font-semibold leading-5">Company type</span>
-                    <span className="text-sky-700 text-xs font-bold">*</span>
-                  </label>
-                  <div className="relative">
-                    <select defaultValue="" className="w-full h-10 bg-white rounded-[10px] border border-slate-300 pl-[14px] pr-8 text-sm text-slate-800 appearance-none focus:outline-none focus:ring-1 focus:ring-sky-700 cursor-pointer">
-                      <option value="" disabled className="text-slate-500">Select…</option>
-                      <option value="operator">Operator</option>
-                      <option value="mvno">MVNO / MVNE</option>
-                      <option value="enterprise">Enterprise</option>
-                    </select>
-                    <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none">
-                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 3 */}
-                <div>
-                  <label className="flex items-center gap-2 mb-[7px]">
-                    <span className="text-slate-800 text-xs font-semibold leading-5">Expected launch market</span>
-                    <span className="px-[7px] py-0.5 rounded-[5px] border border-slate-200 text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Optional</span>
-                  </label>
-                  <input type="text" placeholder="e.g. United States, EMEA, multi-region" className="w-full h-11 bg-white rounded-[10px] border border-slate-300 px-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700" />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1 mb-[7px]">
-                    <span className="text-slate-800 text-xs font-semibold leading-5">Review need</span>
-                    <span className="text-sky-700 text-xs font-bold">*</span>
-                  </label>
-                  <div className="relative">
-                    <select defaultValue="" className="w-full h-10 bg-white rounded-[10px] border border-slate-300 pl-[14px] pr-8 text-sm text-slate-800 appearance-none focus:outline-none focus:ring-1 focus:ring-sky-700 cursor-pointer">
-                      <option value="" disabled className="text-slate-500">Select…</option>
-                      <option value="full">Full Legal Review</option>
-                      <option value="dpa">DPA Only</option>
-                      <option value="security">Security Compliance</option>
-                    </select>
-                    <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none">
-                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 4 (Full width) */}
-              <div>
-                <label className="flex items-center gap-2 mb-[7px]">
-                  <span className="text-slate-800 text-xs font-semibold leading-5">Target timeline</span>
-                  <span className="px-[7px] py-0.5 rounded-[5px] border border-slate-200 text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Optional</span>
-                </label>
-                <div className="relative w-full">
-                  <select defaultValue="" className="w-full h-10 bg-white rounded-[10px] border border-slate-300 pl-[14px] pr-8 text-sm text-slate-800 appearance-none focus:outline-none focus:ring-1 focus:ring-sky-700 cursor-pointer">
-                    <option value="" disabled className="text-slate-500">Select…</option>
-                    <option value="q1">This Quarter</option>
-                    <option value="q2">Next Quarter</option>
-                    <option value="h2">Later this year</option>
-                  </select>
-                  <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 5 (Message) */}
-              <div>
-                <label className="flex items-center gap-2 mb-[7px]">
-                  <span className="text-slate-800 text-xs font-semibold leading-5">Message</span>
-                  <span className="px-[7px] py-0.5 rounded-[5px] border border-slate-200 text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Optional</span>
-                </label>
-                <textarea placeholder="Documents needed, questions, or context for the review." className="w-full h-24 bg-white rounded-[10px] border border-slate-300 p-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700 resize-none"></textarea>
-              </div>
-
-              {/* Checkbox and Button */}
-              <div className="mt-2">
-                <label className="flex items-start gap-[15px] mb-[32px] cursor-pointer group">
-                  <div className="relative flex items-center justify-center shrink-0 mt-[2px]">
-                    <input type="checkbox" className="peer appearance-none w-4 h-4 bg-white rounded-sm border border-neutral-500 checked:bg-sky-700 checked:border-sky-700 transition-colors" />
-                    <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="2.5 6 5 8.5 9.5 3.5"></polyline>
-                    </svg>
-                  </div>
-                  <span className="text-slate-600 text-xs font-semibold leading-5 select-none">
-                    I agree that ZoikoNex may contact me about this request and process my details per the <a href="#" className="text-sky-700 hover:underline">Privacy Notice</a>.
-                  </span>
-                </label>
-
-                <button type="submit" className="w-full h-12 bg-sky-700 text-white rounded-xl flex justify-center items-center gap-3 hover:bg-sky-800 transition-colors font-bold text-base shadow-sm">
-                  Request Legal Pack
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
+            {status === "success" ? (
+              <div className="flex flex-col items-center text-center py-10">
+                <div className="w-12 h-12 rounded-full bg-lime-500/15 border border-lime-500/40 flex items-center justify-center mb-5">
+                  <svg className="w-6 h-6 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
+                </div>
+                <h3 className="text-slate-800 text-lg font-bold mb-2">Request received.</h3>
+                <p className="text-slate-600 text-sm leading-6 max-w-md mb-6">
+                  Thank you. Your request has been routed to the correct team and we will follow up at the work email you provided.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStatus("idle")}
+                  className="text-sky-700 text-sm font-semibold hover:text-sky-800 transition-colors"
+                >
+                  Submit another request
                 </button>
               </div>
-            </form>
+            ) : (
+              <form className="flex flex-col gap-[15px]" onSubmit={handleSubmit} noValidate>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-[13px] gap-y-[15px]">
+                  {/* Row 1 */}
+                  <div>
+                    <label htmlFor="legal-company" className="flex items-center gap-1 mb-[7px]">
+                      <span className="text-slate-800 text-xs font-semibold leading-5">Company</span>
+                      <span className="text-sky-700 text-xs font-bold">*</span>
+                    </label>
+                    <input
+                      id="legal-company"
+                      name="company"
+                      type="text"
+                      value={form.company}
+                      onChange={handleChange("company")}
+                      aria-invalid={!!errors.company}
+                      placeholder="Operator, MVNE, enterprise, or partner"
+                      className={`${inputBase} ${borderFor("company")}`}
+                    />
+                    <FieldError field="company" />
+                  </div>
+                  <div>
+                    <label htmlFor="legal-role" className="flex items-center gap-1 mb-[7px]">
+                      <span className="text-slate-800 text-xs font-semibold leading-5">Your role</span>
+                      <span className="text-sky-700 text-xs font-bold">*</span>
+                    </label>
+                    <input
+                      id="legal-role"
+                      name="role"
+                      type="text"
+                      value={form.role}
+                      onChange={handleChange("role")}
+                      aria-invalid={!!errors.role}
+                      placeholder="Procurement, Counsel, Security, CTO…"
+                      className={`${inputBase} ${borderFor("role")}`}
+                    />
+                    <FieldError field="role" />
+                  </div>
+
+                  {/* Row 2 */}
+                  <div>
+                    <label htmlFor="legal-email" className="flex items-center gap-1 mb-[7px]">
+                      <span className="text-slate-800 text-xs font-semibold leading-5">Work email</span>
+                      <span className="text-sky-700 text-xs font-bold">*</span>
+                    </label>
+                    <input
+                      id="legal-email"
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange("email")}
+                      aria-invalid={!!errors.email}
+                      placeholder="you@company.com"
+                      className={`${inputBase} ${borderFor("email")}`}
+                    />
+                    <FieldError field="email" />
+                  </div>
+                  <div>
+                    <label htmlFor="legal-companyType" className="flex items-center gap-1 mb-[7px]">
+                      <span className="text-slate-800 text-xs font-semibold leading-5">Company type</span>
+                      <span className="text-sky-700 text-xs font-bold">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="legal-companyType"
+                        name="companyType"
+                        value={form.companyType}
+                        onChange={handleChange("companyType")}
+                        aria-invalid={!!errors.companyType}
+                        className={`${selectBase} ${borderFor("companyType")}`}
+                      >
+                        <option value="" disabled className="text-slate-500">Select…</option>
+                        <option value="operator">Operator</option>
+                        <option value="mvno">MVNO / MVNE</option>
+                        <option value="enterprise">Enterprise</option>
+                      </select>
+                      <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none">
+                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <FieldError field="companyType" />
+                  </div>
+
+                  {/* Row 3 */}
+                  <div>
+                    <label htmlFor="legal-launchMarket" className="flex items-center gap-2 mb-[7px]">
+                      <span className="text-slate-800 text-xs font-semibold leading-5">Expected launch market</span>
+                      <span className="px-[7px] py-0.5 rounded-[5px] border border-slate-200 text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Optional</span>
+                    </label>
+                    <input
+                      id="legal-launchMarket"
+                      name="launchMarket"
+                      type="text"
+                      value={form.launchMarket}
+                      onChange={handleChange("launchMarket")}
+                      placeholder="e.g. United States, EMEA, multi-region"
+                      className={`${inputBase} border-slate-300`}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="legal-reviewNeed" className="flex items-center gap-1 mb-[7px]">
+                      <span className="text-slate-800 text-xs font-semibold leading-5">Review need</span>
+                      <span className="text-sky-700 text-xs font-bold">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="legal-reviewNeed"
+                        name="reviewNeed"
+                        value={form.reviewNeed}
+                        onChange={handleChange("reviewNeed")}
+                        aria-invalid={!!errors.reviewNeed}
+                        className={`${selectBase} ${borderFor("reviewNeed")}`}
+                      >
+                        <option value="" disabled className="text-slate-500">Select…</option>
+                        <option value="full">Full Legal Review</option>
+                        <option value="dpa">DPA Only</option>
+                        <option value="security">Security Compliance</option>
+                      </select>
+                      <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none">
+                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <FieldError field="reviewNeed" />
+                  </div>
+                </div>
+
+                {/* Row 4 (Full width) */}
+                <div>
+                  <label htmlFor="legal-timeline" className="flex items-center gap-2 mb-[7px]">
+                    <span className="text-slate-800 text-xs font-semibold leading-5">Target timeline</span>
+                    <span className="px-[7px] py-0.5 rounded-[5px] border border-slate-200 text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Optional</span>
+                  </label>
+                  <div className="relative w-full">
+                    <select
+                      id="legal-timeline"
+                      name="timeline"
+                      value={form.timeline}
+                      onChange={handleChange("timeline")}
+                      className={`${selectBase} border-slate-300`}
+                    >
+                      <option value="" disabled className="text-slate-500">Select…</option>
+                      <option value="q1">This Quarter</option>
+                      <option value="q2">Next Quarter</option>
+                      <option value="h2">Later this year</option>
+                    </select>
+                    <div className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 1L5 5L9 1" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 5 (Message) */}
+                <div>
+                  <label htmlFor="legal-message" className="flex items-center gap-2 mb-[7px]">
+                    <span className="text-slate-800 text-xs font-semibold leading-5">Message</span>
+                    <span className="px-[7px] py-0.5 rounded-[5px] border border-slate-200 text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Optional</span>
+                  </label>
+                  <textarea
+                    id="legal-message"
+                    name="message"
+                    value={form.message}
+                    onChange={handleChange("message")}
+                    placeholder="Documents needed, questions, or context for the review."
+                    className="w-full h-24 bg-white rounded-[10px] border border-slate-300 p-[14px] text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-700 resize-none"
+                  ></textarea>
+                </div>
+
+                {/* Checkbox and Button */}
+                <div className="mt-2">
+                  <label htmlFor="legal-consent" className="flex items-start gap-[15px] mb-[10px] cursor-pointer group">
+                    <div className="relative flex items-center justify-center shrink-0 mt-[2px]">
+                      <input
+                        id="legal-consent"
+                        name="consent"
+                        type="checkbox"
+                        checked={form.consent}
+                        onChange={handleChange("consent")}
+                        aria-invalid={!!errors.consent}
+                        className={`peer appearance-none w-4 h-4 bg-white rounded-sm border checked:bg-sky-700 checked:border-sky-700 transition-colors ${errors.consent ? "border-red-400" : "border-neutral-500"}`}
+                      />
+                      <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="2.5 6 5 8.5 9.5 3.5"></polyline>
+                      </svg>
+                    </div>
+                    <span className="text-slate-600 text-xs font-semibold leading-5 select-none">
+                      I agree that ZoikoNex may contact me about this request and process my details per the <a href="#" className="text-sky-700 hover:underline">Privacy Notice</a>.
+                    </span>
+                  </label>
+                  {errors.consent && (
+                    <p className="text-red-600 text-xs mb-[22px] leading-4 ml-[31px]" role="alert">
+                      {errors.consent}
+                    </p>
+                  )}
+                  {!errors.consent && <div className="mb-[22px]" />}
+
+                  {status === "error" && submitError && (
+                    <div className="mb-4 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3" role="alert">
+                      <p className="text-red-700 text-xs font-medium leading-5">{submitError}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={status === "submitting"}
+                    className="w-full h-12 bg-sky-700 text-white rounded-xl flex justify-center items-center gap-3 hover:bg-sky-800 transition-colors font-bold text-base shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {status === "submitting" ? "Submitting…" : "Request Legal Pack"}
+                    {status !== "submitting" && (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </section>
 
@@ -574,7 +852,7 @@ export default function TermsAndServicesPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-              <button className="bg-[#1974c0] text-white font-semibold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-[9px] hover:bg-[#1560a0] transition-all shadow-[0_0_24px_rgba(25,116,192,0.6)]">
+              <button onClick={scrollToForm} className="bg-[#1974c0] text-white font-semibold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-[9px] hover:bg-[#1560a0] transition-all shadow-[0_0_24px_rgba(25,116,192,0.6)]">
                 Request Legal Pack
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -591,3 +869,5 @@ export default function TermsAndServicesPage() {
     </main>
   );
 }
+
+export default TermsAndServicesPage;
