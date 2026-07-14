@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function LeadershipPage() {
     return (
@@ -26,9 +27,11 @@ export default function LeadershipPage() {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 mb-12 w-full sm:w-auto">
-                            <button className="px-8 py-4 bg-sky-700 hover:bg-sky-800 text-white text-base font-bold font-['Plus_Jakarta_Sans'] rounded-xl shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.70)] transition-all">
-                                Request a Leadership Briefing
-                            </button>
+                            <Link href="/contact-us">
+                                <button className="px-8 py-4 bg-sky-900 hover:bg-sky-950 text-white text-base font-bold font-['Plus_Jakarta_Sans'] rounded-xl shadow-lg transition-all">
+                                    Request a Leadership Briefing
+                                </button>
+                            </Link>
                             <button className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] rounded-xl transition-all">
                                 View Governance Model
                             </button>

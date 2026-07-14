@@ -20,10 +20,12 @@ export default function TrustPage() {
               ZoikoNex is designed to help operators secure subscriber data, govern financial workflows, control AI-assisted decisions, preserve evidence, support data residency, and maintain audit-ready telecom monetization across jurisdictions.
             </p>
             <div className="flex flex-wrap justify-start items-center gap-4">
-              <button className="px-8 py-4 bg-[#2b7c9f] hover:bg-[#23637f] transition-colors rounded flex justify-start items-center gap-2">
-                <span className="text-center text-white text-sm font-semibold font-['Inter']">Request a Trust Briefing</span>
-                <img src="/image/trust/Icon5.svg" alt="Arrow Right" className="w-4 h-4" />
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 bg-[#2b7c9f] hover:bg-[#23637f] transition-colors rounded flex justify-start items-center gap-2">
+                  <span className="text-center text-white text-sm font-semibold font-['Inter']">Request a Trust Briefing</span>
+                  <img src="/image/trust/Icon5.svg" alt="Arrow Right" className="w-4 h-4" />
+                </button>
+              </Link>
               <button className="px-8 py-4 rounded border border-stone-300/30 hover:bg-white/5 transition-colors flex justify-center items-center">
                 <span className="text-center text-white text-sm font-semibold font-['Inter']">Start a Security Review</span>
               </button>

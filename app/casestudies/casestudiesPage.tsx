@@ -430,9 +430,11 @@ export default function CaseStudiesPage() {
                         <p className="text-center text-slate-600 text-base lg:text-lg font-normal font-['Inter'] leading-7">Connect with our architecture team to analyze your current BSS bottlenecks<br className="hidden xl:block"/>and define a sovereign migration path.</p>
                     </div>
                     <div className="self-stretch pt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
-                        <button className="px-10 py-5 bg-black rounded-lg shadow-lg flex flex-col justify-center items-center hover:bg-zinc-800 transition-colors">
-                            <span className="text-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Platform Briefing</span>
-                        </button>
+                        <Link href="/contact-us">
+                            <button className="px-10 py-5 bg-black rounded-lg shadow-lg flex flex-col justify-center items-center hover:bg-zinc-800 transition-colors">
+                                <span className="text-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Platform Briefing</span>
+                            </button>
+                        </Link>
                         <button className="px-10 py-5 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-center items-center hover:bg-stone-50 transition-colors">
                             <span className="text-center text-black text-sm font-semibold font-['Inter'] leading-4">Speak with an Architect</span>
                         </button>

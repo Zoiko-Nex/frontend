@@ -30,7 +30,7 @@ export default function AIGovernance() {
               </p>
             </div>
             <div className="pt-4 flex flex-col sm:flex-row justify-start items-start gap-4">
-              <Link href="#" className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm flex flex-col justify-center items-center">
+              <Link href="/contact-us" className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm flex flex-col justify-center items-center">
                 <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Request an AI Governance Briefing</span>
               </Link>
               <Link href="#" className="px-8 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white hover:bg-white/10 transition-colors flex flex-col justify-center items-center">
@@ -517,7 +517,7 @@ export default function AIGovernance() {
             </h2>
           </div>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6 w-full sm:w-auto">
-            <Link href="#" className="w-full sm:w-auto px-10 py-5 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm flex flex-col justify-center items-center">
+            <Link href="/contact-us" className="w-full sm:w-auto px-10 py-5 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm flex flex-col justify-center items-center">
               <span className="text-center text-white text-lg font-semibold font-['Inter'] leading-7">Request an AI Governance Briefing</span>
             </Link>
             <Link href="#" className="w-full sm:w-auto px-10 py-5 bg-transparent hover:bg-white/5 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-white/30 flex flex-col justify-center items-center">

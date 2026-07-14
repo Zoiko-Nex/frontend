@@ -206,7 +206,7 @@ export function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Terms of Service</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">All users</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">The baseline terms that govern access to and use of the ZoikoNex platform.</p>
-              <button className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Read terms <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <a href="#section-1" className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Read terms <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></a>
             </div>
 
             {/* Card 2 */}
@@ -230,7 +230,7 @@ export function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Acceptable Use Policy</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">All users & developers</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">Permitted and prohibited platform conduct, abuse boundaries, and integrity rules.</p>
-              <button className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">View policy <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <a href="/acceptable-use" className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">View policy <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></a>
             </div>
 
             {/* Card 4 */}
@@ -242,7 +242,7 @@ export function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Privacy Policy</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">All users</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">How personal and operational data is handled across the website and platform.</p>
-              <button className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Read privacy <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <a href="/privacy-policy" className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Read privacy <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></a>
             </div>
 
             {/* Card 5 */}

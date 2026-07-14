@@ -39,12 +39,14 @@ export default function EvidenceArchitecture() {
               </div>
             </div>
             <div className="self-stretch pt-4 inline-flex justify-start items-start">
-              <button className="px-8 py-4 bg-[#2B7EC1] hover:bg-sky-600 transition-colors rounded-lg flex justify-center items-center gap-2">
-                <span className="text-center justify-center text-white text-lg font-normal font-sans leading-7">
-                  Request an Evidence Architecture Brief
-                </span>
-                <ArrowRight className="w-5 h-5 text-white" />
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 bg-[#2B7EC1] hover:bg-sky-600 transition-colors rounded-lg flex justify-center items-center gap-2">
+                  <span className="text-center justify-center text-white text-lg font-normal font-sans leading-7">
+                    Request an Evidence Architecture Brief
+                  </span>
+                  <ArrowRight className="w-5 h-5 text-white" />
+                </button>
+              </Link>
             </div>
           </div>
 
@@ -531,7 +533,7 @@ export default function EvidenceArchitecture() {
                 </div>
                 <div className="justify-center lg:pr-14">
                   <span className="text-white text-sm font-bold font-sans leading-5">Useful: </span>
-                  <span className="text-slate-800 text-sm font-bold font-sans leading-5">Evidence must provide a clear path to resolving a business question.</span>
+                  <span className="text-slate-400 text-sm font-bold font-sans leading-5">Evidence must provide a clear path to resolving a business question.</span>
                 </div>
               </div>
               
@@ -541,7 +543,7 @@ export default function EvidenceArchitecture() {
                 </div>
                 <div className="justify-center">
                   <span className="text-white text-sm font-bold font-sans leading-5">Protected: </span>
-                  <span className="text-slate-800 text-sm font-bold font-sans leading-5">Evidence must be more secure than the events it describes.</span>
+                  <span className="text-slate-400 text-sm font-bold font-sans leading-5">Evidence must be more secure than the events it describes.</span>
                 </div>
               </div>
               
@@ -551,7 +553,7 @@ export default function EvidenceArchitecture() {
                 </div>
                 <div className="justify-center">
                   <span className="text-white text-sm font-bold font-sans leading-5">Honest: </span>
-                  <span className="text-slate-800 text-sm font-bold font-sans leading-5">We define the limits of mathematical certainty for every claim.</span>
+                  <span className="text-slate-400 text-sm font-bold font-sans leading-5">We define the limits of mathematical certainty for every claim.</span>
                 </div>
               </div>
             </div>
@@ -615,9 +617,11 @@ export default function EvidenceArchitecture() {
             </h2>
           </div>
           <div className="w-full flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button className="px-10 py-5 bg-sky-700 hover:bg-sky-600 transition-colors rounded flex justify-center items-center">
-              <span className="text-center justify-center text-white text-lg font-normal font-sans leading-7">Request Architecture Brief</span>
-            </button>
+            <Link href="/contact-us">
+              <button className="px-10 py-5 bg-sky-700 hover:bg-sky-600 transition-colors rounded flex justify-center items-center">
+                <span className="text-center justify-center text-white text-lg font-normal font-sans leading-7">Request Architecture Brief</span>
+              </button>
+            </Link>
             <button className="px-10 py-5 rounded outline outline-1 outline-offset-[-1px] outline-sky-700 hover:bg-sky-700/10 transition-colors flex flex-col justify-center items-center">
               <span className="text-center justify-center text-sky-500 text-lg font-normal font-sans leading-7">Request a Demo</span>
             </button>

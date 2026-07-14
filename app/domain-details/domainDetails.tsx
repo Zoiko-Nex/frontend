@@ -245,7 +245,7 @@ export default function DomainDetails() {
                         </div>
                         
                         <div className="border-t border-slate-200 dark:border-slate-800 mt-10 pt-8 flex flex-wrap gap-4">
-                            <Link href="/contact" className="bg-sky-700 hover:bg-sky-800 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-2 text-sm font-bold transition-colors">
+                            <Link href="/contact-us" className="bg-sky-700 hover:bg-sky-800 text-white rounded-xl px-6 py-3 flex items-center justify-center gap-2 text-sm font-bold transition-colors">
                                 Request a briefing
                                 <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none stroke-[2.2px] stroke-linecap-round stroke-linejoin-round">
                                     <path d="M5 12h14M13 6l6 6-6 6"/>

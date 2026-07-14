@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import Image from "next/image";
 
 // --- TYPES FOR MODULAR DATA RENDERING ---
@@ -52,15 +53,17 @@ export default function SecurityGovernancePage() {
               ZoikoNex is designed to protect the critical systems behind telecom monetization — customer accounts, product catalog, charging, billing, taxation, payments, SIM/eSIM lifecycle, APIs, partner access, AI-assisted workflows, and operational evidence.
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-6">
-              <button className="px-8 py-4 bg-white hover:bg-stone-100 transition rounded-xs text-black text-sm font-semibold inline-flex items-center gap-2 shadow-sm">
-                Request Security Briefing
-                <Image className="w-4 h-4 "
-                    src="/image/security/Icon.png"
-                    alt="icon"
-                    width={16}
-                    height={16}
-                />
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 bg-white hover:bg-stone-100 transition rounded-xs text-black text-sm font-semibold inline-flex items-center gap-2 shadow-sm">
+                  Request Security Briefing
+                  <Image className="w-4 h-4 "
+                      src="/image/security/Icon.png"
+                      alt="icon"
+                      width={16}
+                      height={16}
+                  />
+                </button>
+              </Link>
               <button className="px-8 py-4 border border-white hover:bg-white/10 transition rounded-xs text-white text-sm font-semibold">
                 Request Trust Pack
               </button>
@@ -212,9 +215,11 @@ export default function SecurityGovernancePage() {
             Request a ZoikoNex security briefing or Trust Pack to understand how the platform is designed to support secure telecom monetization, governed operations, and enterprise implementation readiness.
           </p>
           <div className="flex flex-wrap justify-center items-center gap-4 pt-6">
-            <button className="px-10 py-5 bg-[#2d84b8] hover:bg-[#246e98] transition rounded-xs text-white text-xs font-semibold tracking-wider uppercase">
-              Request Security Briefing
-            </button>
+            <Link href="/contact-us">
+              <button className="px-10 py-5 bg-[#2d84b8] hover:bg-[#246e98] transition rounded-xs text-white text-xs font-semibold tracking-wider uppercase">
+                Request Security Briefing
+              </button>
+            </Link>
             <button className="px-10 py-5 border border-gray-500 text-gray-300 hover:bg-white/5 transition rounded-xs text-xs font-semibold tracking-wider uppercase">
               Request Trust Pack
             </button>

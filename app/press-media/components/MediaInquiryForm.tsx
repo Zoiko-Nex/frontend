@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 const FORMS_API_URL = "http://localhost:8099";
 
 const inputCls =
-  "w-full rounded-[6px] border bg-white px-4 text-[14px] text-[#1A2B4A] placeholder-[#A0AEC0] outline-none transition focus:ring-2 focus:ring-[#1778C8]/15";
+  "w-full flex-1 bg-stone-50 px-4 py-3.5 text-base text-zinc-900 placeholder-gray-500 outline outline-1 outline-offset-[-1px] outline-slate-200 focus:outline-sky-600 transition-all";
 
 const labelCls =
-  "block mb-[6px] text-[11px] font-bold uppercase tracking-[1.8px] text-[#4B5563]";
+  "flex w-full flex-col justify-start items-start text-[10px] font-bold leading-4 tracking-wider text-zinc-700 mb-2 uppercase";
 
 interface FormState {
   fullName: string;
@@ -66,10 +67,10 @@ export function MediaInquiryForm() {
     setErrors(validate(values));
   };
 
-  const fieldBorder = (name: keyof FormErrors) =>
+  const fieldOutline = (name: keyof FormErrors) =>
     touched[name] && errors[name]
-      ? "border-[#DC2626] focus:border-[#DC2626]"
-      : "border-[#D1D9E0] focus:border-[#1778C8]";
+      ? "outline-red-500 focus:outline-red-600"
+      : "outline-slate-200 focus:outline-sky-600";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,47 +106,51 @@ export function MediaInquiryForm() {
   };
 
   return (
-    <section className="bg-[#EAEEF3] py-12 font-['Plus_Jakarta_Sans',sans-serif] lg:py-20">
-      <div className="mx-auto max-w-[820px] px-4 sm:px-6">
-
-        {/* White card */}
-        <div className="rounded-2xl bg-white px-5 py-8 shadow-[0_2px_12px_rgba(0,0,0,0.07)] sm:px-10 sm:py-10 lg:px-14 lg:py-[52px]">
-
-          {/* Card header */}
-          <div className="mb-6 text-center sm:mb-8">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[3px] text-[#1778C8]">
-              Media Inquiry
-            </p>
-            <h2 className="text-[24px] font-extrabold leading-[1.15] text-[#1A2B4A] sm:text-[34px]">
+    <section className="bg-zinc-100 px-6 py-16 lg:px-48 lg:py-28 flex flex-col items-center justify-center">
+      <div className="relative flex w-full max-w-[896px] flex-col items-start gap-12 bg-white p-8 lg:p-16 outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-xl">
+        
+        {/* Card header */}
+        <div className="flex w-full flex-col items-center gap-4 pt-2">
+          <div className="text-center text-xs font-semibold uppercase tracking-wider text-sky-600" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            MEDIA INQUIRY
+          </div>
+          <div className="flex flex-col items-center pt-1">
+            <h2 className="text-center text-3xl lg:text-4xl font-semibold leading-tight lg:leading-[48px] text-zinc-900" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
               Connect with Media Relations
             </h2>
-            <p className="mt-3 text-[15px] text-[#64748B]">
+          </div>
+          <div className="flex flex-col items-center">
+            <p className="text-center text-base font-normal leading-6 text-slate-600" style={{ fontFamily: "'Inter', sans-serif" }}>
               Accredited journalists and media organizations receive priority routing.
             </p>
           </div>
+        </div>
 
-          {status === "success" ? (
-            <div className="rounded-[8px] border border-[#BBF7D0] bg-[#F0FDF4] px-5 py-6 text-center">
-              <p className="text-[15px] font-bold text-[#166534]">
-                Your inquiry has been received.
-              </p>
-              <p className="mt-1 text-[14px] text-[#15803D]">
-                Our media relations team will respond shortly.
-              </p>
-              <button
-                type="button"
-                onClick={() => setStatus("idle")}
-                className="mt-4 text-[13px] font-bold uppercase tracking-[1.5px] text-[#1778C8] underline-offset-2 hover:underline"
-              >
-                Submit another
-              </button>
-            </div>
-          ) : (
-            <form className="grid grid-cols-1 gap-5 sm:grid-cols-2" noValidate onSubmit={handleSubmit}>
+        {status === "success" ? (
+          <div className="flex w-full flex-col items-center rounded bg-green-50 px-6 py-12 outline outline-1 outline-green-200">
+            <p className="text-lg font-semibold text-green-800" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Your inquiry has been received.
+            </p>
+            <p className="mt-2 text-base text-green-700" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Our media relations team will respond shortly.
+            </p>
+            <button
+              type="button"
+              onClick={() => setStatus("idle")}
+              className="mt-6 text-xs font-bold uppercase tracking-wider text-sky-700 underline-offset-4 hover:underline"
+              style={{ fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              Submit another request
+            </button>
+          </div>
+        ) : (
+          <form className="flex w-full flex-col items-start" noValidate onSubmit={handleSubmit}>
+            <div className="flex w-full flex-col gap-6">
+              
               {/* Full Name */}
-              <div>
-                <label className={labelCls}>
-                  Full Name <span className="text-[#DC2626]">*</span>
+              <div className="flex w-full flex-col gap-2">
+                <label className={labelCls} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  FULL NAME
                 </label>
                 <input
                   type="text"
@@ -153,36 +158,40 @@ export function MediaInquiryForm() {
                   onChange={(e) => setField("fullName", e.target.value)}
                   onBlur={() => handleBlur("fullName")}
                   placeholder="e.g. Sarah Jenkins"
-                  style={{ height: "44px" }}
-                  className={`${inputCls} ${fieldBorder("fullName")}`}
+                  className={`${inputCls} ${fieldOutline("fullName")}`}
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 />
                 {touched.fullName && errors.fullName && (
-                  <p className="mt-1 text-[12px] text-[#DC2626]">{errors.fullName}</p>
+                  <p className="mt-1 text-xs text-red-600">{errors.fullName}</p>
                 )}
               </div>
 
               {/* Organization */}
-              <div>
-                <label className={labelCls}>Organization</label>
+              <div className="flex w-full flex-col gap-2">
+                <label className={labelCls} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  ORGANIZATION
+                </label>
                 <input
                   type="text"
                   value={values.organization}
                   onChange={(e) => setField("organization", e.target.value)}
                   placeholder="e.g. Global Tech Daily"
-                  style={{ height: "44px" }}
-                  className={`${inputCls} border-[#D1D9E0] focus:border-[#1778C8]`}
+                  className={`${inputCls} outline-slate-200 focus:outline-sky-600`}
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 />
               </div>
 
               {/* Inquiry Type */}
-              <div>
-                <label className={labelCls}>Inquiry Type</label>
-                <div className="relative">
+              <div className="flex w-full flex-col gap-2">
+                <label className={labelCls} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  INQUIRY TYPE
+                </label>
+                <div className="relative flex w-full">
                   <select
                     value={values.inquiryType}
                     onChange={(e) => setField("inquiryType", e.target.value)}
-                    style={{ height: "44px" }}
-                    className={`${inputCls} appearance-none border-[#D1D9E0] pr-10 focus:border-[#1778C8]`}
+                    className={`${inputCls} appearance-none pr-10 outline-slate-200 focus:outline-sky-600`}
+                    style={{ fontFamily: "'Inter', sans-serif" }}
                   >
                     <option>Interview Request</option>
                     <option>Press Release</option>
@@ -190,40 +199,38 @@ export function MediaInquiryForm() {
                     <option>Executive Quote</option>
                     <option>Product Briefing</option>
                   </select>
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]"
-                  >
-                    <path d="M6 8l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Image
+                    src="/image/press/chevron-down.svg"
+                    alt="Select option"
+                    width={16}
+                    height={16}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2"
+                  />
                 </div>
               </div>
 
-              {/* Deadline — calendar */}
-              <div>
-                <label className={labelCls}>
-                  Deadline (UTC) <span className="text-[#DC2626]">*</span>
+              {/* Deadline */}
+              <div className="flex w-full flex-col gap-2 pb-5">
+                <label className={labelCls} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  DEADLINE (UTC)
                 </label>
                 <input
                   type="datetime-local"
                   value={values.deadline}
                   onChange={(e) => setField("deadline", e.target.value)}
                   onBlur={() => handleBlur("deadline")}
-                  style={{ height: "44px" }}
-                  className={`${inputCls} ${fieldBorder("deadline")}`}
+                  className={`${inputCls} ${fieldOutline("deadline")}`}
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 />
                 {touched.deadline && errors.deadline && (
-                  <p className="mt-1 text-[12px] text-[#DC2626]">{errors.deadline}</p>
+                  <p className="mt-1 text-xs text-red-600">{errors.deadline}</p>
                 )}
               </div>
 
-              {/* Inquiry Details — full width */}
-              <div className="sm:col-span-2">
-                <label className={labelCls}>
-                  Inquiry Details <span className="text-[#DC2626]">*</span>
+              {/* Inquiry Details */}
+              <div className="flex w-full flex-col gap-2 pb-1.5">
+                <label className={labelCls} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  INQUIRY DETAILS
                 </label>
                 <textarea
                   rows={5}
@@ -231,46 +238,39 @@ export function MediaInquiryForm() {
                   onChange={(e) => setField("details", e.target.value)}
                   onBlur={() => handleBlur("details")}
                   placeholder="Please provide specific questions or context..."
-                  className={`${inputCls} resize-none py-3 ${fieldBorder("details")}`}
+                  className={`${inputCls} resize-none pt-3 pb-14 ${fieldOutline("details")}`}
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 />
                 {touched.details && errors.details && (
-                  <p className="mt-1 text-[12px] text-[#DC2626]">{errors.details}</p>
+                  <p className="mt-1 text-xs text-red-600">{errors.details}</p>
                 )}
               </div>
 
               {/* Server error */}
               {status === "error" && serverError && (
-                <div className="sm:col-span-2">
-                  <p className="rounded-[6px] bg-[#FEF2F2] px-4 py-3 text-[13px] text-[#DC2626]">
+                <div className="w-full">
+                  <p className="rounded bg-red-50 px-4 py-3 text-sm text-red-600">
                     {serverError}
                   </p>
                 </div>
               )}
 
-              {/* Submit — full width */}
-              <div className="pt-2 sm:col-span-2">
+              {/* Submit */}
+              <div className="flex h-16 w-full items-end justify-start pt-4">
                 <button
                   type="submit"
                   disabled={status === "submitting"}
-                  style={{
-                    height: "52px",
-                    backgroundColor: "#1A4E72",
-                    borderRadius: "6px",
-                    fontFamily: "monospace",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    letterSpacing: "2px",
-                    textTransform: "uppercase",
-                  }}
-                  className="w-full px-8 text-white transition hover:bg-[#154060] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex flex-col items-center justify-center rounded-sm bg-cyan-700 px-12 py-4 transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {status === "submitting" ? "Submitting..." : "Submit Request"}
+                  <span className="text-center text-sm font-semibold uppercase leading-4 text-white" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {status === "submitting" ? "Submitting..." : "Submit Request"}
+                  </span>
                 </button>
               </div>
-            </form>
-          )}
 
-        </div>
+            </div>
+          </form>
+        )}
       </div>
     </section>
   );

@@ -26,36 +26,44 @@ export default function AcceptableUsePage() {
         </section>
 
         {/* Why acceptable use matters in telecom. */}
-        <section className="relative w-[1012px] h-80 mx-auto">
-          <div className="w-[1012px] h-11 left-0 top-[46px] absolute text-slate-800 text-3xl font-extrabold leading-10">Why acceptable use matters in telecom.</div>
-          <div className="w-[1012px] h-11 left-0 top-[104.79px] absolute text-slate-600 text-base font-normal leading-6"><span>These rules exist to protect legitimate customers, carrier relationships, and end users — and to make<br/>security and procurement review faster, not harder.</span></div>
-          <div className="w-[499px] h-20 left-0 top-[174.39px] absolute bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200">
-              <div className="w-[499px] h-20 left-0 top-0 absolute bg-white/0 rounded-2xl shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)]"></div>
-              <div className="w-9 h-9 left-[21px] top-[19px] absolute bg-indigo-50 flex items-center justify-center rounded-[10px]">
+        <section className="pt-[46px] pb-[20px] w-full max-w-[1012px] mx-auto">
+          <h2 className="text-slate-800 text-3xl font-extrabold mb-[15px] leading-10">Why acceptable use matters in telecom.</h2>
+          <p className="text-slate-600 text-base font-normal mb-[35px] leading-6 max-w-[750px]">
+            These rules exist to protect legitimate customers, carrier relationships, and end users — and to make security and procurement review faster, not harder.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-[14px] gap-y-[15px]">
+            <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[20px] flex items-center gap-[15px]">
+              <div className="w-9 h-9 bg-indigo-50 flex items-center justify-center rounded-[10px] shrink-0">
                   <img src="/image/access-use/telecom-abuse.svg" alt="Telecom abuse" className="w-5 h-5" />
               </div>
-              <div className="w-96 h-10 left-[72px] top-[21px] absolute flex flex-col justify-center"><p><span className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Telecom abuse</span><span className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5"> can create customer harm, regulatory exposure,<br/>carrier-relationship risk, payment disputes, and brand damage.</span></p></div>
-          </div>
-          <div className="w-[499px] h-20 left-[513px] top-[174.39px] absolute bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200">
-              <div className="w-[499px] h-20 left-0 top-0 absolute bg-white/0 rounded-2xl shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)]"></div>
-              <div className="w-9 h-9 left-[21px] top-[19px] absolute bg-indigo-50 flex items-center justify-center rounded-[10px]">
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                <strong className="text-slate-800 font-bold">Telecom abuse</strong> can create customer harm, regulatory exposure, carrier-relationship risk, payment disputes, and brand damage.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[20px] flex items-center gap-[15px]">
+              <div className="w-9 h-9 bg-indigo-50 flex items-center justify-center rounded-[10px] shrink-0">
                   <img src="/image/access-use/api-misuse-icon.svg" alt="API misuse" className="w-5 h-5" />
               </div>
-              <div className="w-96 h-10 left-[72px] top-[21px] absolute flex flex-col justify-center"><p><span className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">API misuse</span><span className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5"> can cause data leakage, billing errors, unauthorized<br/>provisioning, excessive load, and integration instability.</span></p></div>
-          </div>
-          <div className="w-[499px] h-20 left-0 top-[269.57px] absolute bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200">
-              <div className="w-[499px] h-20 left-0 top-0 absolute bg-white/0 rounded-2xl shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)]"></div>
-              <div className="w-9 h-9 left-[21px] top-[19px] absolute bg-indigo-50 flex items-center justify-center rounded-[10px]">
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                <strong className="text-slate-800 font-bold">API misuse</strong> can cause data leakage, billing errors, unauthorized provisioning, excessive load, and integration instability.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[20px] flex items-center gap-[15px]">
+              <div className="w-9 h-9 bg-indigo-50 flex items-center justify-center rounded-[10px] shrink-0">
                   <img src="/image/access-use/clear-rules.svg" alt="Clear rules" className="w-5 h-5" />
               </div>
-              <div className="w-96 h-10 left-[72px] top-[21px] absolute flex flex-col justify-center"><p><span className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Clear rules protect legitimate customers</span><span className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5"> by separating<br/>responsible operation from high-risk or unlawful behavior.</span></p></div>
-          </div>
-          <div className="w-[499px] h-20 left-[513px] top-[269.57px] absolute bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200">
-              <div className="w-[499px] h-20 left-0 top-0 absolute bg-white/0 rounded-2xl shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)]"></div>
-              <div className="w-9 h-9 left-[21px] top-[19px] absolute bg-indigo-50 flex items-center justify-center rounded-[10px]">
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                <strong className="text-slate-800 font-bold">Clear rules protect legitimate customers</strong> by separating responsible operation from high-risk or unlawful behavior.
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[20px] flex items-center gap-[15px]">
+              <div className="w-9 h-9 bg-indigo-50 flex items-center justify-center rounded-[10px] shrink-0">
                   <img src="/image/access-use/transparent-boundaries.svg" alt="Transparent boundaries" className="w-5 h-5" />
               </div>
-              <div className="w-96 h-10 left-[72px] top-[21px] absolute flex flex-col justify-center"><p><span className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Transparent boundaries</span><span className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5"> help legal, compliance, security, and<br/>procurement teams complete due diligence faster.</span></p></div>
+              <p className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                <strong className="text-slate-800 font-bold">Transparent boundaries</strong> help legal, compliance, security, and procurement teams complete due diligence faster.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -257,7 +265,7 @@ export default function AcceptableUsePage() {
             Clear boundaries that keep evaluation easy and the platform reliable.
           </p>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-[25px] h-64 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)]">
+          <div className="bg-white rounded-2xl border border-slate-200 p-[25px] shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),_0px_1px_2px_0px_rgba(11,60,99,0.06)]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-[15px] gap-x-[14px] mb-[18px]">
               {[
                 "Sandbox is for testing, evaluation, and integration development only,\nunless production access is approved.",
@@ -314,11 +322,12 @@ export default function AcceptableUsePage() {
               <div className="w-24 h-3 left-[16px] top-[14px] absolute flex justify-center items-center text-slate-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Evidence basis</div>
             </div>
             <div className="w-32 h-16 left-[1px] top-[43.50px] absolute border-b border-slate-200">
-              <div className="w-20 h-6 left-[16px] top-[14.50px] absolute bg-stone-200 rounded-md outline outline-1 outline-offset-[-1px] outline-lime-500/30">
-                <div className="w-3 h-3 left-[9px] top-[7px] absolute overflow-hidden">
-                  <div className="w-2 h-2 left-[1.50px] top-[1.50px] absolute outline outline-[1.20px] outline-offset-[-0.60px] outline-lime-600"></div>
-                </div>
-                <div className="w-12 h-3 left-[27px] top-[6px] absolute flex justify-center items-center text-lime-600 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Low-risk</div>
+              <div className="left-[16px] top-[14.50px] absolute bg-[#f3faeb] rounded-md outline outline-1 outline-offset-[-1px] outline-lime-500/40 flex items-center h-6 px-2 gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-lime-600 shrink-0">
+                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
+                  <circle cx="6" cy="6" r="1.5" fill="currentColor"/>
+                </svg>
+                <div className="text-lime-600 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide whitespace-nowrap pt-[1px]">Low-risk</div>
               </div>
             </div>
             <div className="w-96 h-16 left-[126.61px] top-[43.50px] absolute border-b border-slate-200">
@@ -331,11 +340,12 @@ export default function AcceptableUsePage() {
               <div className="w-64 h-4 left-[16px] top-[16.50px] absolute flex items-center text-slate-600 text-xs font-normal leading-5">Support note & customer communication</div>
             </div>
             <div className="w-32 h-14 left-[1px] top-[114.09px] absolute border-b border-slate-200">
-              <div className="w-20 h-6 left-[16px] top-[14.50px] absolute bg-indigo-50 rounded-md outline outline-1 outline-offset-[-1px] outline-sky-700/30">
-                <div className="w-3 h-3 left-[9px] top-[7px] absolute overflow-hidden">
-                  <div className="w-2 h-2 left-[1.52px] top-[1.53px] absolute outline outline-[1.20px] outline-offset-[-0.60px] outline-sky-700"></div>
-                </div>
-                <div className="w-12 h-3 left-[27px] top-[6px] absolute flex justify-center items-center text-sky-700 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Repeated</div>
+              <div className="left-[16px] top-[14.50px] absolute bg-indigo-50 rounded-md outline outline-1 outline-offset-[-1px] outline-sky-700/40 flex items-center h-6 px-2 gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-sky-700 shrink-0">
+                  <path d="M6 2L1.5 10H10.5L6 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M6 5.5V7.5M6 9H6.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                <div className="text-sky-700 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide whitespace-nowrap pt-[1px]">Repeated</div>
               </div>
             </div>
             <div className="w-96 h-14 left-[126.61px] top-[114.09px] absolute border-b border-slate-200">
@@ -348,11 +358,12 @@ export default function AcceptableUsePage() {
               <div className="w-60 h-4 left-[16px] top-[16.50px] absolute flex items-center text-slate-600 text-xs font-normal leading-5">Account, API, policy, or support record</div>
             </div>
             <div className="w-32 h-16 left-[1px] top-[169.09px] absolute border-b border-slate-200">
-              <div className="w-24 h-6 left-[16px] top-[14.50px] absolute bg-orange-100 rounded-md outline outline-1 outline-offset-[-1px] outline-yellow-600/40">
-                <div className="w-3 h-3 left-[9px] top-[7px] absolute overflow-hidden">
-                  <div className="w-2 h-2 left-[1.52px] top-[1.53px] absolute outline outline-[1.20px] outline-offset-[-0.60px] outline-yellow-600"></div>
-                </div>
-                <div className="w-14 h-3 left-[27px] top-[6px] absolute flex justify-center items-center text-yellow-600 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">High-risk</div>
+              <div className="left-[16px] top-[14.50px] absolute bg-orange-50 rounded-md outline outline-1 outline-offset-[-1px] outline-yellow-600/40 flex items-center h-6 px-2 gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-yellow-600 shrink-0">
+                  <path d="M6 2L1.5 10H10.5L6 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M6 5.5V7.5M6 9H6.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                <div className="text-yellow-600 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide whitespace-nowrap pt-[1px]">High-risk</div>
               </div>
             </div>
             <div className="w-96 h-16 left-[126.61px] top-[169.09px] absolute border-b border-slate-200">
@@ -364,11 +375,12 @@ export default function AcceptableUsePage() {
             <div className="w-72 h-16 left-[708.56px] top-[169.09px] absolute border-b border-slate-200">
               <div className="w-64 h-9 left-[16px] top-[16.50px] absolute flex items-center text-slate-600 text-xs font-normal leading-5"><span>Evidence-ledger event, security signal, or<br/>abuse report</span></div>
             </div>
-            <div className="w-20 h-6 left-[17px] top-[254.19px] absolute bg-red-500/10 rounded-md outline outline-1 outline-offset-[-1px] outline-red-500/40">
-              <div className="w-3 h-3 left-[9px] top-[7px] absolute overflow-hidden">
-                <div className="w-2 h-2 left-[2px] top-[1.50px] absolute outline outline-[1.20px] outline-offset-[-0.60px] outline-red-500"></div>
-              </div>
-              <div className="w-10 h-3 left-[27px] top-[6px] absolute flex justify-center items-center text-red-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide">Severe</div>
+            <div className="left-[17px] top-[254.19px] absolute bg-red-50 rounded-md outline outline-1 outline-offset-[-1px] outline-red-500/40 flex items-center h-6 px-2 gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-red-500 shrink-0">
+                <path d="M6 2L2 3.5V6.5C2 9.5 4.5 11 6 11.5C7.5 11 10 9.5 10 6.5V3.5L6 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                <path d="M6 5V7M6 8.5H6.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              <div className="text-red-500 text-[10px] font-semibold font-mono uppercase leading-4 tracking-wide whitespace-nowrap pt-[1px]">Severe</div>
             </div>
             <div className="w-72 h-9 left-[142.61px] top-[256.19px] absolute flex items-center text-slate-600 text-xs font-normal leading-5"><span>Account suspension, termination, legal referral, or<br/>carrier/partner notice where appropriate</span></div>
             <div className="w-28 h-9 left-[541.81px] top-[256.19px] absolute flex items-center text-slate-600 text-xs font-normal leading-5"><span>Appeal, subject to<br/>contract & law</span></div>

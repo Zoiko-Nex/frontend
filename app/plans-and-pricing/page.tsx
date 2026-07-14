@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 const pathways = [
     {
@@ -246,14 +247,27 @@ const PlansAndPricing = () => {
                                 </ul>
                             </div>
 
-                            <button
-                                className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
-                                        ? 'bg-sky-600 hover:bg-sky-500 text-white'
-                                        : 'outline outline-1 outline-slate-800 text-slate-300 hover:bg-white/5'
-                                    }`}
-                            >
-                                {path.buttonText}
-                            </button>
+                            {path.buttonText.toLowerCase().includes('briefing') ? (
+                                <Link href="/contact-us" className="w-full">
+                                    <button
+                                        className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
+                                                ? 'bg-sky-600 hover:bg-sky-500 text-white'
+                                                : 'outline outline-1 outline-slate-800 text-slate-300 hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {path.buttonText}
+                                    </button>
+                                </Link>
+                            ) : (
+                                <button
+                                    className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
+                                            ? 'bg-sky-600 hover:bg-sky-500 text-white'
+                                            : 'outline outline-1 outline-slate-800 text-slate-300 hover:bg-white/5'
+                                        }`}
+                                >
+                                    {path.buttonText}
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>

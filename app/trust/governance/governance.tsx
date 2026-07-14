@@ -36,12 +36,14 @@ export default function Governance() {
               <div className="justify-center text-slate-400 text-base font-normal font-sans leading-6">ZoikoNex governance gives telecom operators a controlled way to manage<br className="hidden lg:block" />roles, approvals, policies, configuration changes, AI-assisted actions,<br className="hidden lg:block" />evidence trails, and operational decisions across brands, jurisdictions,<br className="hidden lg:block" />partners, products, and teams.</div>
             </div>
             <div className="w-full flex flex-col sm:flex-row justify-start items-start gap-4">
-              <button className="px-8 py-4 bg-[#2B7EC1] hover:bg-sky-600 transition-colors rounded flex justify-start items-center gap-2">
-                <span className="text-center justify-center text-white text-base font-normal font-sans leading-6">Request a Governance Briefing</span>
-                <div className="flex flex-col justify-start items-center">
-                  <Image src="/image/gover/icon20.svg" alt="Arrow Right" width={18} height={18} />
-                </div>
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 bg-[#2B7EC1] hover:bg-sky-600 transition-colors rounded flex justify-start items-center gap-2">
+                  <span className="text-center justify-center text-white text-base font-normal font-sans leading-6">Request a Governance Briefing</span>
+                  <div className="flex flex-col justify-start items-center">
+                    <Image src="/image/gover/icon20.svg" alt="Arrow Right" width={18} height={18} />
+                  </div>
+                </button>
+              </Link>
               <button className="px-8 py-4 rounded outline outline-1 outline-offset-[-1px] outline-slate-700 hover:bg-slate-800 transition-colors flex flex-col justify-center items-center">
                 <span className="text-center justify-center text-white text-base font-normal font-sans leading-6">View Trust Pack</span>
               </button>
@@ -695,9 +697,11 @@ export default function Governance() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button className="px-6 py-3 bg-[#20232D] hover:bg-[#15171E] transition-colors rounded-md flex justify-center items-center">
-              <span className="text-center text-white text-sm font-medium font-sans">Request a Governance Briefing</span>
-            </button>
+            <Link href="/contact-us">
+              <button className="px-6 py-3 bg-[#20232D] hover:bg-[#15171E] transition-colors rounded-md flex justify-center items-center">
+                <span className="text-center text-white text-sm font-medium font-sans">Request a Governance Briefing</span>
+              </button>
+            </Link>
             <button className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors rounded-md flex justify-center items-center">
               <span className="text-center text-white text-sm font-medium font-sans">View Evidence Ledger</span>
             </button>

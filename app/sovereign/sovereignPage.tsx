@@ -33,7 +33,7 @@ export default function SovereignDeploymentPage() {
                             </div>
                         </div>
                         <div className="w-full flex justify-start items-start gap-4">
-                            <Link href="#briefing" className="px-6 py-3.5 bg-[#2a7a9d] hover:bg-[#236886] transition-colors rounded-lg flex justify-center items-center gap-2 shadow-lg">
+                            <Link href="/contact-us" className="px-6 py-3.5 bg-[#2a7a9d] hover:bg-[#236886] transition-colors rounded-lg flex justify-center items-center gap-2 shadow-lg">
                                 <div className="text-center justify-center text-white text-[13px] font-semibold font-['Inter'] leading-5">Request Sovereign Briefing</div>
                                 <div className="flex flex-col justify-start items-center">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M11 14l-3-3 1.4-1.4 1.6 1.6 4.6-4.6L17 8l-6 6z" fill="#2a7a9d" /></svg>
@@ -284,7 +284,7 @@ export default function SovereignDeploymentPage() {
                             <div className="w-full text-center text-white/90 text-lg font-normal font-['Inter'] leading-7">Join the world's most regulated operators who trust ZoikoNex for their<br className="hidden md:block" />national-grade BSS infrastructure.</div>
                         </div>
                         <div className="w-full pt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
-                            <Link href="#briefing" className="px-8 py-4 bg-white hover:bg-gray-50 transition-colors rounded-lg flex flex-col justify-center items-center shadow">
+                            <Link href="/contact-us" className="px-8 py-4 bg-white hover:bg-gray-50 transition-colors rounded-lg flex flex-col justify-center items-center shadow">
                                 <div className="text-center justify-center text-[#2a78a1] text-base font-semibold font-['Inter'] leading-6">Request a Sovereign Briefing</div>
                             </Link>
                             <Link href="#whitepaper" className="px-8 py-4 rounded-lg outline outline-1 outline-offset-[-1px] outline-white/40 hover:bg-white/10 transition-colors flex flex-col justify-center items-center">

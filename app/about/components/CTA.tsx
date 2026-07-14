@@ -20,9 +20,11 @@ export default function CTA() {
             </button>
           </Link>
 
-          <button className="h-[50px] w-full rounded-[10px] border border-white/90 px-8 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:w-[240px]">
-            View Platform Architecture
-          </button>
+          <Link href="/platform-architecture">
+            <button className="h-[50px] w-full rounded-[10px] border border-white/90 px-8 text-[15px] font-semibold text-white transition hover:bg-white/10 sm:w-[240px]">
+              View Platform Architecture
+            </button>
+          </Link>
         </div>
       </div>
     </section>
