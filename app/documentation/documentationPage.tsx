@@ -356,9 +356,11 @@ export default function DocumentationPage() {
                         Need the documentation path for<br/>your telecom launch or<br/>modernization?
                     </h2>
                     <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full sm:w-auto mt-4">
-                        <button className="px-8 py-3.5 bg-[#1a88bb] hover:bg-[#15719e] transition-colors rounded-sm text-white text-sm font-semibold shadow-lg">
-                            Request Platform Briefing
-                        </button>
+                        <Link href="/contact-us">
+                            <button className="px-8 py-3.5 bg-[#1a88bb] hover:bg-[#15719e] transition-colors rounded-sm text-white text-sm font-semibold shadow-lg">
+                                Request Platform Briefing
+                            </button>
+                        </Link>
                         <button className="px-8 py-3.5 bg-transparent border border-gray-500 hover:bg-white/10 transition-colors rounded-sm text-white text-sm font-semibold">
                             Request Documentation Access
                         </button>

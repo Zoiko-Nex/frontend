@@ -37,17 +37,17 @@ const routingItems = [
 ];
 
 const otherRoutes = [
-    { tag: 'Press & media', title: 'Media relations', link: 'Press & Media' },
-    { tag: 'Ecosystem', title: 'Partnerships', link: 'Partners page' },
-    { tag: 'Talent', title: 'Careers', link: 'Open roles' },
-    { tag: 'Legal', title: 'Legal notices', link: 'Legal intake' },
+    { tag: 'Press & media', title: 'Media relations', link: 'Press & Media', url: '/press-media' },
+    { tag: 'Ecosystem', title: 'Partnerships', link: 'Partners page', url: '/partners' },
+    { tag: 'Talent', title: 'Careers', link: 'Open roles', url: '/careers' },
+    { tag: 'Legal', title: 'Legal notices', link: 'Legal Intake', url: '/legal' },
 ];
 
 const ContactUs = () => {
     return (
         <div className="w-full bg-slate-50">
             {/* ─── HERO SECTION ─── */}
-            <section className="relative w-full h-[615px] overflow-hidden border-b border-slate-200 bg-slate-950">
+            <section className="relative w-full py-20 lg:py-0 lg:h-[615px] overflow-hidden border-b border-slate-200 bg-slate-950 flex items-center justify-center">
                 {/* Background image & gradient overlay */}
                 <div className="absolute inset-0">
                     <Image
@@ -64,22 +64,20 @@ const ContactUs = () => {
                 </div>
 
                 {/* Centered content wrapper */}
-                <div className="relative z-10 mx-auto max-w-[1440px] w-full h-full">
+                <div className="relative z-10 mx-auto max-w-[1140px] w-full px-6 flex flex-col lg:flex-row items-center justify-between gap-12">
                     {/* Left – text container */}
-                    <div className="absolute left-[171px] top-[160px] w-[580px] flex items-start">
+                    <div className="flex flex-col max-w-[580px]">
                         <h1
-                            className="text-white text-5xl font-extrabold leading-[61px] tracking-tight"
+                            className="text-white text-4xl lg:text-[56px] font-extrabold lg:leading-[61px] tracking-tight mb-6"
                             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                         >
-                            Reach the right <br />
-                            team for your telecom <br />
+                            Reach the right <br className="hidden lg:block" />
+                            team for your telecom <br className="hidden lg:block" />
                             platform inquiry.
                         </h1>
-                    </div>
 
-                    <div className="absolute left-[171px] top-[358px] w-[478px]">
                         <p
-                            className="text-slate-300 text-base font-normal leading-7"
+                            className="text-slate-300 text-base font-normal leading-7 max-w-[478px]"
                             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                         >
                             Whether you&apos;re launching an MVNO, modernizing a telecom BSS
@@ -91,7 +89,7 @@ const ContactUs = () => {
 
                     {/* Right – Routing Console card */}
                     <div
-                        className="absolute left-[813px] top-[92px] w-[486.39px] h-[384px] rounded-[20px] border border-white/10 backdrop-blur-[3px] flex flex-col"
+                        className="w-full max-w-[486.39px] h-[384px] rounded-[20px] border border-white/10 backdrop-blur-[3px] flex flex-col shrink-0"
                         style={{
                             background:
                                 'linear-gradient(77deg, rgba(15,23,42,0.90), rgba(15,23,42,0.90))',
@@ -169,14 +167,14 @@ const ContactUs = () => {
             </section>
 
             {/* ─── FORM SECTION ─── */}
-            <section className="relative w-full bg-[#f4f7f6] py-[100px]">
+            <section className="relative w-full bg-[#f4f7f6] py-[100px] flex items-center justify-center">
                 {/* Lime radial glow top-right */}
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_92%_8%,rgba(132,204,22,0.08),transparent_60%)]" />
 
-                <div className="relative mx-auto w-[1072px] h-[812px]">
+                <div className="relative z-10 mx-auto max-w-[1140px] w-full px-6 flex flex-col lg:flex-row items-center justify-between gap-12">
                     {/* Left text */}
-                    <div className="absolute left-[18px] top-[196px] w-[320px] h-[14px]">
-                        <div className="flex items-center gap-2">
+                    <div className="flex flex-col max-w-[420px]">
+                        <div className="flex items-center gap-2 mb-4">
                             <span className="w-1.5 h-1.5 bg-lime-500 rounded-sm" />
                             <span
                                 className="text-sky-700 text-xs font-semibold uppercase tracking-widest leading-4"
@@ -185,31 +183,29 @@ const ContactUs = () => {
                                 Send an Inquiry
                             </span>
                         </div>
-                    </div>
 
-                    <div className="absolute left-[18px] top-[224px] w-[420px] h-[192px] flex items-start text-slate-800 text-5xl font-extrabold leading-[64px]">
                         <h2
+                            className="text-slate-800 text-4xl lg:text-5xl font-extrabold lg:leading-[64px] mb-6"
                             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                         >
-                            Tell us what <br />
-                            you’re building <br />
+                            Tell us what <br className="hidden lg:block" />
+                            you’re building <br className="hidden lg:block" />
                             or evaluating.
                         </h2>
-                    </div>
 
-                    <div className="absolute left-[18px] top-[429px] w-[320px] h-[80px] text-slate-600 text-base font-normal leading-6">
                         <p
+                            className="text-slate-600 text-base font-normal leading-6"
                             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                         >
-                            Pick an inquiry type and we’ll show only the <br />
-                            fields that matter, then route your message to <br />
+                            Pick an inquiry type and we’ll show only the <br className="hidden lg:block" />
+                            fields that matter, then route your message to <br className="hidden lg:block" />
                             the right team.
                         </p>
                     </div>
 
                     {/* Right – Form card */}
                     <div
-                        className="w-[628.80px] h-[574.69px] left-[443px] top-[119px] absolute bg-white rounded-[20px] outline outline-1 outline-offset-[-1px] outline-slate-200"
+                        className="relative w-full max-w-[628.80px] h-[574.69px] bg-white rounded-[20px] outline outline-1 outline-offset-[-1px] outline-slate-200 shrink-0 transform scale-90 sm:scale-100 origin-top lg:origin-center"
                         style={{
                             boxShadow:
                                 '0px 18px 48px -22px rgba(11,60,99,0.28), 0px 1px 2px 0px rgba(11,60,99,0.04)',
@@ -368,43 +364,41 @@ const ContactUs = () => {
                     Corporate, media, partnership &amp; careers.
                 </h2>
 
-                <div className="grid grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {otherRoutes.map((route, idx) => (
-                        <div
+                        <a
+                            href={route.url}
                             key={idx}
-                            className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
+                            className="bg-white rounded-2xl border border-slate-200 p-[22px] hover:shadow-md transition-shadow cursor-pointer flex flex-col items-start group"
                             style={{
                                 boxShadow:
                                     '0px 6px 16px -10px rgba(11,60,99,0.22), 0px 1px 2px 0px rgba(11,60,99,0.06)',
                             }}
                         >
                             <span
-                                className="text-slate-500 text-[9.5px] font-normal uppercase tracking-wide"
+                                className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.1em]"
                                 style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                             >
                                 {route.tag}
                             </span>
                             <h3
-                                className="text-slate-800 text-sm font-bold leading-6 mt-2"
+                                className="text-slate-800 text-[15px] font-bold leading-6 mt-1.5 mb-6"
                                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                             >
                                 {route.title}
                             </h3>
-                            <div className="flex items-center gap-1.5 mt-5">
+                            <div className="mt-auto inline-flex items-center gap-1.5 text-sky-600 group-hover:text-sky-700 transition-colors">
                                 <span
-                                    className="text-sky-700 text-xs font-semibold"
+                                    className="text-xs font-bold tracking-tight"
                                     style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                 >
                                     {route.link}
                                 </span>
-                                <img
-                                    src="/image/contact/right-arrow.svg"
-                                    alt="Arrow"
-                                    width={12}
-                                    height={12}
-                                />
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 6h7m0 0l-3-3m3 3l-3 3" />
+                                </svg>
                             </div>
-                        </div>
+                        </a>
                     ))}
                 </div>
             </section>

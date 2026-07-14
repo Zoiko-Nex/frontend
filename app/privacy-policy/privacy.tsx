@@ -234,30 +234,30 @@ const policyTags = [
 
       </div>
     </section>
-     <section className="w-full max-w-[1280px] mx-auto px-4 md:px-13 py-16  space-y-12 bg-[#FFFFFF]">
+     <section className="w-full py-16 space-y-12 bg-[#FAFAFA]">
       
       {/* Component Section Header */}
-      <div className="w-full text-center">
-        <h2 className="text-zinc-900 text-3xl md:text-4xl font-semibold  leading-tight tracking-tight">
+      <div className="w-full text-center px-4">
+        <h2 className="text-zinc-900 text-3xl md:text-4xl font-semibold leading-tight tracking-tight">
           Data Taxonomy for Telecom Operations
         </h2>
       </div>
 
       {/* Overflow container enabling clean horizontal swipe scroll on narrow smartphone screens */}
-      <div className="w-full border border-stone-300 rounded-xl overflow-hidden shadow-[0px_1px_2px_0px_rgba(0,0,0,0.02)]">
-        <div className="overflow-x-auto">
+      <div className="w-full border-t border-b border-stone-300 overflow-hidden shadow-[0px_1px_2px_0px_rgba(0,0,0,0.02)]">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[700px]">
             
             {/* Table Header Fields */}
             <thead>
-              <tr className="bg-stone-200 border-b border-stone-300">
-                <th className="p-5 md:p-6 text-zinc-900 text-xs font-semibold  tracking-wider uppercase w-1/4">
+              <tr className="bg-stone-200/80 border-b border-stone-300">
+                <th className="py-5 md:py-6 pl-6 md:pl-12 lg:pl-24 text-zinc-900 text-xs font-semibold tracking-wider uppercase w-1/4">
                   Category
                 </th>
-                <th className="p-5 md:p-6 text-zinc-900 text-xs font-semibold  tracking-wider uppercase w-1/2">
+                <th className="p-5 md:p-6 text-zinc-900 text-xs font-semibold tracking-wider uppercase w-1/2">
                   Data Elements
                 </th>
-                <th className="p-5 md:p-6 text-zinc-900 text-xs font-semibold  tracking-wider uppercase w-1/4">
+                <th className="py-5 md:py-6 pr-6 md:pr-12 lg:pr-24 text-zinc-900 text-xs font-semibold tracking-wider uppercase w-1/4">
                   Purpose Archetype
                 </th>
               </tr>
@@ -269,18 +269,18 @@ const policyTags = [
                 <tr key={row.id} className="hover:bg-stone-50/40 transition-colors duration-150">
                   
                   {/* Category Title Cell */}
-                  <td className="p-5 md:p-6 text-zinc-900 text-l md:text-xl font-semibold leading-snug">
+                  <td className="py-5 md:py-6 pl-6 md:pl-12 lg:pl-24 text-zinc-900 text-lg md:text-xl font-semibold leading-snug">
                     {row.category}
                   </td>
                   
                   {/* Data Content Summary Cell */}
-                  <td className="p-5 md:p-6 text-zinc-700 text-base font-normal leading-relaxed">
+                  <td className="p-5 md:p-6 text-zinc-700 text-sm md:text-base font-normal leading-relaxed">
                     {row.elements}
                   </td>
                   
                   {/* Micro Badge Label Status Cell */}
-                  <td className="p-5 md:p-6 vertical-middle">
-                    <span className={`inline-block px-2.5 py-1 rounded-sm text-[10px] font-semibold  tracking-wider leading-none uppercase ${row.badgeStyles}`}>
+                  <td className="py-5 md:py-6 pr-6 md:pr-12 lg:pr-24 align-middle">
+                    <span className={`inline-block px-2.5 py-1 rounded-sm text-[10px] font-semibold tracking-wider leading-none uppercase ${row.badgeStyles}`}>
                       {row.archetype}
                     </span>
                   </td>

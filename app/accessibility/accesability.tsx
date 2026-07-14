@@ -52,7 +52,8 @@ export default function AccesabilityPage() {
             <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[21px] h-44 relative">
               <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center mb-[13px]">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 2L12.5 7H17.5L13.5 10.5L15 15.5L10 12.5L5 15.5L6.5 10.5L2.5 7H7.5L10 2Z" stroke="#0369a1" strokeWidth="1.58" strokeLinejoin="round"/>
+                  <rect x="3" y="3" width="14" height="14" rx="2" stroke="#0369a1" strokeWidth="1.58"/>
+                  <path d="M7 10.5L9 12.5L13.5 7.5" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div className="text-slate-800 text-base font-bold leading-6 mb-[10px]">Buyer confidence</div>
@@ -63,9 +64,8 @@ export default function AccesabilityPage() {
             <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[21px] h-44 relative">
               <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center mb-[13px]">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="6" width="14" height="2" rx="1" stroke="#0369a1" strokeWidth="1.58"/>
-                  <rect x="3" y="10" width="10" height="2" rx="1" stroke="#0369a1" strokeWidth="1.58"/>
-                  <rect x="3" y="14" width="7" height="2" rx="1" stroke="#0369a1" strokeWidth="1.58"/>
+                  <rect x="3" y="3" width="14" height="14" rx="2" stroke="#0369a1" strokeWidth="1.58"/>
+                  <path d="M6 7H14M6 10H14M6 13H11" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round"/>
                 </svg>
               </div>
               <div className="text-slate-800 text-base font-bold leading-6 mb-[10px]">User productivity</div>
@@ -76,8 +76,8 @@ export default function AccesabilityPage() {
             <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[21px] h-44 relative">
               <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center mb-[13px]">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16 10C16 13.314 13.314 16 10 16C6.686 16 4 13.314 4 10C4 6.686 6.686 4 10 4C11.657 4 13.157 4.672 14.243 5.757" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round"/>
-                  <path d="M14 4L14.243 5.757L16 6" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="10" cy="10" r="7" stroke="#0369a1" strokeWidth="1.58"/>
+                  <path d="M7 10.5L9 12.5L13.5 7.5" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div className="text-slate-800 text-base font-bold leading-6 mb-[10px]">Retention &amp; less support</div>
@@ -88,8 +88,7 @@ export default function AccesabilityPage() {
             <div className="bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 shadow-[0px_6px_16px_-10px_rgba(11,60,99,0.22),0px_1px_2px_0px_rgba(11,60,99,0.06)] p-[21px] h-44 relative">
               <div className="w-10 h-10 bg-indigo-50 rounded-[10px] flex items-center justify-center mb-[13px]">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="14" height="14" rx="2" stroke="#0369a1" strokeWidth="1.58"/>
-                  <path d="M7 10L9 12L13 8" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M10 3L4 5.5V10.5C4 13.987 6.5414 17.1331 10 18C13.4586 17.1331 16 13.987 16 10.5V5.5L10 3Z" stroke="#0369a1" strokeWidth="1.58" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div className="text-slate-800 text-base font-bold leading-6 mb-[10px]">Platform quality</div>
@@ -155,7 +154,9 @@ export default function AccesabilityPage() {
             </div>
             <div className="bg-red-50 border-l border-slate-200 p-5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 rounded-full border-[1.5px] border-red-500 shrink-0"></div>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-red-500 shrink-0">
+                  <path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
                 <span className="text-red-500 text-xs font-semibold font-mono uppercase tracking-wide">What we don&apos;t claim</span>
               </div>
               <div className="text-slate-600 text-xs font-normal leading-5 space-y-1.5">
@@ -379,8 +380,15 @@ export default function AccesabilityPage() {
             </button>
           </div>
           <div className="flex items-center justify-center gap-5 text-sky-200/80 text-xs font-semibold relative z-10">
-            {['Trust Center', 'Privacy Policy', 'Security', 'Compliance', 'Documentation', 'Contact'].map((link) => (
-              <a key={link} href="#" className="hover:text-white transition-colors">{link}</a>
+            {[
+              { name: 'Trust Center', href: '/trust' },
+              { name: 'Privacy Policy', href: '/privacy-policy' },
+              { name: 'Security', href: '/security' },
+              { name: 'Compliance', href: '/compliance' },
+              { name: 'Documentation', href: '/documentation' },
+              { name: 'Contact', href: '/contact-us' },
+            ].map((link) => (
+              <a key={link.name} href={link.href} className="hover:text-white transition-colors">{link.name}</a>
             ))}
           </div>
         </div>

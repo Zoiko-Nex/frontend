@@ -197,14 +197,13 @@ export default function CookieConsent() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-          <button className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.7)] hover:bg-sky-800 transition-colors duration-200">
+          <button onClick={() => setSettingsOpen(true)} className="px-6 h-12 bg-sky-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-[0px_12px_24px_-12px_rgba(22,104,184,0.7)] hover:bg-sky-800 transition-colors duration-200">
             <span>Manage cookie preferences → </span>
-         
           </button>
 
-          <button className="px-6 h-12 bg-white text-slate-800 rounded-xl font-bold text-sm border border-slate-300 hover:bg-slate-50 transition-colors duration-200">
+          <a href="/privacy-policy" className="px-6 h-12 bg-white text-slate-800 rounded-xl font-bold text-sm border border-slate-300 hover:bg-slate-50 transition-colors duration-200 flex items-center justify-center">
             Read Privacy Policy
-          </button>
+          </a>
         </div>
 
         
@@ -673,9 +672,14 @@ export default function CookieConsent() {
 
       {/* Dot-separated text links */}
       <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 text-sm font-normal font-['Plus_Jakarta_Sans']">
-        {['Privacy Policy', 'Security', 'Compliance', 'Contact'].map((link, i, arr) => (
-          <React.Fragment key={link}>
-            <button className="text-sky-700 hover:underline transition-all">{link}</button>
+        {[
+          { name: 'Privacy Policy', href: '/privacy-policy' },
+          { name: 'Security', href: '/security' },
+          { name: 'Compliance', href: '/compliance' },
+          { name: 'Contact', href: '/contact-us' }
+        ].map((link, i, arr) => (
+          <React.Fragment key={link.name}>
+            <a href={link.href} className="text-sky-700 hover:underline transition-all">{link.name}</a>
             {i < arr.length - 1 && (
               <span className="text-slate-400 select-none px-1">·</span>
             )}

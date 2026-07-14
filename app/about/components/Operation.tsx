@@ -1,6 +1,13 @@
-import { Anchor, BriefcaseBusiness, PhoneCall, Smartphone, UsersRound } from "lucide-react";
+import { Briefcase, Network, Phone, Smartphone, UsersRound } from "lucide-react";
 
-const targets = [
+type TargetItem = {
+  title: string;
+  desc: string;
+  Icon?: any;
+  imageSrc?: string;
+};
+
+const targets: TargetItem[] = [
   {
     title: "MVNOs & MVNEs",
     desc: "Launch and scale virtual operations with full BSS capabilities built in from day one - no fragmented vendor ecosystem required.",
@@ -9,7 +16,7 @@ const targets = [
   {
     title: "MNOs & Wholesale Carriers",
     desc: "Modernize legacy monetization stacks through controlled migration and coexistence, without disrupting live commercial operations.",
-    Icon: PhoneCall,
+    Icon: Phone,
   },
   {
     title: "eSIM-First Digital Providers",
@@ -19,22 +26,26 @@ const targets = [
   {
     title: "IoT & M2M Operators",
     desc: "Fleet-scale billing, connectivity lifecycle, and device management with the compliance controls enterprise and regulated environments require.",
-    Icon: Anchor,
+    imageSrc: "/image/about/one.svg",
   },
   {
     title: "Enterprises & B2B Platforms",
     desc: "Account hierarchies, pooled billing, SLA-linked charging, and programmable network API monetization for enterprises embedding connectivity.",
-    Icon: BriefcaseBusiness,
+    Icon: Briefcase,
   },
 ];
 
-function TargetCard({ item }: { item: (typeof targets)[number] }) {
+function TargetCard({ item }: { item: TargetItem }) {
   const Icon = item.Icon;
 
   return (
     <div className="min-h-[213px] rounded-[16px] border border-[#DDE7F0] bg-white px-[28px] pt-[28px] pb-[24px]">
       <div className="mb-[19px] flex h-[44px] w-[44px] items-center justify-center rounded-[11px] bg-[#EAF6FF] text-[#2B83C6]">
-        <Icon size={22} strokeWidth={2.1} />
+        {item.imageSrc ? (
+          <img src={item.imageSrc} alt={item.title} className="w-[22px] h-[22px]" />
+        ) : Icon ? (
+          <Icon size={22} strokeWidth={2.1} />
+        ) : null}
       </div>
       <h3 className="mb-[9px] text-[16px] font-extrabold leading-[1.25] text-[#1C1D31]">
         {item.title}

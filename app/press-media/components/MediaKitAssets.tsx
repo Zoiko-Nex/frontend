@@ -1,24 +1,23 @@
-import { Shapes, UserCircle2, ScanLine, BookOpen } from "lucide-react";
-import { Download } from "lucide-react";
+import Image from "next/image";
 
 const assets = [
   {
-    Icon: Shapes,
+    icon: "/image/press/logo-pack.svg",
     title: "Logo Pack",
     format: "EPS, SVG, PNG (14MB)",
   },
   {
-    Icon: UserCircle2,
+    icon: "/image/press/exec-headshots.svg",
     title: "Exec Headshots",
     format: "JPG, TIFF (42MB)",
   },
   {
-    Icon: ScanLine,
+    icon: "/image/press/product-ui.svg",
     title: "Product UI",
     format: "4K PNG (185MB)",
   },
   {
-    Icon: BookOpen,
+    icon: "/image/press/brand-guidelines.svg",
     title: "Brand Guidelines",
     format: "PDF (8.5MB)",
   },
@@ -26,43 +25,50 @@ const assets = [
 
 export default function MediaKitAssets() {
   return (
-    <section className="bg-white py-12 font-['Plus_Jakarta_Sans',sans-serif] lg:py-20">
-      <div className="mx-auto max-w-275 px-4 sm:px-6 lg:px-8">
-
+    <section className="bg-white py-16 lg:py-28">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center justify-center gap-16 px-8">
+        
         {/* Heading */}
-        <div className="mb-4 text-center">
-          <h2 className="text-[26px] font-bold text-[#1A2B4A] lg:text-[32px]">Media Kit Assets</h2>
-          <p className="mx-auto mt-3 max-w-140 text-[15px] leading-[1.65] text-[#64748B]">
-            Approved visual assets and guidelines for press use. All files are provided
-            in vector and high-resolution raster formats.
-          </p>
+        <div className="flex w-full flex-col items-center gap-4">
+          <h2 className="text-center text-4xl font-semibold leading-[48px] text-zinc-900" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
+            Media Kit Assets
+          </h2>
+          <div className="flex max-w-[672px] flex-col items-center">
+            <p className="text-center text-base font-normal leading-6 text-slate-600" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Approved visual assets and guidelines for press use. All files are provided in vector and high-resolution raster formats.
+            </p>
+          </div>
         </div>
 
         {/* 4-col grid */}
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:mt-12 lg:grid-cols-4">
+        <div className="flex w-full flex-col md:flex-row items-start justify-center gap-6">
           {assets.map((asset) => {
-            const Icon = asset.Icon;
             return (
-              <div key={asset.title}>
+              <div key={asset.title} className="flex flex-1 flex-col relative w-full mb-8 md:mb-0">
+                
                 {/* Thumbnail box */}
-                <div className="flex h-60 items-center justify-center rounded-xl bg-[#EBEEF2]">
-                  <Icon size={44} className="text-[#2B83C6]" strokeWidth={1.4} />
+                <div className="flex w-full flex-col items-start pb-4">
+                  <div className="flex w-full items-center justify-center bg-stone-200 py-28 transition-colors hover:bg-stone-300">
+                    <Image src={asset.icon} alt={asset.title} width={36} height={36} />
+                  </div>
                 </div>
 
                 {/* Info below */}
-                <div className="mt-4 text-center">
-                  <p className="font-mono text-[13.5px] font-bold text-[#1A2B4A]">
+                <div className="flex w-full flex-col items-center mt-2 gap-1">
+                  <div className="text-center text-xs font-semibold tracking-wider text-zinc-900" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     {asset.title}
-                  </p>
-                  <p className="mt-0.5 font-mono text-[12px] text-[#94A3B8]">
+                  </div>
+                  <div className="text-center text-xs font-normal leading-4 text-gray-500 mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
                     {asset.format}
-                  </p>
+                  </div>
                   <a
                     href="#"
-                    className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1778C8] transition hover:text-[#1461A8]"
+                    className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
                   >
-                    Download
-                    <Download size={13} strokeWidth={2.2} />
+                    <span className="text-center text-sm font-normal leading-6 text-sky-600" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Download
+                    </span>
+                    <Image src="/image/press/download.svg" alt="Download" width={12} height={12} />
                   </a>
                 </div>
               </div>

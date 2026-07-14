@@ -116,7 +116,7 @@ export default function WhitePapersPage() {
                       </svg>
                       <span className="text-white text-base font-normal leading-6">Download PDF</span>
                     </Link>
-                    <Link href="/request-a-demo" className="px-8 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors flex justify-center items-center">
+                    <Link href="/contact-us" className="px-8 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors flex justify-center items-center">
                       <span className="text-base font-normal leading-6">Request Full Briefing</span>
                     </Link>
                   </div>

@@ -56,9 +56,11 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-              <button className="rounded-lg bg-[#8CC63F] px-6 py-3 text-[13px] font-semibold text-[#0B1633]">
-                View the Platform <span aria-hidden="true">-&gt;</span>
-              </button>
+              <Link href="/platform">
+                <button className="rounded-lg bg-[#8CC63F] px-6 py-3 text-[13px] font-semibold text-[#0B1633]">
+                  View the Platform <span aria-hidden="true">-&gt;</span>
+                </button>
+              </Link>
               <Link
                 href="/request-a-demo"
                 className="rounded-lg border border-white/30 px-6 py-3 text-[13px] font-semibold text-white inline-block"

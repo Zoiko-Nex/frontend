@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { CheckCircle2, Globe, AlertTriangle, FileText, Server, Zap, Receipt, ChevronRight } from 'lucide-react';
 
 export default function MVNOLaunch() {
@@ -290,9 +291,11 @@ export default function MVNOLaunch() {
                         Achieve infrastructure-grade reliability and regulatory precision with a migration path tailored for your region.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                        <button className="bg-[#317a99] hover:bg-[#28637c] text-white text-[15px] font-medium py-3 px-8 rounded transition-colors shadow-sm">
-                            Request a Similar Launch Briefing
-                        </button>
+                        <Link href="/contact-us">
+                            <button className="bg-[#317a99] hover:bg-[#28637c] text-white text-[15px] font-medium py-3 px-8 rounded transition-colors shadow-sm">
+                                Request a Similar Launch Briefing
+                            </button>
+                        </Link>
                         <button className="bg-white text-[#334155] text-[15px] border border-[#cbd5e1] font-medium py-3 px-8 rounded hover:bg-gray-50 transition-colors shadow-sm">
                             Download Full Case Study
                         </button>

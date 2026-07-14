@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FileText } from "lucide-react";
 
 type Release = {
   date: string;
@@ -48,66 +47,83 @@ export default function LatestAnnouncements() {
       : releases.filter((r) => r.category === active);
 
   return (
-    <section className="bg-[#F8F9FB] py-12 font-['Plus_Jakarta_Sans',sans-serif] lg:py-20">
-      <div className="mx-auto max-w-275 px-4 sm:px-6 lg:px-8">
-
-        {/* Title */}
-        <h2 className="mb-4 text-[26px] font-bold text-[#1A2B4A] sm:mb-6 lg:text-[32px]">
-          Latest Announcements
-        </h2>
-
-        {/* Filter tabs */}
-        <div className="mb-7 flex flex-wrap items-center gap-2 lg:mb-10">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActive(tab)}
-              className={`rounded-full px-5 py-[9px] text-[13px] font-semibold transition ${active === tab
-                  ? "bg-[#111827] text-white"
-                  : "text-[#4B5563] hover:text-[#1A2B4A]"
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
+    <section className="bg-[#F8F9FA] py-16 lg:py-28">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col items-start gap-16 px-8">
+        
+        {/* Header & Tabs */}
+        <div className="flex w-full flex-col lg:flex-row lg:items-end justify-between">
+          <div className="flex flex-col items-start gap-4">
+            <div className="flex flex-col items-start">
+              <h2 className="text-4xl font-semibold leading-[48px] text-zinc-900 justify-center" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                Latest Announcements
+              </h2>
+            </div>
+            <div className="flex items-start gap-4">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActive(tab)}
+                  className={`flex flex-col items-center justify-center rounded-xl px-4 py-1.5 transition-colors ${
+                    active === tab
+                      ? "bg-black text-white"
+                      : "text-slate-600 hover:bg-black/5"
+                  }`}
+                >
+                  <span className="text-center text-xs font-semibold leading-3 tracking-wider justify-center" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {tab}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Cards grid */}
-        <div className="grid gap-5 lg:grid-cols-2">
+        {/* Cards Grid */}
+        <div className="grid w-full gap-6 md:grid-cols-2">
           {filtered.map((release) => (
             <div
               key={release.title}
-              className="flex flex-col rounded-xl border border-[#E2E8F0] bg-white p-5 transition hover:border-[#C8DBF0] hover:shadow-sm sm:p-8"
+              className="flex flex-col justify-between items-start bg-white p-8 outline outline-1 outline-offset-[-1px] outline-transparent hover:outline-slate-200 transition-all"
             >
-              {/* Date + badge row */}
-              <div className="mb-4 flex items-center justify-between">
-                <span className="font-mono text-[13px] text-[#94A3B8]">
-                  {release.date}
-                </span>
-                <span className="rounded-full bg-[#22C55E] px-3 py-[3px] text-[11px] font-bold uppercase tracking-wide text-white">
-                  Approved
-                </span>
+              <div className="flex w-full flex-col items-start gap-4 pb-8">
+                {/* Date & Badge */}
+                <div className="flex w-full items-start justify-between">
+                  <div className="text-xs font-semibold tracking-wider text-gray-500 leading-3 justify-center" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {release.date}
+                  </div>
+                  <div className="flex flex-col items-start justify-start rounded-xl bg-lime-300 px-3 py-1">
+                    <div className="text-[10px] font-normal leading-4 text-lime-700 justify-center" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      APPROVED
+                    </div>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="flex flex-col items-start pt-2">
+                  <h3 className="text-2xl font-semibold leading-8 text-zinc-900 justify-center" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>
+                    {release.title}
+                  </h3>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-col items-start overflow-hidden">
+                  <p className="text-base font-normal leading-6 text-slate-600 justify-center" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {release.body}
+                  </p>
+                </div>
               </div>
 
-              {/* Title */}
-              <h3 className="mb-3 text-[17px] font-bold leading-[1.3] text-[#1A2B4A] sm:text-[20px]">
-                {release.title}
-              </h3>
-
-              {/* Body */}
-              <p className="flex-1 text-[14px] leading-[1.7] text-[#64748B]">
-                {release.body}
-              </p>
-
-              {/* Read link */}
-              <div className="mt-6 flex items-center justify-between border-t border-[#F1F5F9] pt-4">
-                <a
-                  href="#"
-                  className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[1.5px] text-[#1778C8] transition hover:text-[#1461A8]"
-                >
-                  Read Full Release
-                </a>
-                <FileText size={16} className="text-[#94A3B8]" strokeWidth={1.8} />
+              {/* Footer */}
+              <div className="flex w-full items-center justify-start gap-4">
+                <div className="flex flex-col items-start justify-start">
+                  <a href="#" className="text-xs font-semibold tracking-wider leading-3 text-sky-600 transition hover:opacity-80 justify-center" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    READ FULL RELEASE
+                  </a>
+                </div>
+                <div className="h-px flex-1 bg-slate-200" />
+                <div className="flex flex-col items-start justify-start">
+                  <img src="/image/press/document.svg" alt="Document" className="h-5 w-auto" />
+                </div>
               </div>
             </div>
           ))}
