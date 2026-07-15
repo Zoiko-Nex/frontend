@@ -17,10 +17,10 @@ export default function SharedSaaSPage() {
                             <div className="self-stretch justify-center text-slate-600 text-lg font-normal font-['Inter'] leading-7">Governed monetization infrastructure without the operational<br />burden of dedicated hardware. Scale your digital operator<br />ecosystem with mathematical precision.</div>
                         </div>
                         <div className="self-stretch pt-2.5 inline-flex justify-start items-start gap-4">
-                            <div className="px-8 py-4 relative bg-cyan-700 rounded-lg inline-flex flex-col justify-center items-center cursor-pointer hover:bg-cyan-800 transition-colors">
+                            <Link href="/request-a-demo" className="px-8 py-4 relative bg-cyan-700 rounded-lg inline-flex flex-col justify-center items-center cursor-pointer hover:bg-cyan-800 transition-colors">
                                 <div className="w-44 h-12 left-0 top-0 absolute bg-white/0 rounded-lg shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.10)] shadow-lg"></div>
                                 <div className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Demo</div>
-                            </div>
+                            </Link>
                             <div className="px-8 py-4 rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 inline-flex flex-col justify-center items-center cursor-pointer hover:bg-stone-50 transition-colors">
                                 <div className="text-center justify-center text-black text-sm font-semibold font-['Inter'] leading-4">Talk to an Architect</div>
                             </div>
@@ -314,9 +314,9 @@ export default function SharedSaaSPage() {
                         <div className="text-center justify-center text-white text-lg font-normal font-['Inter'] leading-7">Join 40+ global digital operators who launched their commercial footprint in under 30 days using our<br />SaaS infrastructure.</div>
                     </div>
                     <div className="self-stretch pt-4 inline-flex justify-center items-start gap-4">
-                        <div className="px-10 py-5 bg-white rounded-lg inline-flex flex-col justify-center items-center cursor-pointer hover:bg-stone-100 transition-colors">
+                        <Link href="/request-a-demo" className="px-10 py-5 bg-white rounded-lg inline-flex flex-col justify-center items-center cursor-pointer hover:bg-stone-100 transition-colors">
                             <div className="text-center justify-center text-cyan-700 text-sm font-semibold font-['Inter'] leading-4">Request a Demo</div>
-                        </div>
+                        </Link>
                         <div className="px-10 py-5 rounded-lg outline outline-1 outline-offset-[-1px] outline-white inline-flex flex-col justify-center items-center cursor-pointer hover:bg-white/10 transition-colors">
                             <div className="w-32 text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Talk to an Architect</div>
                         </div>

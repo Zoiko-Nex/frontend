@@ -247,7 +247,20 @@ const SecurityCard: React.FC<SecurityCardProps> = ({ iconSrc, title, description
 const StackLayer: React.FC<StackLayerProps> = ({ layer, title, borderColor, textColor, opacityClass }) => {
   // Dynamically map path using layout identifier numbers (e.g., LayerIcon_07.png)
   const layerNum = layer.replace("LAYER ", "");
-  const customIconSrc = `/image/security/LayerIcon_${layerNum}.png`;
+  
+  // The icons are currently numbered in reverse compared to the Figma design
+  // We remap them here so Layer 07 gets LayerIcon_01.png (Gavel), etc.
+  const iconMap: Record<string, string> = {
+    "07": "01",
+    "06": "02",
+    "05": "03",
+    "04": "04",
+    "03": "05",
+    "02": "06",
+    "01": "07"
+  };
+  const mappedNum = iconMap[layerNum] || layerNum;
+  const customIconSrc = `/image/security/LayerIcon_${mappedNum}.png`;
   
   return (
     <div className={`p-6 bg-[#1e1e2f]/70 ${opacityClass} rounded-xs border-l-4 ${borderColor} border-y border-r border-gray-700/50 backdrop-blur-sm flex justify-between items-center group hover:bg-[#1e1e2f] transition duration-200 cursor-pointer`}>
@@ -277,7 +290,7 @@ const MatrixRow: React.FC<MatrixRowProps> = ({ workflow, risk, concept, benefit 
     <td className="py-6 px-6 text-zinc-900 text-base font-medium">{workflow}</td>
     <td className="py-6 px-6 text-slate-600 text-base font-normal">{risk}</td>
     <td className="py-6 px-6 text-zinc-900 text-base font-normal">{concept}</td>
-    <td className="py-6 px-6 text-[#0284c7] text-base font-semibold">{benefit}</td>
+    <td className="py-6 px-6 text-[#0284c7] text-base font-semibold whitespace-nowrap">{benefit}</td>
   </tr>
 );
 

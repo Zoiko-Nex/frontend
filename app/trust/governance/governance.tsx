@@ -336,8 +336,8 @@ export default function Governance() {
 
           <div className="w-full max-w-5xl flex flex-col justify-start items-start gap-8">
             {/* Box 1 */}
-            <div className="w-full p-8 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-start items-start">
-              <div className="w-full flex flex-col justify-start items-start gap-2 mb-8">
+            <div className="w-full p-8 sm:px-12 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-center gap-8">
+              <div className="w-full lg:w-[250px] flex flex-col justify-center items-start gap-2 shrink-0">
                 <div className="flex flex-col justify-start items-start">
                   <span className="justify-center text-[#2B7EC1] text-sm font-bold font-mono uppercase tracking-wider">USE CASE</span>
                 </div>
@@ -345,33 +345,33 @@ export default function Governance() {
                   <h3 className="justify-center text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">New Plan Approval</h3>
                 </div>
               </div>
-              <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4 px-4 sm:px-12">
-                <div className="flex flex-col justify-start items-center gap-3">
+              <div className="flex-1 w-full flex flex-col sm:flex-row justify-between items-center">
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#1C1C2E] rounded-xl flex justify-center items-center">
                     <Image src="/image/gover/icon28.svg" alt="Requester" width={24} height={24} />
                   </div>
                   <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase">Requester</span>
                 </div>
-                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block mx-4"></div>
-                <div className="flex flex-col justify-start items-center gap-3">
+                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#1C1C2E] rounded-xl flex justify-center items-center">
                     <Image src="/image/gover/icon29.svg" alt="Reviewer" width={24} height={24} />
                   </div>
                   <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase">Reviewer</span>
                 </div>
-                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block mx-4"></div>
-                <div className="flex flex-col justify-start items-center gap-3">
+                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#2B7EC1] rounded-xl flex justify-center items-center shadow-md shadow-sky-500/20">
                     <Image src="/image/gover/icon30.svg" alt="Evidence Capture" width={24} height={24} />
                   </div>
-                  <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase text-center max-w-[100px]">Evidence Capture</span>
+                  <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase text-center max-w-[120px]">Evidence Capture</span>
                 </div>
               </div>
             </div>
 
             {/* Box 2 */}
-            <div className="w-full p-8 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-start items-start">
-              <div className="w-full flex flex-col justify-start items-start gap-2 mb-8">
+            <div className="w-full p-8 sm:px-12 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-center gap-8">
+              <div className="w-full lg:w-[250px] flex flex-col justify-center items-start gap-2 shrink-0">
                 <div className="flex flex-col justify-start items-start">
                   <span className="justify-center text-[#2B7EC1] text-sm font-bold font-mono uppercase tracking-wider">USE CASE</span>
                 </div>
@@ -379,33 +379,33 @@ export default function Governance() {
                   <h3 className="justify-center text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">Billing Adjustment</h3>
                 </div>
               </div>
-              <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4 px-4 sm:px-12">
-                <div className="flex flex-col justify-start items-center gap-3">
+              <div className="flex-1 w-full flex flex-col sm:flex-row justify-between items-center">
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#1C1C2E] rounded-xl flex justify-center items-center">
                     <Image src="/image/gover/icon31.svg" alt="Agent" width={24} height={24} />
                   </div>
                   <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase">Agent</span>
                 </div>
-                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block mx-4"></div>
-                <div className="flex flex-col justify-start items-center gap-3">
+                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#1C1C2E] rounded-xl flex justify-center items-center">
                     <Image src="/image/gover/icon33.svg" alt="Supervisor" width={24} height={24} />
                   </div>
                   <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase">Supervisor</span>
                 </div>
-                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block mx-4"></div>
-                <div className="flex flex-col justify-start items-center gap-3">
+                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#2B7EC1] rounded-xl flex justify-center items-center shadow-md shadow-sky-500/20">
                     <Image src="/image/gover/icon32.svg" alt="Ledger Entry" width={24} height={24} />
                   </div>
-                  <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase text-center max-w-[100px]">Ledger Entry</span>
+                  <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase text-center max-w-[120px]">Ledger Entry</span>
                 </div>
               </div>
             </div>
 
             {/* Box 3 */}
-            <div className="w-full p-8 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-start items-start">
-              <div className="w-full flex flex-col justify-start items-start gap-2 mb-8">
+            <div className="w-full p-8 sm:px-12 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-center gap-8">
+              <div className="w-full lg:w-[250px] flex flex-col justify-center items-start gap-2 shrink-0">
                 <div className="flex flex-col justify-start items-start">
                   <span className="justify-center text-[#2B7EC1] text-sm font-bold font-mono uppercase tracking-wider">USE CASE</span>
                 </div>
@@ -413,26 +413,26 @@ export default function Governance() {
                   <h3 className="justify-center text-zinc-900 text-lg font-bold font-['Hanken_Grotesk']">AI-Assisted Escalation</h3>
                 </div>
               </div>
-              <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4 px-4 sm:px-12">
-                <div className="flex flex-col justify-start items-center gap-3">
+              <div className="flex-1 w-full flex flex-col sm:flex-row justify-between items-center">
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#1C1C2E] rounded-xl flex justify-center items-center">
                     <Image src="/image/gover/icon34.svg" alt="AI Engine" width={24} height={24} />
                   </div>
                   <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase">AI Engine</span>
                 </div>
-                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block mx-4"></div>
-                <div className="flex flex-col justify-start items-center gap-3">
+                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#1C1C2E] rounded-xl flex justify-center items-center">
                     <Image src="/image/gover/icon35.svg" alt="Ops Lead" width={24} height={24} />
                   </div>
                   <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase">Ops Lead</span>
                 </div>
-                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block mx-4"></div>
-                <div className="flex flex-col justify-start items-center gap-3">
+                <div className="flex-1 h-[2px] bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col justify-start items-center gap-3 relative z-10 bg-white">
                   <div className="w-14 h-14 bg-[#2B7EC1] rounded-xl flex justify-center items-center shadow-md shadow-sky-500/20">
                     <Image src="/image/gover/icon36.svg" alt="Decision Log" width={24} height={24} />
                   </div>
-                  <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase text-center max-w-[100px]">Decision Log</span>
+                  <span className="justify-center text-zinc-900 text-xs font-bold font-mono uppercase text-center max-w-[120px]">Decision Log</span>
                 </div>
               </div>
             </div>
@@ -702,9 +702,11 @@ export default function Governance() {
                 <span className="text-center text-white text-sm font-medium font-sans">Request a Governance Briefing</span>
               </button>
             </Link>
-            <button className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors rounded-md flex justify-center items-center">
-              <span className="text-center text-white text-sm font-medium font-sans">View Evidence Ledger</span>
-            </button>
+            <Link href="/evidence">
+              <button className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors rounded-md flex justify-center items-center w-full sm:w-auto">
+                <span className="text-center text-white text-sm font-medium font-sans">View Evidence Ledger</span>
+              </button>
+            </Link>
           </div>
         </div>
       </section>

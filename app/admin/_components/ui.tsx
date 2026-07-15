@@ -11,7 +11,7 @@ export function Button({
   const base: React.CSSProperties = {
     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
     padding: "8px 14px", borderRadius: "var(--ax-radius-sm)", fontSize: 13, fontWeight: 500,
-    cursor: props.disabled || loading ? "not-allowed" : "pointer", border: "1px solid transparent",
+    cursor: props.disabled || loading ? "not-allowed" : "pointer", borderWidth: 1, borderStyle: "solid", borderColor: "transparent",
     transition: "background .12s, border-color .12s, opacity .12s", whiteSpace: "nowrap",
     opacity: props.disabled || loading ? 0.55 : 1, lineHeight: 1.2,
   };

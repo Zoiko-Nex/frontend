@@ -290,9 +290,11 @@ export default function ESIMAndLifecyclePage() {
                             <p className="text-center justify-center text-gray-500 text-lg font-normal font-['Inter'] leading-7">Join the world's fastest-growing MVNOs and digital brands built on ZoikoNex<br className="hidden md:block" />Sovereign Infrastructure.</p>
                         </div>
                         <div className="self-stretch pt-2.5 flex justify-center items-start gap-4">
-                            <button className="w-full sm:w-56 px-10 py-5 bg-cyan-700 rounded-sm flex flex-col justify-center items-center hover:bg-cyan-600 transition-colors">
-                                <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Demo</span>
-                            </button>
+                            <Link href="/request-a-demo">
+                                <button className="w-full sm:w-56 px-10 py-5 bg-cyan-700 rounded-sm flex flex-col justify-center items-center hover:bg-cyan-600 transition-colors">
+                                    <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Demo</span>
+                                </button>
+                            </Link>
                         </div>
                     </div>
                 </div>

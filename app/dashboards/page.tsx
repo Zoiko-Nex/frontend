@@ -425,8 +425,10 @@ export default function DashboardsPage() {
   // Load session context and poll backend health checks and logs
   useEffect(() => {
     const session = getSession();
-    if (session) {
+    if (session && session.accessToken) {
       setSessionData({ email: session.email, tenantId: session.tenantId });
+    } else {
+      router.replace('/login');
     }
 
     const serviceMapping: Record<string, string> = {

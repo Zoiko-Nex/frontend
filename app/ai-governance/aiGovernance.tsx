@@ -21,7 +21,10 @@ export default function AIGovernance() {
             </div>
             <div className="flex flex-col justify-start items-start">
               <h1 className="justify-center text-white text-6xl font-bold font-['Hanken_Grotesk'] leading-[75px]">
-                AI that accelerates<br/>telecom operations —<br/>without surrendering<br/>control.
+                AI that accelerates<br/>
+                <span className="whitespace-nowrap">telecom operations —</span><br/>
+                without surrendering<br/>
+                control.
               </h1>
             </div>
             <div className="max-w-[576px] flex flex-col justify-start items-start">
@@ -33,7 +36,7 @@ export default function AIGovernance() {
               <Link href="/contact-us" className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm flex flex-col justify-center items-center">
                 <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Request an AI Governance Briefing</span>
               </Link>
-              <Link href="#" className="px-8 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white hover:bg-white/10 transition-colors flex flex-col justify-center items-center">
+              <Link href="/evidence" className="px-8 py-4 rounded-sm outline outline-1 outline-offset-[-1px] outline-white hover:bg-white/10 transition-colors flex flex-col justify-center items-center">
                 <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Explore the Evidence Ledger</span>
               </Link>
             </div>
@@ -70,7 +73,7 @@ export default function AIGovernance() {
                       <span className="justify-center text-white text-[9px] font-bold font-['JetBrains_Mono'] leading-3">POLICY_GATE</span>
                     </div>
                     <span className="text-white/50 text-[10px] font-normal font-['Inter'] leading-4">THRESHOLD CHECK</span>
-                    <div className="flex flex-wrap items-center gap-1">
+                    <div className="flex items-center gap-1 whitespace-nowrap">
                       <span className="text-white text-xs font-normal font-['Inter'] leading-5">MAX ADJUSTMENT: 10% |</span>
                       <span className="text-red-500 text-xs font-normal font-['Inter'] leading-5">EXCEEDED</span>
                     </div>
@@ -520,7 +523,7 @@ export default function AIGovernance() {
             <Link href="/contact-us" className="w-full sm:w-auto px-10 py-5 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm flex flex-col justify-center items-center">
               <span className="text-center text-white text-lg font-semibold font-['Inter'] leading-7">Request an AI Governance Briefing</span>
             </Link>
-            <Link href="#" className="w-full sm:w-auto px-10 py-5 bg-transparent hover:bg-white/5 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-white/30 flex flex-col justify-center items-center">
+            <Link href="/evidence" className="w-full sm:w-auto px-10 py-5 bg-transparent hover:bg-white/5 transition-colors rounded-sm outline outline-1 outline-offset-[-1px] outline-white/30 flex flex-col justify-center items-center">
               <span className="text-center text-white text-lg font-semibold font-['Inter'] leading-7">View Evidence Ledger</span>
             </Link>
           </div>

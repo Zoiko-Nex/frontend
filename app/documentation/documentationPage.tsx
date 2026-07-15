@@ -71,10 +71,10 @@ export default function DocumentationPage() {
                     <div className="self-stretch inline-flex justify-center items-stretch gap-6 flex-wrap lg:flex-nowrap">
                         {[
                             { role: 'FOUNDERS', title: 'Evaluate', desc: 'Understand the business logic and market fit of ZoikoNex.', link: 'View Guides', href: '/white-papers' },
-                            { role: 'ARCHITECTS', title: 'Plan', desc: 'Map your existing legacy stacks to our modern infrastructure.', link: 'View Blueprints', href: '/request-a-demo' },
+                            { role: 'ARCHITECTS', title: 'Plan', desc: 'Map your existing legacy stacks to our modern infrastructure.', link: 'View Blueprints', href: '/technical-architecture' },
                             { role: 'DEVELOPERS', title: 'Integrate', desc: 'REST APIs, SDKs, and sandbox environments for testing.', link: 'API Docs', href: '/api-reference' },
                             { role: 'COMPLIANCE', title: 'Review', desc: 'Governance logs and regulatory evidence generation.', link: 'Trust Center', href: '/trust' },
-                            { role: 'OPERATORS', title: 'Operate', desc: 'Daily administration, lifecycle management, and scaling.', link: 'Operations', href: '/developer-portal' }
+                            { role: 'OPERATORS', title: 'Operate', desc: 'Daily administration, lifecycle management, and scaling.', link: 'Operations', href: '/operators' }
                         ].map((item, i) => (
                             <Link href={item.href} key={i} className="w-56 self-stretch p-8 bg-white outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
                                 <div className="pb-4 flex flex-col justify-start items-start">

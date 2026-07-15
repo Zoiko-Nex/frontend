@@ -622,9 +622,11 @@ export default function EvidenceArchitecture() {
                 <span className="text-center justify-center text-white text-lg font-normal font-sans leading-7">Request Architecture Brief</span>
               </button>
             </Link>
-            <button className="px-10 py-5 rounded outline outline-1 outline-offset-[-1px] outline-sky-700 hover:bg-sky-700/10 transition-colors flex flex-col justify-center items-center">
-              <span className="text-center justify-center text-sky-500 text-lg font-normal font-sans leading-7">Request a Demo</span>
-            </button>
+            <Link href="/request-a-demo">
+              <button className="px-10 py-5 rounded outline outline-1 outline-offset-[-1px] outline-sky-700 hover:bg-sky-700/10 transition-colors flex flex-col justify-center items-center w-full sm:w-auto">
+                <span className="text-center justify-center text-sky-500 text-lg font-normal font-sans leading-7">Request a Demo</span>
+              </button>
+            </Link>
           </div>
           <div className="w-full flex flex-col justify-start items-center mt-8">
             <div className="text-center justify-center text-gray-500 text-xs font-normal font-mono leading-4">
