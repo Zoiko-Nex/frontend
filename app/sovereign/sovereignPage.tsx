@@ -47,18 +47,18 @@ export default function SovereignDeploymentPage() {
                             <div className="w-full flex justify-start items-center gap-3">
                                 <div className="w-2 h-2 bg-lime-400 rounded-full shadow-[0_0_8px_rgba(163,230,53,0.8)]"></div>
                                 <div className="flex flex-col justify-start items-start">
-                                    <div className="justify-center text-[#8e96a4] text-xs font-bold font-mono leading-3 tracking-widest">SYSTEM STATUS: ENCRYPTED</div>
+                                    <div className="justify-center text-gray-300 text-xs font-bold font-mono leading-3 tracking-widest">SYSTEM STATUS: ENCRYPTED</div>
                                 </div>
                             </div>
                             <div className="w-full flex flex-col justify-start items-start gap-3.5 mt-2">
                                 <div className="w-full px-4 py-3 rounded outline outline-1 outline-offset-[-1px] outline-white/5 flex flex-col justify-start items-start">
-                                    <div className="justify-center text-[#5e6675] text-[10px] font-medium font-mono leading-3">ROOT_IDENTITY_KEY: VALIDATED_HSM</div>
+                                    <div className="justify-center text-gray-400 text-[10px] font-medium font-mono leading-3">ROOT_IDENTITY_KEY: VALIDATED_HSM</div>
                                 </div>
                                 <div className="w-full px-4 py-3 rounded outline outline-1 outline-offset-[-1px] outline-white/5 flex flex-col justify-start items-start">
-                                    <div className="justify-center text-[#5e6675] text-[10px] font-medium font-mono leading-3">RESIDENCY_PIN: GEO_LOCKED_EU_WEST_1</div>
+                                    <div className="justify-center text-gray-400 text-[10px] font-medium font-mono leading-3">RESIDENCY_PIN: GEO_LOCKED_EU_WEST_1</div>
                                 </div>
                                 <div className="w-full px-4 py-3 rounded outline outline-1 outline-offset-[-1px] outline-white/5 flex flex-col justify-start items-start">
-                                    <div className="justify-center text-[#5e6675] text-[10px] font-medium font-mono leading-3">AUDIT_TRAIL: IMMUTABLE_LEDGER_SYNC</div>
+                                    <div className="justify-center text-gray-400 text-[10px] font-medium font-mono leading-3">AUDIT_TRAIL: IMMUTABLE_LEDGER_SYNC</div>
                                 </div>
                             </div>
                         </div>

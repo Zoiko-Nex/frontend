@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { setSession, decodeJwt } from '@/lib/admin/session';
 
-const DEFAULT_TENANT_ID = '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d';
+const DEFAULT_TENANT_ID = '';
 
 const LoginPage = () => {
     const router = useRouter();
@@ -58,9 +58,9 @@ const LoginPage = () => {
                 roles: payload?.roles || [],
             });
 
-            setSuccess('Login successful! Redirecting to Super Admin...');
+            setSuccess('Login successful! Redirecting to Dashboard...');
             setTimeout(() => {
-                router.push('/Super-admin');
+                router.push('/dashboards');
             }, 800);
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred.');

@@ -294,19 +294,19 @@ const PlansAndPricing = () => {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="border-b border-slate-800">
-                                <th className="w-[30%] py-3 pl-4 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                <th className="w-[30%] pb-2 pl-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 leading-4">
                                     Factor
                                 </th>
 
-                                <th className="w-[24%] py-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                <th className="w-[24%] pb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-600 leading-4">
                                     ZoikoNex
                                 </th>
 
-                                <th className="w-[26%] py-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                <th className="w-[26%] pb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-600 leading-4">
                                     Legacy on-prem BSS
                                 </th>
 
-                                <th className="w-[20%] py-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                <th className="w-[20%] pb-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-600 leading-4">
                                     In-house build
                                 </th>
                             </tr>
@@ -322,19 +322,19 @@ const PlansAndPricing = () => {
                                             : ""
                                     }
                                 >
-                                    <td className="py-[18px] pl-4 text-xs font-medium text-blue-50">
+                                    <td className="py-4 pl-4 text-xs font-medium text-blue-50 leading-5">
                                         {row.factor}
                                     </td>
 
-                                    <td className="py-[18px] text-center text-xs font-semibold text-slate-400">
+                                    <td className="py-4 text-center text-xs font-semibold text-slate-300 leading-5">
                                         {row.zoiko}
                                     </td>
 
-                                    <td className="py-[18px] text-center text-xs font-normal text-slate-400">
+                                    <td className="py-4 text-center text-xs font-normal text-slate-400 leading-5">
                                         {row.legacy}
                                     </td>
 
-                                    <td className="py-[18px] text-center text-xs font-normal text-slate-400">
+                                    <td className="py-4 text-center text-xs font-normal text-slate-400 leading-5">
                                         {row.inhouse}
                                     </td>
                                 </tr>

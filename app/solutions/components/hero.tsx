@@ -3,8 +3,7 @@ import Link from "next/link";
 export default function SovereignMonetizationHero() {
 
   return (
-    <section className="bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-[1440px] mx-auto">
+    <section className="bg-gray-50 dark:bg-gray-900 w-full">
         <div
           className="
             relative overflow-hidden
@@ -64,7 +63,6 @@ export default function SovereignMonetizationHero() {
             </div>
           </div>
         </div>
-      </div>
     </section>
   );
 }

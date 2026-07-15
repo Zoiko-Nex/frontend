@@ -1,7 +1,7 @@
 "use client"
 import React, { useState } from 'react';
 import Link from "next/link";
-import { ArrowRight } from "lucide-react"; // or wherever your icon set lives
+import { ArrowRight, Headset, MessageSquare } from "lucide-react"; // or wherever your icon set lives
 
 // Mock Data for the 18 API Domains
 const apiDomains = [
@@ -265,19 +265,28 @@ export default function ZoikoNexPage() {
       </section>
 
       {/* 7. COMMUNITY CTA */}
-      <section className="bg-gray-950 py-24 text-center text-white">
-        <div className="mx-auto max-w-2xl px-6 flex flex-col items-center gap-6">
-          <h2 className="text-4xl font-semibold tracking-tight">Master the Nexus</h2>
-          <p className="text-lg text-gray-400 leading-relaxed font-normal">
-            Connect with Tier-1 architects and community developers building the next generation of sovereign financial connectivity.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 pt-4">
-            <Link href="/contact-us" className="rounded bg-white px-8 py-4 text-sm font-semibold text-black hover:bg-stone-100 transition flex items-center gap-2">
-              Start Integration
-              <ArrowRight className="h-4 w-4" />
+      <section className="w-full py-28 bg-gray-900 inline-flex flex-col justify-center items-center">
+        <div className="w-full max-w-[768px] px-6 flex flex-col justify-start items-center gap-6">
+          <div className="self-stretch flex flex-col justify-start items-center">
+            <h2 className="text-center justify-center text-white text-4xl font-semibold font-['Hanken_Grotesk'] leading-[48px]">Master the Nexus</h2>
+          </div>
+          <div className="self-stretch flex flex-col justify-start items-center">
+            <p className="text-center justify-center text-gray-500 text-lg font-normal font-['Inter'] leading-7">
+              Connect with Tier-1 architects and community developers building the next<br className="hidden md:block"/>generation of sovereign financial connectivity.
+            </p>
+          </div>
+          <div className="self-stretch pt-6 flex justify-center items-center gap-6">
+            <Link href="/contact-us" className="px-8 py-4 bg-white rounded-xs flex justify-start items-center gap-2 hover:bg-gray-100 transition-colors">
+              <div className="inline-flex flex-col justify-start items-center">
+                <Headset className="w-5 h-5 text-black" />
+              </div>
+              <span className="text-center justify-center text-black text-sm font-semibold font-['Inter'] leading-4">Technical Support</span>
             </Link>
-            <Link href="/contact-us" className="rounded border border-white/20 px-8 py-4 text-sm font-semibold text-white hover:bg-white/5 transition flex items-center gap-2">
-              Contact Support
+            <Link href="/contact-us" className="px-8 py-4 rounded-xs outline outline-1 outline-offset-[-1px] outline-white/20 flex justify-start items-center gap-2 hover:bg-white/5 transition-colors">
+              <div className="inline-flex flex-col justify-start items-center">
+                <MessageSquare className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-center justify-center text-white text-sm font-semibold font-['Inter'] leading-4">Developer Briefing</span>
             </Link>
           </div>
         </div>
