@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSession, clearSession } from "@/lib/admin/session";
@@ -63,6 +63,172 @@ export default function DashboardsPage() {
 
   // Active Tab state
   const [currentTab, setCurrentTab] = useState<string>("Services");
+
+  // ── Navbar dynamic states ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [tenantInfoOpen, setTenantInfoOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const helpRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+  const tenantRef = useRef<HTMLDivElement>(null);
+  const [isInviteModalOpen, setInviteModalOpen] = useState(false);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [inviteAccess, setInviteAccess] = useState<string[]>([]);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createdUserDetails, setCreatedUserDetails] = useState<{
+    email: string;
+    password: string;
+    tenantId: string;
+  } | null>(null);
+
+  const [tenantUsers, setTenantUsers] = useState([
+    { id: "AM", initials: "AM", name: "Alex Mercer", role: "Account Owner", access: "Full", status: "ACTIVE" },
+    { id: "RT", initials: "RT", name: "Rhea Tan", role: "Tenant Admin", access: "Users · Env · Support", status: "ACTIVE" },
+    { id: "SO", initials: "SO", name: "Sam Okafor", role: "Technical Evaluator", access: "Sandbox · Docs", status: "ACTIVE" },
+    { id: "LV", initials: "LV", name: "Lena Vos", role: "Finance Reviewer", access: "Billing · TCO", status: "ACTIVE" },
+    { id: "DH", initials: "DH", name: "Dana Hill", role: "Viewer", access: "Read-only", status: "INVITED" },
+  ]);
+
+  const handleCreateUser = async () => {
+    if (!inviteEmail || !inviteName || !invitePassword) {
+      alert("Please fill in email, name, and generate a password");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8080,
+          method: "POST",
+          path: "/v1/users",
+          headers: {
+            "X-Tenant-ID": sessionData.tenantId || "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+          },
+          body: {
+            email: inviteEmail,
+            full_name: inviteName,
+            temporary_password: invitePassword,
+            access_domains: inviteAccess
+          }
+        })
+      });
+
+      if (res.ok) {
+        setCreatedUserDetails({
+          email: inviteEmail,
+          password: invitePassword,
+          tenantId: sessionData.tenantId || "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+        });
+
+        // Append new user to the table
+        const newInitials = inviteName.trim() ? inviteName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() : "U";
+        setTenantUsers(prev => [
+          ...prev,
+          {
+            id: inviteEmail,
+            initials: newInitials,
+            name: inviteName || "New User",
+            role: "Custom",
+            access: inviteAccess.length > 0 ? inviteAccess.slice(0, 2).join(" · ") + (inviteAccess.length > 2 ? ` +${inviteAccess.length - 2}` : "") : "None",
+            status: "INVITED"
+          }
+        ]);
+
+        setInviteModalOpen(false);
+        setInviteEmail("");
+        setInviteName("");
+        setInvitePassword("");
+        setInviteAccess([]);
+      } else {
+        alert("Failed to create user. Status: " + res.status);
+      }
+    } catch (err) {
+      alert("Error creating user: " + String(err));
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const [notifications] = useState([
+    { id: 1, type: "alert", title: "CDR ingestion spike detected", time: "2m ago", read: false },
+    { id: 2, type: "success", title: "Billing cycle completed", time: "18m ago", read: false },
+    { id: 3, type: "warning", title: "API rate limit at 85%", time: "1h ago", read: false },
+    { id: 4, type: "info", title: "New SDK version v4.2.1 available", time: "3h ago", read: true },
+    { id: 5, type: "success", title: "eSIM provisioning batch done", time: "5h ago", read: true },
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Searchable items from sidebar + services
+  const searchableItems = [
+    { label: "Dashboard", tabKey: "Dashboard", category: "Navigation" },
+    { label: "Services", tabKey: "Services", category: "Navigation" },
+    { label: "Deployment", tabKey: "Deployment", category: "Navigation" },
+    { label: "Sandbox / POC", tabKey: "Sandbox", category: "Navigation" },
+    { label: "Trust Vault", tabKey: "Trust", category: "Navigation" },
+    { label: "Documentation", tabKey: "Documentation", category: "Navigation" },
+    { label: "Support & Success", tabKey: "Support", category: "Navigation" },
+    { label: "Billing & Commercials", tabKey: "Billing", category: "Navigation" },
+    { label: "Admin Settings", tabKey: "Settings", category: "Navigation" },
+    { label: "Product Catalog", tabKey: "Services", category: "Service" },
+    { label: "Real-Time Charging", tabKey: "Services", category: "Service" },
+    { label: "Billing & Invoice", tabKey: "Services", category: "Service" },
+    { label: "eSIM / SIM Management", tabKey: "Services", category: "Service" },
+    { label: "Evidence Ledger", tabKey: "Services", category: "Service" },
+    { label: "API Gateway", tabKey: "Services", category: "Service" },
+  ];
+
+  const filteredSearch = searchQuery.trim()
+    ? searchableItems.filter(item =>
+      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    ).slice(0, 8)
+    : [];
+
+  // Close all navbar dropdowns on outside click
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      const t = e.target as Node;
+      if (searchRef.current && !searchRef.current.contains(t)) setSearchFocused(false);
+      if (notifRef.current && !notifRef.current.contains(t)) setNotificationsOpen(false);
+      if (helpRef.current && !helpRef.current.contains(t)) setHelpOpen(false);
+      if (userRef.current && !userRef.current.contains(t)) setUserMenuOpen(false);
+      if (tenantRef.current && !tenantRef.current.contains(t)) setTenantInfoOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  // Keyboard shortcut: Ctrl+K / Cmd+K to focus search
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchFocused(true);
+        const input = searchRef.current?.querySelector("input");
+        input?.focus();
+      }
+      if (e.key === "Escape") {
+        setSearchFocused(false);
+        setNotificationsOpen(false);
+        setHelpOpen(false);
+        setUserMenuOpen(false);
+        setTenantInfoOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Customer Self-Service Portal states
   const [custPortalCustomerId, setCustPortalCustomerId] = useState("1f211ae1-b736-43d2-86ff-08463bd7be36");
@@ -616,55 +782,223 @@ export default function DashboardsPage() {
   return (
     <div className="w-full bg-[#f8fafc] min-h-screen flex flex-col justify-start items-start font-sans">
 
-      {/* Top Header */}
+      {/* ═══ Top Header Navbar ═══ */}
       <div className="w-full h-14 px-4 bg-sky-950 border-b-[0.80px] border-white/5 flex justify-between items-center shrink-0 z-50">
 
         {/* Left Side: Logo & Context Pills */}
         <div className="flex items-center gap-5">
           {/* Logo */}
-          <div className="w-60 flex justify-start items-center">
+          <Link href="/dashboards" className="w-60 flex justify-start items-center hover:opacity-90 transition-opacity">
             <img src="/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png" alt="ZoikoNex Logo" className="h-8 object-contain" />
-          </div>
+          </Link>
 
           {/* Context Pills */}
           <div className="flex items-center gap-4">
-            <div className="h-10 px-3 py-1.5 bg-white/10 rounded-[10px] outline outline-1 outline-white/20 flex items-center gap-2 cursor-pointer hover:bg-white/20 transition">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-              <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">
-                Helios Mobile {sessionData.tenantId && `(${sessionData.tenantId.substring(0, 6)})`}
-              </div>
+            {/* Tenant Info Pill */}
+            <div className="relative" ref={tenantRef}>
+              <button
+                onClick={() => { setTenantInfoOpen(!tenantInfoOpen); setNotificationsOpen(false); setHelpOpen(false); setUserMenuOpen(false); }}
+                className={`h-10 px-3 py-1.5 rounded-[10px] outline outline-1 flex items-center gap-2 cursor-pointer transition-all duration-200 ${tenantInfoOpen
+                  ? "bg-white/20 outline-white/40 ring-1 ring-sky-400/40"
+                  : "bg-white/10 outline-white/20 hover:bg-white/20"
+                  }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">
+                  Helios Mobile {sessionData.tenantId && `(${sessionData.tenantId.substring(0, 6)})`}
+                </div>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`text-slate-400 transition-transform duration-200 ${tenantInfoOpen ? "rotate-180" : ""}`} strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+
+              {/* Tenant Info Dropdown */}
+              {tenantInfoOpen && (
+                <div className="absolute top-[calc(100%+8px)] left-0 w-72 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                  <div className="p-4 border-b border-white/10">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-sky-400 mb-2">Active Tenant</div>
+                    <div className="text-white text-sm font-bold">Helios Mobile</div>
+                    <div className="text-slate-400 text-[11px] font-mono mt-1">{sessionData.tenantId || "1a2b3c"}</div>
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
+                      <span className="text-slate-300 text-xs">Region</span>
+                      <span className="text-white text-xs font-medium">US-West-2</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
+                      <span className="text-slate-300 text-xs">Plan</span>
+                      <span className="text-lime-300 text-xs font-semibold">Enterprise</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
+                      <span className="text-slate-300 text-xs">Services</span>
+                      <span className="text-white text-xs font-medium">{onlineCount}/18 online</span>
+                    </div>
+                  </div>
+                  <div className="p-3 border-t border-white/10">
+                    <button onClick={() => { setCurrentTab("Settings"); setTenantInfoOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">Manage Tenant Settings →</button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="h-10 px-4 py-2.5 bg-lime-500/20 rounded-[10px] outline outline-1 outline-lime-500/40 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm"></div>
+            {/* Environment Badge */}
+            <div className="h-10 px-4 py-2.5 bg-lime-500/20 rounded-[10px] outline outline-1 outline-lime-500/40 flex items-center gap-2 cursor-default" title="Environment: Production">
+              <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm animate-pulse"></div>
               <div className="text-lime-200 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-3 tracking-wide">PRODUCTION</div>
             </div>
           </div>
         </div>
 
         {/* Center: Search Bar */}
-        <div className="flex-1 max-w-lg mx-4">
-          <div className="w-full px-4 py-2 bg-white/10 rounded-[10px] outline outline-1 outline-white/20 flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-slate-400" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <div className="text-slate-400 text-xs font-normal font-['Plus_Jakarta_Sans'] flex-1">Search services, docs, settings…</div>
+        <div className="flex-1 max-w-lg mx-4 relative" ref={searchRef}>
+          <div className={`w-full px-4 py-2 rounded-[10px] outline outline-1 flex items-center gap-2 transition-all duration-200 ${searchFocused
+            ? "bg-white/20 outline-sky-400/50 ring-1 ring-sky-400/30"
+            : "bg-white/10 outline-white/20 hover:bg-white/15"
+            }`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`transition-colors duration-200 ${searchFocused ? "text-sky-300" : "text-slate-400"}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              placeholder="Search services, docs, settings…"
+              className="bg-transparent text-white text-xs font-normal font-['Plus_Jakarta_Sans'] flex-1 outline-none placeholder-slate-400"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-white transition cursor-pointer">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            )}
+            {!searchFocused && (
+              <div className="flex items-center gap-1 text-slate-500 text-[10px] font-mono border border-white/10 rounded px-1.5 py-0.5">⌘K</div>
+            )}
           </div>
+
+          {/* Search Results Dropdown */}
+          {searchFocused && (searchQuery.trim() ? filteredSearch.length > 0 : true) && (
+            <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+              {searchQuery.trim() === "" ? (
+                <div className="p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 mb-2">Quick Navigation</div>
+                  {["Dashboard", "Services", "Billing & Commercials", "Trust Vault", "Admin Settings"].map(label => (
+                    <button key={label} onClick={() => { setCurrentTab(searchableItems.find(i => i.label === label)?.tabKey || "Dashboard"); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white rounded-lg transition flex items-center gap-2 cursor-pointer">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-slate-500" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-2 max-h-64 overflow-y-auto">
+                  {filteredSearch.map((item, i) => (
+                    <button key={i} onClick={() => { setCurrentTab(item.tabKey); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-center justify-between cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-sky-400" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <span className="text-white text-xs font-medium">{item.label}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">{item.category}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Right Side: Icons */}
+        {/* Right Side: Interactive Icons */}
         <div className="flex items-center gap-3">
-          <button className="w-9 h-9 bg-white/10 rounded-full outline outline-1 outline-white/20 flex justify-center items-center text-indigo-50 hover:bg-white/20 transition cursor-pointer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-          </button>
 
-          <button className="w-9 h-9 relative bg-white/10 rounded-full outline outline-1 outline-white/20 flex justify-center items-center text-indigo-50 hover:bg-white/20 transition cursor-pointer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <div className="w-2 h-2 absolute top-1.5 right-1.5 bg-lime-500 rounded-full border border-sky-950"></div>
-          </button>
+          {/* Help Button */}
+          <div className="relative" ref={helpRef}>
+            <button
+              onClick={() => { setHelpOpen(!helpOpen); setNotificationsOpen(false); setUserMenuOpen(false); setTenantInfoOpen(false); }}
+              className={`w-9 h-9 rounded-full outline outline-1 flex justify-center items-center transition-all duration-200 cursor-pointer ${helpOpen
+                ? "bg-white/25 outline-sky-400/50 text-sky-300"
+                : "bg-white/10 outline-white/20 text-indigo-50 hover:bg-white/20"
+                }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
 
+            {/* Help Dropdown */}
+            {helpOpen && (
+              <div className="absolute top-[calc(100%+8px)] right-0 w-72 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                <div className="p-4 border-b border-white/10">
+                  <div className="text-white text-sm font-bold">Help & Resources</div>
+                  <div className="text-slate-400 text-[11px] mt-0.5">Quick access to docs and support</div>
+                </div>
+                <div className="p-2 space-y-0.5">
+                  {[
+                    { label: "Getting Started Guide", icon: "📘", tabKey: "Documentation" },
+                    { label: "API Reference", icon: "🔗", tabKey: "Documentation" },
+                    { label: "Contact Support", icon: "💬", tabKey: "Support" },
+                    { label: "Keyboard Shortcuts", icon: "⌨️", tabKey: "" },
+                    { label: "What's New (v4.2)", icon: "🆕", tabKey: "" },
+                  ].map(item => (
+                    <button key={item.label} onClick={() => { if (item.tabKey) setCurrentTab(item.tabKey); setHelpOpen(false); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-center gap-3 cursor-pointer">
+                      <span className="text-sm">{item.icon}</span>
+                      <span className="text-slate-200 text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-3 border-t border-white/10 bg-white/[0.02]">
+                  <div className="text-[10px] text-slate-500 text-center">Press <span className="font-mono bg-white/10 px-1 py-0.5 rounded text-slate-400">Esc</span> to close · <span className="font-mono bg-white/10 px-1 py-0.5 rounded text-slate-400">⌘K</span> to search</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notifications Bell */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => { setNotificationsOpen(!notificationsOpen); setHelpOpen(false); setUserMenuOpen(false); setTenantInfoOpen(false); }}
+              className={`w-9 h-9 relative rounded-full outline outline-1 flex justify-center items-center transition-all duration-200 cursor-pointer ${notificationsOpen
+                ? "bg-white/25 outline-sky-400/50 text-sky-300"
+                : "bg-white/10 outline-white/20 text-indigo-50 hover:bg-white/20"
+                }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              {unreadCount > 0 && (
+                <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full border-2 border-sky-950 flex items-center justify-center">
+                  <span className="text-white text-[9px] font-bold">{unreadCount}</span>
+                </div>
+              )}
+            </button>
+
+            {/* Notifications Dropdown */}
+            {notificationsOpen && (
+              <div className="absolute top-[calc(100%+8px)] right-0 w-80 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                  <div>
+                    <div className="text-white text-sm font-bold">Notifications</div>
+                    <div className="text-slate-400 text-[11px] mt-0.5">{unreadCount} unread</div>
+                  </div>
+                  <button className="text-[10px] text-sky-400 font-semibold hover:text-sky-300 transition cursor-pointer">Mark all read</button>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {notifications.map(n => (
+                    <div key={n.id} className={`px-4 py-3 border-b border-white/5 hover:bg-white/[0.03] transition cursor-pointer flex items-start gap-3 ${!n.read ? "bg-sky-500/[0.04]" : ""}`}>
+                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === "alert" ? "bg-red-400" :
+                        n.type === "success" ? "bg-lime-400" :
+                          n.type === "warning" ? "bg-amber-400" : "bg-sky-400"
+                        }`} />
+                      <div className="min-w-0 flex-1">
+                        <div className={`text-xs font-medium leading-snug ${!n.read ? "text-white" : "text-slate-300"}`}>{n.title}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">{n.time}</div>
+                      </div>
+                      {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-sky-400 mt-1.5 shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+                <div className="p-3 border-t border-white/10">
+                  <button onClick={() => { setCurrentTab("Support"); setNotificationsOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">View All Notifications →</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Email + Logout (visible) */}
           {sessionData.email && (
             <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
               <div className="text-xs text-white font-medium">{sessionData.email}</div>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="text-xs text-red-300 hover:text-red-400 font-bold transition cursor-pointer"
               >
@@ -673,11 +1007,49 @@ export default function DashboardsPage() {
             </div>
           )}
 
-          <button className="w-9 h-9 bg-gradient-to-br from-sky-700 to-lime-600 rounded-full outline outline-1 outline-white/20 flex justify-center items-center cursor-pointer">
-            <div className="text-white text-xs font-bold font-['Plus_Jakarta_Sans']">
-              {sessionData.email ? sessionData.email.substring(0, 2).toUpperCase() : 'AM'}
-            </div>
-          </button>
+          {/* User Avatar with Menu */}
+          <div className="relative" ref={userRef}>
+            <button
+              onClick={() => { setUserMenuOpen(!userMenuOpen); setHelpOpen(false); setNotificationsOpen(false); setTenantInfoOpen(false); }}
+              className={`w-9 h-9 rounded-full outline outline-1 flex justify-center items-center cursor-pointer transition-all duration-200 ${userMenuOpen
+                ? "ring-2 ring-sky-400/50 outline-white/40 bg-gradient-to-br from-sky-600 to-lime-500"
+                : "outline-white/20 bg-gradient-to-br from-sky-700 to-lime-600 hover:ring-2 hover:ring-white/20"
+                }`}
+            >
+              <div className="text-white text-xs font-bold font-['Plus_Jakarta_Sans']">
+                {sessionData.email ? sessionData.email.substring(0, 2).toUpperCase() : 'AM'}
+              </div>
+            </button>
+
+            {/* User Menu Dropdown */}
+            {userMenuOpen && (
+              <div className="absolute top-[calc(100%+8px)] right-0 w-64 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                <div className="p-4 border-b border-white/10">
+                  <div className="text-white text-sm font-bold">{sessionData.email || "admin@acme.com"}</div>
+                  <div className="text-slate-400 text-[11px] mt-0.5 font-mono">{sessionData.tenantId || "Tenant Admin"}</div>
+                </div>
+                <div className="p-2 space-y-0.5">
+                  {[
+                    { label: "Profile Settings", icon: "👤", action: () => setCurrentTab("Settings") },
+                    { label: "Billing & Usage", icon: "💳", action: () => setCurrentTab("Billing") },
+                    { label: "Team Members", icon: "👥", action: () => setCurrentTab("Settings") },
+                    { label: "API Keys", icon: "🔑", action: () => setCurrentTab("Settings") },
+                  ].map(item => (
+                    <button key={item.label} onClick={() => { item.action(); setUserMenuOpen(false); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-center gap-3 cursor-pointer">
+                      <span className="text-sm">{item.icon}</span>
+                      <span className="text-slate-200 text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-2 border-t border-white/10">
+                  <button onClick={() => { handleLogout(); setUserMenuOpen(false); }} className="w-full text-left px-3 py-2.5 hover:bg-red-500/10 rounded-lg transition flex items-center gap-3 cursor-pointer">
+                    <span className="text-sm">🚪</span>
+                    <span className="text-red-400 text-xs font-semibold">Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1197,8 +1569,8 @@ export default function DashboardsPage() {
                 {/* Status Banner */}
                 {portalMessage && (
                   <div className={`p-4 rounded-xl border text-xs font-semibold font-sans text-left ${portalMessage.type === "success"
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                      : "bg-rose-50 border-rose-200 text-rose-600"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                    : "bg-rose-50 border-rose-200 text-rose-600"
                     }`}>
                     {portalMessage.text}
                   </div>
@@ -1310,10 +1682,10 @@ export default function DashboardsPage() {
                               <td className="px-6 py-4 text-xs font-bold">${((inv.amount_minor_units || 4500) / 100).toFixed(2)} {inv.currency_code || "USD"}</td>
                               <td className="px-6 py-4">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${inv.status === "ISSUED"
-                                    ? "bg-emerald-50 text-emerald-600"
-                                    : inv.status === "DRAFT"
-                                      ? "bg-amber-50 text-amber-600"
-                                      : "bg-slate-50 text-slate-600"
+                                  ? "bg-emerald-50 text-emerald-600"
+                                  : inv.status === "DRAFT"
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-slate-50 text-slate-600"
                                   }`}>
                                   {inv.status}
                                 </span>
@@ -1612,8 +1984,8 @@ export default function DashboardsPage() {
                           <div key={i} className={`py-2.5 ${i !== 6 ? 'border-b border-slate-200' : ''} flex justify-between items-center`}>
                             <div className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans']">{item.name}</div>
                             <div className={`px-2 py-1 rounded-md outline outline-1 flex items-center gap-1.5 ${item.color === 'lime' ? 'bg-stone-100 outline-lime-500/30 text-lime-600' :
-                                item.color === 'red' ? 'bg-rose-50 outline-red-500/40 text-red-500' :
-                                  'bg-orange-50 outline-yellow-600/40 text-yellow-600'
+                              item.color === 'red' ? 'bg-rose-50 outline-red-500/40 text-red-500' :
+                                'bg-orange-50 outline-yellow-600/40 text-yellow-600'
                               }`}>
                               {item.color === 'lime' && <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                               {item.color === 'red' && <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
@@ -2003,7 +2375,10 @@ export default function DashboardsPage() {
                       <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Users, roles, SSO, and audit. Permission rule: deny overrides allow.</div>
                     </div>
                   </div>
-                  <button className="min-h-10 px-4 py-3 bg-[#1d64b8] text-white hover:bg-[#154e93] transition rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setInviteModalOpen(true)}
+                    className="min-h-10 px-4 py-3 bg-[#1d64b8] text-white hover:bg-[#154e93] transition rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                     Invite user
                   </button>
@@ -2098,101 +2473,34 @@ export default function DashboardsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-sans">
-                        <tr>
-                          <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">AM</div>
-                            <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">Alex Mercer</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">Account Owner</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-normal">Full</td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
-                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ACTIVE
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">RT</div>
-                            <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">Rhea Tan</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">Tenant Admin</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-normal">Users · Env · Support</td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
-                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ACTIVE
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">SO</div>
-                            <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">Sam Okafor</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">Technical Evaluator</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-normal">Sandbox · Docs</td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
-                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ACTIVE
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">LV</div>
-                            <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">Lena Vos</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">Finance Reviewer</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-normal">Billing · TCO</td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
-                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                              ACTIVE
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">DH</div>
-                            <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">Dana Hill</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">Viewer</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-normal">Read-only</td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 bg-indigo-50 rounded text-indigo-500 border border-indigo-200 text-[10px] font-bold font-mono uppercase inline-flex items-center gap-1">
-                              <div className="w-1 h-2 border-r border-b border-indigo-500 rotate-45 mb-0.5 ml-1"></div>
-                              INVITED
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
-                          </td>
-                        </tr>
+                        {tenantUsers.map(user => (
+                          <tr key={user.id}>
+                            <td className="px-6 py-4 flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">{user.initials}</div>
+                              <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">{user.name}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">{user.role}</span>
+                            </td>
+                            <td className="px-6 py-4 text-xs font-normal">{user.access}</td>
+                            <td className="px-6 py-4">
+                              {user.status === "ACTIVE" ? (
+                                <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
+                                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                  ACTIVE
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 bg-indigo-50 rounded text-indigo-500 border border-indigo-200 text-[10px] font-bold font-mono uppercase inline-flex items-center gap-1">
+                                  <div className="w-1 h-2 border-r border-b border-indigo-500 rotate-45 mb-0.5 ml-1"></div>
+                                  INVITED
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2498,6 +2806,187 @@ export default function DashboardsPage() {
                   ) : (
                     "Execute API Call"
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New User Invite Modal */}
+        {isInviteModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[600px] flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="flex justify-between items-center p-5 border-b border-slate-200">
+                <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New user</h2>
+                <button
+                  onClick={() => setInviteModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[75vh]">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-semibold">Email</label>
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-semibold">Full name</label>
+                  <input
+                    type="text"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-semibold">Temporary password</label>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      id="temp-password"
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm font-mono"
+                    />
+                    <button
+                      onClick={() => {
+                        const newPass = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-4).toUpperCase() + "!";
+                        setInvitePassword(newPass);
+                      }}
+                      className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold transition border border-slate-300 shadow-sm cursor-pointer"
+                    >
+                      Generate
+                    </button>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-0.5">At least 12 characters — shown once after creation, so save it.</p>
+                </div>
+
+                <div className="pt-2">
+                  <h3 className="text-slate-500 text-[11px] font-bold tracking-wider uppercase mb-3">What can they access?</h3>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                    {[
+                      "Identity & Tenancy", "Customers & Accounts",
+                      "Lifecycle & KYC", "Product Catalogue",
+                      "Orders & Provisioning", "Integration Ecosystem",
+                      "Usage & Mediation", "Rating & Charging",
+                      "Tax & Jurisdiction", "Billing & Invoice",
+                      "Payments", "Finance Ledger",
+                      "Evidence Ledger", "Partner Settlement",
+                      "Revenue Assurance", "Dunning & Disputes",
+                      "Fraud & Risk", "Reporting & Regulatory"
+                    ].map(access => (
+                      <label key={access} className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative flex items-center justify-center w-4 h-4 rounded-sm border border-slate-300 bg-white group-hover:border-sky-400 transition-colors shadow-sm overflow-hidden">
+                          <input
+                            type="checkbox"
+                            className="opacity-0 absolute inset-0 cursor-pointer peer"
+                            checked={inviteAccess.includes(access)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setInviteAccess(prev => [...prev, access]);
+                              } else {
+                                setInviteAccess(prev => prev.filter(a => a !== access));
+                              }
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-sky-500 opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                          <svg className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <span className="text-slate-700 text-sm font-medium">{access}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                <button
+                  onClick={() => setInviteModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateUser}
+                  disabled={isCreatingUser}
+                  className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-70 flex items-center gap-2"
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : "Create user"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Success Modal */}
+        {createdUserDetails && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-[#0f172a] border border-slate-700/60 rounded-xl shadow-2xl w-[500px] flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="flex justify-between items-center p-5 border-b border-slate-700/60">
+                <h2 className="text-white text-lg font-bold">User created</h2>
+                <button
+                  onClick={() => setCreatedUserDetails(null)}
+                  className="text-slate-400 hover:text-white transition cursor-pointer"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 flex flex-col gap-5">
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  This is the only time the temporary password is shown. Copy it now and share it with them securely.
+                </p>
+
+                <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 flex flex-col gap-1 font-mono text-[13px] text-slate-300 shadow-inner">
+                  <div><span className="text-white font-semibold">ZoikoNex login — your account</span></div>
+                  <div className="mt-1">URL: <span className="text-white">https://www.zoikonex.com/admin</span></div>
+                  <div>Tenant ID: <span className="text-white">{createdUserDetails.tenantId}</span></div>
+                  <div>Email: <span className="text-white">{createdUserDetails.email}</span></div>
+                  <div>Temporary password: <span className="text-white">{createdUserDetails.password}</span></div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const text = `ZoikoNex login - your account\nURL: https://www.zoikonex.com/admin\nTenant ID: ${createdUserDetails.tenantId}\nEmail: ${createdUserDetails.email}\nTemporary password: ${createdUserDetails.password}`;
+                    navigator.clipboard.writeText(text);
+                    alert("Copied to clipboard!");
+                  }}
+                  className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white border border-slate-600 rounded-lg text-sm font-semibold transition cursor-pointer"
+                >
+                  Copy login details
+                </button>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 flex justify-end gap-3">
+                <button
+                  onClick={() => setCreatedUserDetails(null)}
+                  className="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-lg text-sm font-bold transition shadow-sm cursor-pointer"
+                >
+                  Done
                 </button>
               </div>
             </div>
