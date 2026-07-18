@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+
+const FORMS_API_URL =
+    process.env.NEXT_PUBLIC_FORMS_API_URL ?? 'http://localhost:8099';
 
 const routingItems = [
     {
@@ -43,7 +46,178 @@ const otherRoutes = [
     { tag: 'Legal', title: 'Legal notices', link: 'Legal Intake', url: '/legal' },
 ];
 
-const ContactUs = () => {
+const inquiryOptions = [
+    { value: 'sales', label: 'Platform Sales' },
+    { value: 'support', label: 'Customer Support' },
+    { value: 'partnership', label: 'Partnerships' },
+    { value: 'developers', label: 'Developers & APIs' },
+    { value: 'security', label: 'Security & Compliance' },
+    { value: 'press', label: 'Press & Media' },
+];
+
+const countryOptions = [
+    { value: 'US', label: 'United States' },
+    { value: 'GB', label: 'United Kingdom' },
+    { value: 'CA', label: 'Canada' },
+    { value: 'IN', label: 'India' },
+    { value: 'SG', label: 'Singapore' },
+];
+
+interface FormState {
+    inquiryType: string;
+    fullName: string;
+    workEmail: string;
+    country: string;
+    message: string;
+    agreement: boolean;
+}
+
+interface FormErrors {
+    inquiryType?: string;
+    fullName?: string;
+    workEmail?: string;
+    country?: string;
+    message?: string;
+    agreement?: string;
+}
+
+type Status = 'idle' | 'submitting' | 'success' | 'error';
+
+const initialState: FormState = {
+    inquiryType: '',
+    fullName: '',
+    workEmail: '',
+    country: '',
+    message: '',
+    agreement: false,
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validate(values: FormState): FormErrors {
+    const errors: FormErrors = {};
+    if (!values.inquiryType) errors.inquiryType = 'Please select an inquiry type.';
+    if (!values.fullName.trim()) errors.fullName = 'Full name is required.';
+    if (!values.workEmail.trim()) errors.workEmail = 'Work email is required.';
+    else if (!EMAIL_RE.test(values.workEmail.trim()))
+        errors.workEmail = 'Enter a valid email address.';
+    if (!values.country) errors.country = 'Please select a country or region.';
+    if (!values.message.trim()) errors.message = 'Message is required.';
+    if (!values.agreement) errors.agreement = 'Please accept the terms to continue.';
+    return errors;
+}
+
+const JAKARTA = { fontFamily: "'Plus Jakarta Sans', sans-serif" } as const;
+const MONO = { fontFamily: "'IBM Plex Mono', monospace" } as const;
+
+const inputBase =
+    'w-full h-11 bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] px-4 text-slate-800 placeholder-slate-500 text-sm font-normal focus:outline-1 transition-colors';
+
+const selectBase =
+    'w-full h-10 bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] px-4 text-slate-800 text-sm font-normal appearance-none pr-10 focus:outline-1 cursor-pointer transition-colors';
+
+export const ContactUs = () => {
+    const [values, setValues] = useState<FormState>(initialState);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
+    const [errors, setErrors] = useState<FormErrors>({});
+    const [status, setStatus] = useState<Status>('idle');
+    const [serverError, setServerError] = useState('');
+
+    const setField = (name: keyof FormState, value: string | boolean) => {
+        const next = { ...values, [name]: value };
+        setValues(next);
+        if (touched[name]) setErrors(validate(next));
+    };
+
+    const handleBlur = (name: keyof FormState) => {
+        setTouched((t) => ({ ...t, [name]: true }));
+        setErrors(validate(values));
+    };
+
+    const fieldOutline = (name: keyof FormErrors) =>
+        touched[name] && errors[name]
+            ? 'outline-red-400 focus:outline-red-500'
+            : 'outline-slate-300 focus:outline-sky-700';
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const found = validate(values);
+        setErrors(found);
+        setTouched({
+            inquiryType: true,
+            fullName: true,
+            workEmail: true,
+            country: true,
+            message: true,
+            agreement: true,
+        });
+        if (Object.keys(found).length > 0) return;
+
+        setStatus('submitting');
+        setServerError('');
+        try {
+            const res = await fetch(`${FORMS_API_URL}/v1/contact-us`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    inquiry_type: values.inquiryType,
+                    full_name: values.fullName.trim(),
+                    work_email: values.workEmail.trim(),
+                    country: values.country,
+                    message: values.message.trim(),
+                    consent: values.agreement,
+                }),
+            });
+
+            let data: {
+                contact_us_id?: string;
+                mail_status?: string;
+                mail_error?: string;
+                message?: string;
+            } | null = null;
+            try {
+                data = await res.json();
+            } catch {
+                data = null;
+            }
+
+            // The backend persists the submission first, then attempts the admin
+            // email. It returns 201 whenever the record is saved — even if mail
+            // could not be delivered (mail_status = NOT_SENT). So:
+            //   • saved (mail SENT or NOT_SENT) → green
+            //   • not saved → red (the only case where nothing landed)
+            const saved = res.ok && !!data?.contact_us_id;
+
+            if (saved) {
+                // Data is safe. If the admin mail failed we still show green to
+                // the visitor, but surface it for ops visibility.
+                if (data?.mail_status === 'NOT_SENT') {
+                    console.warn(
+                        'Contact inquiry saved but admin email was not sent:',
+                        data?.mail_error
+                    );
+                }
+                setStatus('success');
+                setValues(initialState);
+                setTouched({});
+            } else {
+                // Neither saved nor mailed — a real failure.
+                setStatus('error');
+                setServerError(
+                    data?.message || `Something went wrong (${res.status}). Please try again.`
+                );
+            }
+        } catch (err) {
+            // Network / unreachable server — nothing was saved.
+            setStatus('error');
+            setServerError(
+                err instanceof Error
+                    ? err.message
+                    : 'Something went wrong. Please try again.'
+            );
+        }
+    };
+
     return (
         <div className="w-full bg-slate-50">
             {/* ─── HERO SECTION ─── */}
@@ -69,7 +243,7 @@ const ContactUs = () => {
                     <div className="flex flex-col max-w-[580px]">
                         <h1
                             className="text-white text-4xl lg:text-[56px] font-extrabold lg:leading-[61px] tracking-tight mb-6"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                            style={JAKARTA}
                         >
                             Reach the right <br className="hidden lg:block" />
                             team for your telecom <br className="hidden lg:block" />
@@ -78,7 +252,7 @@ const ContactUs = () => {
 
                         <p
                             className="text-slate-300 text-base font-normal leading-7 max-w-[478px]"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                            style={JAKARTA}
                         >
                             Whether you&apos;re launching an MVNO, modernizing a telecom BSS
                             stack, evaluating APIs, exploring partnership, or seeking customer
@@ -100,7 +274,7 @@ const ContactUs = () => {
                         <div className="flex items-center justify-between px-[23px] h-[46px] border-b border-white/10 flex-shrink-0">
                             <span
                                 className="text-slate-400 text-xs font-semibold uppercase tracking-[0.15em]"
-                                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                style={MONO}
                             >
                                 Routing Console
                             </span>
@@ -108,7 +282,7 @@ const ContactUs = () => {
                                 <span className="w-1.5 h-1.5 bg-lime-500 rounded-full animate-pulse" />
                                 <span
                                     className="text-lime-500 text-[10px] font-bold uppercase tracking-wider"
-                                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                    style={MONO}
                                 >
                                     Online
                                 </span>
@@ -138,15 +312,13 @@ const ContactUs = () => {
                                         <div className="flex flex-col">
                                             <span
                                                 className="text-white text-[13.5px] font-semibold tracking-wide"
-                                                style={{
-                                                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                                                }}
+                                                style={JAKARTA}
                                             >
                                                 {item.title}
                                             </span>
                                             <span
                                                 className="text-slate-400 text-[9.5px] tracking-wider leading-3 mt-0.5"
-                                                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                                style={MONO}
                                             >
                                                 {item.subtitle}
                                             </span>
@@ -171,14 +343,14 @@ const ContactUs = () => {
                 {/* Lime radial glow top-right */}
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_92%_8%,rgba(132,204,22,0.08),transparent_60%)]" />
 
-                <div className="relative z-10 mx-auto max-w-[1140px] w-full px-6 flex flex-col lg:flex-row items-center justify-between gap-12">
+                <div className="relative z-10 mx-auto max-w-[1140px] w-full px-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-12">
                     {/* Left text */}
                     <div className="flex flex-col max-w-[420px]">
                         <div className="flex items-center gap-2 mb-4">
                             <span className="w-1.5 h-1.5 bg-lime-500 rounded-sm" />
                             <span
                                 className="text-sky-700 text-xs font-semibold uppercase tracking-widest leading-4"
-                                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                style={MONO}
                             >
                                 Send an Inquiry
                             </span>
@@ -186,162 +358,261 @@ const ContactUs = () => {
 
                         <h2
                             className="text-slate-800 text-4xl lg:text-5xl font-extrabold lg:leading-[64px] mb-6"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                            style={JAKARTA}
                         >
                             Tell us what <br className="hidden lg:block" />
-                            you’re building <br className="hidden lg:block" />
+                            you&rsquo;re building <br className="hidden lg:block" />
                             or evaluating.
                         </h2>
 
-                        <p
-                            className="text-slate-600 text-base font-normal leading-6"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        >
-                            Pick an inquiry type and we’ll show only the <br className="hidden lg:block" />
-                            fields that matter, then route your message to <br className="hidden lg:block" />
+                        <p className="text-slate-600 text-base font-normal leading-6" style={JAKARTA}>
+                            Pick an inquiry type and we&rsquo;ll show only the{' '}
+                            <br className="hidden lg:block" />
+                            fields that matter, then route your message to{' '}
+                            <br className="hidden lg:block" />
                             the right team.
                         </p>
                     </div>
 
                     {/* Right – Form card */}
                     <div
-                        className="relative w-full max-w-[628.80px] h-[574.69px] bg-white rounded-[20px] outline outline-1 outline-offset-[-1px] outline-slate-200 shrink-0 transform scale-90 sm:scale-100 origin-top lg:origin-center"
+                        className="relative w-full max-w-[628.80px] bg-white rounded-[20px] outline outline-1 outline-offset-[-1px] outline-slate-200 shrink-0 p-7"
                         style={{
                             boxShadow:
                                 '0px 18px 48px -22px rgba(11,60,99,0.28), 0px 1px 2px 0px rgba(11,60,99,0.04)',
                         }}
                     >
-                        {/* Inquiry type */}
-                        <div className="w-20 h-5 left-[29px] top-[29px] absolute text-slate-800 text-xs font-semibold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            Inquiry type
-                        </div>
-                        <div className="w-2 h-5 left-[110.39px] top-[29px] absolute text-red-500 text-xs font-bold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            *
-                        </div>
-                        
-                        <div className="relative">
-                            <select
-                                defaultValue=""
-                                className="w-[570.80px] h-10 left-[29px] top-[56.80px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 px-4 text-slate-800 text-sm font-normal appearance-none focus:outline-none focus:outline-sky-700 focus:outline-1 cursor-pointer"
-                                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                        {status === 'success' ? (
+                            <div className="flex flex-col items-center justify-center rounded-[14px] bg-green-50 px-6 py-16 outline outline-1 outline-green-200">
+                                <p
+                                    className="text-lg font-bold text-green-800"
+                                    style={JAKARTA}
+                                >
+                                    Your inquiry has been received.
+                                </p>
+                                <p
+                                    className="mt-2 text-sm text-green-700 text-center"
+                                    style={JAKARTA}
+                                >
+                                    We&rsquo;ll route it to the right team and respond shortly.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatus('idle')}
+                                    className="mt-6 text-xs font-bold uppercase tracking-wider text-sky-700 underline-offset-4 hover:underline"
+                                    style={MONO}
+                                >
+                                    Send another inquiry
+                                </button>
+                            </div>
+                        ) : (
+                            <form
+                                noValidate
+                                onSubmit={handleSubmit}
+                                className="flex flex-col gap-5"
                             >
-                                <option value="" disabled hidden>Select an inquiry type…</option>
-                                <option value="sales">Platform Sales</option>
-                                <option value="support">Customer Support</option>
-                                <option value="partnership">Partnerships</option>
-                                <option value="developers">Developers & APIs</option>
-                                <option value="security">Security & Compliance</option>
-                                <option value="press">Press & Media</option>
-                            </select>
-                            <img
-                                src="/image/contact/chevron-down-1.svg"
-                                alt="Chevron"
-                                width={10}
-                                height={6}
-                                className="absolute left-[571.80px] top-[73.80px] pointer-events-none"
-                            />
-                        </div>
+                                {/* Inquiry type */}
+                                <div className="flex flex-col gap-2">
+                                    <label
+                                        className="flex items-center gap-0.5 text-xs font-semibold text-slate-800"
+                                        style={JAKARTA}
+                                    >
+                                        Inquiry type <span className="text-red-500 font-bold">*</span>
+                                    </label>
+                                    <div className="relative w-full">
+                                        <select
+                                            value={values.inquiryType}
+                                            onChange={(e) => setField('inquiryType', e.target.value)}
+                                            onBlur={() => handleBlur('inquiryType')}
+                                            className={`${selectBase} ${fieldOutline('inquiryType')}`}
+                                            style={JAKARTA}
+                                        >
+                                            <option value="" disabled hidden>
+                                                Select an inquiry type…
+                                            </option>
+                                            {inquiryOptions.map((o) => (
+                                                <option key={o.value} value={o.value}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <img
+                                            src="/image/contact/chevron-down-1.svg"
+                                            alt="Chevron"
+                                            width={10}
+                                            height={6}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                                        />
+                                    </div>
+                                    {touched.inquiryType && errors.inquiryType && (
+                                        <p className="text-xs text-red-600">{errors.inquiryType}</p>
+                                    )}
+                                </div>
 
-                        {/* Full name */}
-                        <div className="w-14 h-5 left-[29px] top-[112.80px] absolute text-slate-800 text-xs font-semibold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            Full name
-                        </div>
-                        <div className="w-2 h-5 left-[94.78px] top-[112.80px] absolute text-red-500 text-xs font-bold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            *
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Your full name"
-                            className="w-[288px] h-11 left-[29px] top-[140.59px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 px-4 text-slate-800 placeholder-slate-500 text-sm font-normal focus:outline-none focus:outline-sky-700 focus:outline-1"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        />
+                                {/* Full name + Work email */}
+                                <div className="flex flex-col sm:flex-row gap-5">
+                                    <div className="flex flex-col gap-2 flex-1">
+                                        <label
+                                            className="flex items-center gap-0.5 text-xs font-semibold text-slate-800"
+                                            style={JAKARTA}
+                                        >
+                                            Full name <span className="text-red-500 font-bold">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={values.fullName}
+                                            onChange={(e) => setField('fullName', e.target.value)}
+                                            onBlur={() => handleBlur('fullName')}
+                                            placeholder="Your full name"
+                                            className={`${inputBase} ${fieldOutline('fullName')}`}
+                                            style={JAKARTA}
+                                        />
+                                        {touched.fullName && errors.fullName && (
+                                            <p className="text-xs text-red-600">{errors.fullName}</p>
+                                        )}
+                                    </div>
 
-                        {/* Work email */}
-                        <div className="w-16 h-5 left-[320.89px] top-[112.80px] absolute text-slate-800 text-xs font-semibold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            Work email
-                        </div>
-                        <div className="w-2 h-5 left-[397.19px] top-[112.80px] absolute text-red-500 text-xs font-bold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            *
-                        </div>
-                        <input
-                            type="email"
-                            placeholder="you@company.com"
-                            className="w-[288px] h-11 left-[320.89px] top-[140.59px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 px-4 text-slate-800 placeholder-slate-500 text-sm font-normal focus:outline-none focus:outline-sky-700 focus:outline-1"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        />
+                                    <div className="flex flex-col gap-2 flex-1">
+                                        <label
+                                            className="flex items-center gap-0.5 text-xs font-semibold text-slate-800"
+                                            style={JAKARTA}
+                                        >
+                                            Work email <span className="text-red-500 font-bold">*</span>
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={values.workEmail}
+                                            onChange={(e) => setField('workEmail', e.target.value)}
+                                            onBlur={() => handleBlur('workEmail')}
+                                            placeholder="you@company.com"
+                                            className={`${inputBase} ${fieldOutline('workEmail')}`}
+                                            style={JAKARTA}
+                                        />
+                                        {touched.workEmail && errors.workEmail && (
+                                            <p className="text-xs text-red-600">{errors.workEmail}</p>
+                                        )}
+                                    </div>
+                                </div>
 
-                        {/* Country / region */}
-                        <div className="w-24 h-5 left-[29px] top-[214.59px] absolute text-slate-800 text-xs font-semibold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            Country / region
-                        </div>
-                        <div className="w-2 h-5 left-[138.36px] top-[214.59px] absolute text-red-500 text-xs font-bold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            *
-                        </div>
-                        <div className="relative">
-                            <select
-                                defaultValue=""
-                                className="w-[288px] h-10 left-[29px] top-[242.39px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 px-4 text-slate-800 text-sm font-normal appearance-none focus:outline-none focus:outline-sky-700 focus:outline-1 cursor-pointer"
-                                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                            >
-                                <option value="" disabled hidden>Select…</option>
-                                <option value="US">United States</option>
-                                <option value="GB">United Kingdom</option>
-                                <option value="CA">Canada</option>
-                                <option value="IN">India</option>
-                                <option value="SG">Singapore</option>
-                            </select>
-                            <img
-                                src="/image/contact/chevron-down-1.svg"
-                                alt="Chevron"
-                                width={10}
-                                height={6}
-                                className="absolute left-[279.89px] top-[259.39px] pointer-events-none"
-                            />
-                        </div>
+                                {/* Country / region */}
+                                <div className="flex flex-col gap-2 sm:max-w-[288px]">
+                                    <label
+                                        className="flex items-center gap-0.5 text-xs font-semibold text-slate-800"
+                                        style={JAKARTA}
+                                    >
+                                        Country / region <span className="text-red-500 font-bold">*</span>
+                                    </label>
+                                    <div className="relative w-full">
+                                        <select
+                                            value={values.country}
+                                            onChange={(e) => setField('country', e.target.value)}
+                                            onBlur={() => handleBlur('country')}
+                                            className={`${selectBase} ${fieldOutline('country')}`}
+                                            style={JAKARTA}
+                                        >
+                                            <option value="" disabled hidden>
+                                                Select…
+                                            </option>
+                                            {countryOptions.map((o) => (
+                                                <option key={o.value} value={o.value}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <img
+                                            src="/image/contact/chevron-down-1.svg"
+                                            alt="Chevron"
+                                            width={10}
+                                            height={6}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                                        />
+                                    </div>
+                                    {touched.country && errors.country && (
+                                        <p className="text-xs text-red-600">{errors.country}</p>
+                                    )}
+                                </div>
 
-                        {/* Message */}
-                        <div className="w-14 h-5 left-[29px] top-[298.39px] absolute text-slate-800 text-xs font-semibold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            Message
-                        </div>
-                        <div className="w-2 h-5 left-[92.66px] top-[298.39px] absolute text-red-500 text-xs font-bold leading-5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            *
-                        </div>
-                        <textarea
-                            placeholder="What are you building, modernizing, integrating, or evaluating?"
-                            className="w-[570.80px] h-24 left-[29px] top-[326.19px] absolute bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] outline-slate-300 p-4 text-slate-800 placeholder-slate-500 text-sm font-normal focus:outline-none focus:outline-sky-700 focus:outline-1 resize-none leading-6"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        />
+                                {/* Message */}
+                                <div className="flex flex-col gap-2">
+                                    <label
+                                        className="flex items-center gap-0.5 text-xs font-semibold text-slate-800"
+                                        style={JAKARTA}
+                                    >
+                                        Message <span className="text-red-500 font-bold">*</span>
+                                    </label>
+                                    <textarea
+                                        rows={4}
+                                        value={values.message}
+                                        onChange={(e) => setField('message', e.target.value)}
+                                        onBlur={() => handleBlur('message')}
+                                        placeholder="What are you building, modernizing, integrating, or evaluating?"
+                                        className={`w-full bg-white rounded-[10px] outline outline-1 outline-offset-[-1px] p-4 text-slate-800 placeholder-slate-500 text-sm font-normal focus:outline-1 resize-none leading-6 transition-colors ${fieldOutline(
+                                            'message'
+                                        )}`}
+                                        style={JAKARTA}
+                                    />
+                                    {touched.message && errors.message && (
+                                        <p className="text-xs text-red-600">{errors.message}</p>
+                                    )}
+                                </div>
 
-                        {/* Checkbox */}
-                        <input
-                            type="checkbox"
-                            id="agreement"
-                            className="w-4 h-4 left-[33px] top-[446.19px] absolute border border-neutral-500 rounded-sm cursor-pointer accent-sky-700"
-                        />
-                        <label
-                            htmlFor="agreement"
-                            className="w-[516.97px] h-9 left-[64px] top-[446.19px] absolute text-slate-600 text-xs font-semibold leading-5 select-none cursor-pointer"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        >
-                            I agree that ZoikoNex may process my information to review, route, and respond to this
-                            inquiry per the{' '}
-                            <span className="text-sky-700 hover:underline">Privacy Policy</span>.
-                        </label>
+                                {/* Agreement */}
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="agreement"
+                                            checked={values.agreement}
+                                            onChange={(e) => setField('agreement', e.target.checked)}
+                                            onBlur={() => handleBlur('agreement')}
+                                            className="mt-0.5 w-4 h-4 border border-neutral-500 rounded-sm cursor-pointer accent-sky-700 flex-shrink-0"
+                                        />
+                                        <label
+                                            htmlFor="agreement"
+                                            className="text-slate-600 text-xs font-semibold leading-5 select-none cursor-pointer"
+                                            style={JAKARTA}
+                                        >
+                                            I agree that ZoikoNex may process my information to review,
+                                            route, and respond to this inquiry per the{' '}
+                                            <span className="text-sky-700 hover:underline">
+                                                Privacy Policy
+                                            </span>
+                                            .
+                                        </label>
+                                    </div>
+                                    {touched.agreement && errors.agreement && (
+                                        <p className="text-xs text-red-600 pl-7">{errors.agreement}</p>
+                                    )}
+                                </div>
 
-                        {/* Submit button */}
-                        <button
-                            type="submit"
-                            className="w-[570.80px] h-12 left-[29px] top-[497.69px] absolute bg-sky-700 hover:bg-sky-800 transition-colors rounded-xl flex items-center justify-center gap-2 cursor-pointer text-white text-base font-bold"
-                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                        >
-                            <span>Send inquiry</span>
-                            <img
-                                src="/image/contact/white-arrow.svg"
-                                alt="Arrow"
-                                width={14}
-                                height={14}
-                            />
-                        </button>
+                                {/* Server error */}
+                                {status === 'error' && serverError && (
+                                    <p className="rounded-[10px] bg-red-50 px-4 py-3 text-sm text-red-600 outline outline-1 outline-offset-[-1px] outline-red-200">
+                                        {serverError}
+                                    </p>
+                                )}
+
+                                {/* Submit button */}
+                                <button
+                                    type="submit"
+                                    disabled={status === 'submitting'}
+                                    className="w-full h-12 bg-sky-700 hover:bg-sky-800 transition-colors rounded-xl flex items-center justify-center gap-2 cursor-pointer text-white text-base font-bold disabled:cursor-not-allowed disabled:opacity-60"
+                                    style={JAKARTA}
+                                >
+                                    <span>
+                                        {status === 'submitting' ? 'Sending…' : 'Send inquiry'}
+                                    </span>
+                                    {status !== 'submitting' && (
+                                        <img
+                                            src="/image/contact/white-arrow.svg"
+                                            alt="Arrow"
+                                            width={14}
+                                            height={14}
+                                        />
+                                    )}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 </div>
             </section>
@@ -352,14 +623,14 @@ const ContactUs = () => {
                     <span className="w-1.5 h-1.5 bg-lime-500 rounded-sm" />
                     <span
                         className="text-sky-700 text-xs font-semibold uppercase tracking-widest"
-                        style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                        style={MONO}
                     >
                         Other Routes
                     </span>
                 </div>
                 <h2
                     className="text-slate-800 text-[30px] font-extrabold leading-[48px] mb-6"
-                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                    style={JAKARTA}
                 >
                     Corporate, media, partnership &amp; careers.
                 </h2>
@@ -377,25 +648,35 @@ const ContactUs = () => {
                         >
                             <span
                                 className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.1em]"
-                                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                                style={MONO}
                             >
                                 {route.tag}
                             </span>
                             <h3
                                 className="text-slate-800 text-[15px] font-bold leading-6 mt-1.5 mb-6"
-                                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                                style={JAKARTA}
                             >
                                 {route.title}
                             </h3>
                             <div className="mt-auto inline-flex items-center gap-1.5 text-sky-600 group-hover:text-sky-700 transition-colors">
                                 <span
                                     className="text-xs font-bold tracking-tight"
-                                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                                    style={JAKARTA}
                                 >
                                     {route.link}
                                 </span>
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 6h7m0 0l-3-3m3 3l-3 3" />
+                                <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    viewBox="0 0 12 12"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M2.5 6h7m0 0l-3-3m3 3l-3 3"
+                                    />
                                 </svg>
                             </div>
                         </a>
