@@ -16,9 +16,9 @@ export default function CaseStudiesPage() {
                             Discover how global enterprises and service providers leverage our APIs to modernize BSS, maintain sovereign control, elevate scale, and redefine connectivity.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                            <button className="px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm text-white text-sm font-semibold shadow-lg">
+                            <Link href="/methodology" className="inline-block px-8 py-4 bg-cyan-700 hover:bg-cyan-600 transition-colors rounded-sm text-white text-sm font-semibold shadow-lg text-center">
                                 Explore Our Methodology
-                            </button>
+                            </Link>
                             <button className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 transition-colors rounded-sm text-zinc-900 text-sm font-semibold">
                                 Download Portfolio PDF
                             </button>
