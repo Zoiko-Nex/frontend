@@ -246,65 +246,71 @@ export default function CaseStudiesPage() {
                     </div>
                     <div className="self-stretch grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Card 1 */}
-                        <div className="w-full p-8 bg-white rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start gap-3">
-                            <div className="w-12 h-12 bg-zinc-100 rounded-sm flex justify-center items-center">
-                                <img src="/image/case/Icon8.svg" className="w-6 h-6 object-contain" alt="Travel eSIM Brand" />
-                            </div>
-                            <div className="self-stretch pt-3 flex flex-col justify-start items-start">
-                                <h3 className="text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Travel eSIM Brand</h3>
-                            </div>
-                            <div className="self-stretch flex flex-col justify-start items-start flex-1">
-                                <p className="text-slate-600 text-sm font-normal font-['Inter'] leading-5">Deployment of a multi-IMSI global<br className="hidden xl:block" />roaming solution with real-time balance<br className="hidden xl:block" />enforcement across 180 countries.</p>
-                            </div>
-                            <div className="self-stretch pt-3 flex justify-between items-center w-full mt-auto">
+                        <div className="w-full bg-white rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col hover:shadow-xl transition-shadow group h-full">
+                            <Link href="/implementation/travel-esim-brand" className="p-8 pb-0 flex flex-col justify-start items-start gap-3 flex-1 cursor-pointer">
+                                <div className="w-12 h-12 bg-zinc-100 rounded-sm flex justify-center items-center">
+                                    <img src="/image/case/Icon8.svg" className="w-6 h-6 object-contain" alt="Travel eSIM Brand" />
+                                </div>
+                                <div className="self-stretch pt-3 flex flex-col justify-start items-start">
+                                    <h3 className="text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8 group-hover:text-cyan-700 transition-colors">Travel eSIM Brand</h3>
+                                </div>
+                                <div className="self-stretch flex flex-col justify-start items-start flex-1">
+                                    <p className="text-slate-600 text-sm font-normal font-['Inter'] leading-5">Deployment of a multi-IMSI global<br className="hidden xl:block" />roaming solution with real-time balance<br className="hidden xl:block" />enforcement across 180 countries.</p>
+                                </div>
+                            </Link>
+                            <div className="px-8 pb-8 pt-6 flex justify-between items-center w-full mt-auto">
                                 <div className="px-2 py-1 bg-stone-200 rounded-xs flex flex-col justify-start items-start">
                                     <span className="text-zinc-700 text-xs font-normal font-['JetBrains_Mono'] leading-4">ANONYMIZED</span>
                                 </div>
-                                <div className="flex justify-center items-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                                <a href="/pdfs/ZoikoNex-Travel-eSIM-Brand.pdf" download className="flex justify-center items-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
                                     <img src="/image/case/Icon9.svg" className="w-4 h-4 object-contain" alt="Download" />
-                                </div>
+                                </a>
                             </div>
                         </div>
 
                         {/* Card 2 */}
-                        <div className="w-full p-8 bg-white rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start gap-3">
-                            <div className="w-12 h-12 bg-zinc-100 rounded-sm flex justify-center items-center">
-                                <img src="/image/case/Icon11.svg" className="w-6 h-6 object-contain" alt="Regulated Telecom Billing" />
-                            </div>
-                            <div className="self-stretch pt-3 flex flex-col justify-start items-start">
-                                <h3 className="text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Regulated Telecom<br className="hidden md:block" />Billing</h3>
-                            </div>
-                            <div className="self-stretch flex flex-col justify-start items-start flex-1">
-                                <p className="text-slate-600 text-sm font-normal font-['Inter'] leading-5">Complex tax engine integration and<br className="hidden xl:block" />sovereign data compliance for high-<br className="hidden xl:block" />security government contractors.</p>
-                            </div>
-                            <div className="self-stretch pt-3 flex justify-between items-center w-full mt-auto">
+                        <div className="w-full bg-white rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col hover:shadow-xl transition-shadow group h-full">
+                            <Link href="/implementation/regulated-telecom-billing" className="p-8 pb-0 flex flex-col justify-start items-start gap-3 flex-1 cursor-pointer">
+                                <div className="w-12 h-12 bg-zinc-100 rounded-sm flex justify-center items-center">
+                                    <img src="/image/case/Icon11.svg" className="w-6 h-6 object-contain" alt="Regulated Telecom Billing" />
+                                </div>
+                                <div className="self-stretch pt-3 flex flex-col justify-start items-start">
+                                    <h3 className="text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8 group-hover:text-cyan-700 transition-colors">Regulated Telecom<br className="hidden md:block" />Billing</h3>
+                                </div>
+                                <div className="self-stretch flex flex-col justify-start items-start flex-1">
+                                    <p className="text-slate-600 text-sm font-normal font-['Inter'] leading-5">Complex tax engine integration and<br className="hidden xl:block" />sovereign data compliance for high-<br className="hidden xl:block" />security government contractors.</p>
+                                </div>
+                            </Link>
+                            <div className="px-8 pb-8 pt-6 flex justify-between items-center w-full mt-auto">
                                 <div className="px-2 py-1 bg-stone-200 rounded-xs flex flex-col justify-start items-start">
                                     <span className="text-zinc-700 text-xs font-normal font-['JetBrains_Mono'] leading-4">ANONYMIZED</span>
                                 </div>
-                                <div className="flex justify-center items-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                                <a href="/pdfs/ZoikoNex-Regulated-Telecom-Billing.pdf" download className="flex justify-center items-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
                                     <img src="/image/case/Icon9.svg" className="w-4 h-4 object-contain" alt="Download" />
-                                </div>
+                                </a>
                             </div>
                         </div>
 
                         {/* Card 3 */}
-                        <div className="w-full p-8 bg-white rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-start items-start gap-3">
-                            <div className="w-12 h-12 bg-zinc-100 rounded-sm flex justify-center items-center">
-                                <img src="/image/case/Icon10.svg" className="w-6 h-6 object-contain" alt="Partner Reseller Program" />
-                            </div>
-                            <div className="self-stretch pt-3 flex flex-col justify-start items-start">
-                                <h3 className="text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Partner Reseller<br className="hidden md:block" />Program</h3>
-                            </div>
-                            <div className="self-stretch flex flex-col justify-start items-start flex-1">
-                                <p className="text-slate-600 text-sm font-normal font-['Inter'] leading-5">White-labeling the BSS portal for sub-<br className="hidden xl:block" />distributors with granular commission<br className="hidden xl:block" />management and hierarchy controls.</p>
-                            </div>
-                            <div className="self-stretch pt-3 flex justify-between items-center w-full mt-auto">
+                        <div className="w-full bg-white rounded-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col hover:shadow-xl transition-shadow group h-full">
+                            <Link href="/implementation/partner-reseller-program" className="p-8 pb-0 flex flex-col justify-start items-start gap-3 flex-1 cursor-pointer">
+                                <div className="w-12 h-12 bg-zinc-100 rounded-sm flex justify-center items-center">
+                                    <img src="/image/case/Icon10.svg" className="w-6 h-6 object-contain" alt="Partner Reseller Program" />
+                                </div>
+                                <div className="self-stretch pt-3 flex flex-col justify-start items-start">
+                                    <h3 className="text-zinc-900 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8 group-hover:text-cyan-700 transition-colors">Partner Reseller<br className="hidden md:block" />Program</h3>
+                                </div>
+                                <div className="self-stretch flex flex-col justify-start items-start flex-1">
+                                    <p className="text-slate-600 text-sm font-normal font-['Inter'] leading-5">White-labeling the BSS portal for sub-<br className="hidden xl:block" />distributors with granular commission<br className="hidden xl:block" />management and hierarchy controls.</p>
+                                </div>
+                            </Link>
+                            <div className="px-8 pb-8 pt-6 flex justify-between items-center w-full mt-auto">
                                 <div className="px-2 py-1 bg-stone-200 rounded-xs flex flex-col justify-start items-start">
                                     <span className="text-zinc-700 text-xs font-normal font-['JetBrains_Mono'] leading-4">ANONYMIZED</span>
                                 </div>
-                                <div className="flex justify-center items-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                                <a href="/pdfs/ZoikoNex-Partner-Reseller-Program.pdf" download className="flex justify-center items-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
                                     <img src="/image/case/Icon9.svg" className="w-4 h-4 object-contain" alt="Download" />
-                                </div>
+                                </a>
                             </div>
                         </div>
 
