@@ -37,7 +37,7 @@ export default function PressRoomSnapshot() {
   return (
     <section className="bg-[#F8F9FA] py-16 lg:py-24">
       <div className="mx-auto flex w-full max-w-[1140px] flex-col items-start justify-center px-6 lg:px-8">
-        
+
         {/* Title + underline */}
         <div className="mb-12 flex w-full flex-col items-start gap-3">
           <h2 className="text-3xl font-bold text-slate-800 lg:text-4xl" style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}>

@@ -109,13 +109,13 @@ export default function WhitePapersPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-3">
-                    <Link href="#" className="px-8 py-3 bg-cyan-700 hover:bg-cyan-800 transition-colors rounded-lg inline-flex items-center justify-center gap-2">
+                    <a href="/pdfs/zoikonex-sovereign-bss-architecture-guide-2024.pdf" target="_blank" rel="noopener noreferrer" className="px-8 py-3 bg-cyan-700 hover:bg-cyan-800 transition-colors rounded-lg inline-flex items-center justify-center gap-2">
                       {/* Download icon */}
                       <svg className="w-3 h-3 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
                         <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
                       <span className="text-white text-base font-normal leading-6">Download PDF</span>
-                    </Link>
+                    </a>
                     <Link href="/contact-us" className="px-8 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors flex justify-center items-center">
                       <span className="text-base font-normal leading-6">Request Full Briefing</span>
                     </Link>
@@ -207,12 +207,12 @@ export default function WhitePapersPage() {
                         <div className="w-2 h-2 bg-slate-200 dark:bg-zinc-700 rounded-full"></div>
                       </div>
                     </div>
-                    <button className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
+                    <a href="/pdfs/zoikonex-cloud-sovereignty-high-stakes-markets.pdf" target="_blank" rel="noopener noreferrer" className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
                       <svg className="w-3 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
                         <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
                       <span className="text-base font-normal leading-6">Download PDF</span>
-                    </button>
+                    </a>
                   </div>
                 </div>
 
@@ -243,12 +243,12 @@ export default function WhitePapersPage() {
                         <div className="w-2 h-2 bg-slate-200 dark:bg-zinc-700 rounded-full"></div>
                       </div>
                     </div>
-                    <button className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
-                      <svg className="w-3.5 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="none" viewBox="0 0 14 12" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="1" y="1" width="12" height="10" rx="1" /><path d="M4 6h6M7 3v6" />
+                    <a href="/pdfs/zoikonex-realtime-bss-latency-benchmarks.pdf" target="_blank" rel="noopener noreferrer" className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
+                      <svg className="w-3 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
+                        <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
-                      <span className="text-base font-normal leading-6">Request Briefing</span>
-                    </button>
+                      <span className="text-base font-normal leading-6">Download PDF</span>
+                    </a>
                   </div>
                 </div>
 
@@ -279,12 +279,12 @@ export default function WhitePapersPage() {
                         <div className="w-2 h-2 bg-slate-200 dark:bg-zinc-700 rounded-full"></div>
                       </div>
                     </div>
-                    <button className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
+                    <a href="/pdfs/zoikonex-zero-touch-provisioning-study.pdf" target="_blank" rel="noopener noreferrer" className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
                       <svg className="w-3 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
                         <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
                       <span className="text-base font-normal leading-6">Download PDF</span>
-                    </button>
+                    </a>
                   </div>
                 </div>
 
@@ -315,12 +315,12 @@ export default function WhitePapersPage() {
                         <div className="w-2 h-2 bg-sky-600 rounded-full"></div>
                       </div>
                     </div>
-                    <button className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
+                    <a href="/pdfs/zoikonex-modernizing-legacy-debt-bss.pdf" target="_blank" rel="noopener noreferrer" className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
                       <svg className="w-3 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
                         <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
                       <span className="text-base font-normal leading-6">Download PDF</span>
-                    </button>
+                    </a>
                   </div>
                 </div>
 
@@ -351,12 +351,12 @@ export default function WhitePapersPage() {
                         <div className="w-2 h-2 bg-slate-200 dark:bg-zinc-700 rounded-full"></div>
                       </div>
                     </div>
-                    <button className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
-                      <svg className="w-3.5 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="none" viewBox="0 0 14 12" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="1" y="1" width="12" height="10" rx="1" /><path d="M4 6h6M7 3v6" />
+                    <a href="/pdfs/zoikonex-api-first-the-new-standard.pdf" target="_blank" rel="noopener noreferrer" className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
+                      <svg className="w-3 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
+                        <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
-                      <span className="text-base font-normal leading-6">Request Briefing</span>
-                    </button>
+                      <span className="text-base font-normal leading-6">Download PDF</span>
+                    </a>
                   </div>
                 </div>
 
@@ -387,12 +387,12 @@ export default function WhitePapersPage() {
                         <div className="w-2 h-2 bg-slate-200 dark:bg-zinc-700 rounded-full"></div>
                       </div>
                     </div>
-                    <button className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
+                    <a href="/pdfs/zoikonex-5g-monetization-strategies.pdf" target="_blank" rel="noopener noreferrer" className="self-stretch py-3 rounded-sm outline outline-1 outline-offset-[-1px] outline-slate-200 dark:outline-zinc-700 text-zinc-900 dark:text-white inline-flex justify-center items-center gap-2 hover:bg-stone-50 dark:hover:bg-zinc-800 transition-colors">
                       <svg className="w-3 h-3 text-zinc-900 dark:text-white flex-shrink-0" fill="currentColor" viewBox="0 0 12 12">
                         <path d="M6 8L2 4h3V0h2v4h3L6 8zM0 10h12v2H0v-2z" />
                       </svg>
                       <span className="text-base font-normal leading-6">Download PDF</span>
-                    </button>
+                    </a>
                   </div>
                 </div>
 
