@@ -441,9 +441,11 @@ export default function CaseStudiesPage() {
                                 <span className="text-center text-white text-sm font-semibold font-['Inter'] leading-4">Request a Platform Briefing</span>
                             </button>
                         </Link>
-                        <button className="px-10 py-5 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-center items-center hover:bg-stone-50 transition-colors">
-                            <span className="text-center text-black text-sm font-semibold font-['Inter'] leading-4">Speak with an Architect</span>
-                        </button>
+                        <Link href="/contact-us">
+                            <button className="px-10 py-5 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col justify-center items-center hover:bg-stone-50 transition-colors">
+                                <span className="text-center text-black text-sm font-semibold font-['Inter'] leading-4">Speak with an Architect</span>
+                            </button>
+                        </Link>
                     </div>
                 </div>
             </section>

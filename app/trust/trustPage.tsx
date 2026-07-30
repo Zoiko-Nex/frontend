@@ -26,9 +26,11 @@ export default function TrustPage() {
                   <img src="/image/trust/Icon5.svg" alt="Arrow Right" className="w-4 h-4" />
                 </button>
               </Link>
-              <button className="px-8 py-4 rounded border border-stone-300/30 hover:bg-white/5 transition-colors flex justify-center items-center">
-                <span className="text-center text-white text-sm font-semibold font-['Inter']">Start a Security Review</span>
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 rounded border border-stone-300/30 hover:bg-white/5 transition-colors flex justify-center items-center">
+                  <span className="text-center text-white text-sm font-semibold font-['Inter']">Start a Security Review</span>
+                </button>
+              </Link>
             </div>
           </div>
 
@@ -420,9 +422,11 @@ export default function TrustPage() {
               <h3 className="text-white text-2xl font-semibold font-['Inter']">Ready for a Technical Deep Dive?</h3>
               <p className="text-gray-400 text-sm font-normal">Download the full Nexus Sovereign Security Architecture whitepaper and CAIQ assessment.</p>
             </div>
-            <button className="px-6 py-3 bg-[#2b7c9f] hover:bg-[#23637f] transition-colors rounded text-white text-sm font-medium whitespace-nowrap">
-              Request Procurement Pack
-            </button>
+            <Link href="/contact-us">
+              <button className="px-6 py-3 bg-[#2b7c9f] hover:bg-[#23637f] transition-colors rounded text-white text-sm font-medium whitespace-nowrap">
+                Request Procurement Pack
+              </button>
+            </Link>
           </div>
         </div>
       </section>

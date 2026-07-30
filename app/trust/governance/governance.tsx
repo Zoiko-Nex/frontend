@@ -44,9 +44,11 @@ export default function Governance() {
                   </div>
                 </button>
               </Link>
-              <button className="px-8 py-4 rounded outline outline-1 outline-offset-[-1px] outline-slate-700 hover:bg-slate-800 transition-colors flex flex-col justify-center items-center">
-                <span className="text-center justify-center text-white text-base font-normal font-sans leading-6">View Trust Pack</span>
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 rounded outline outline-1 outline-offset-[-1px] outline-slate-700 hover:bg-slate-800 transition-colors flex flex-col justify-center items-center">
+                  <span className="text-center justify-center text-white text-base font-normal font-sans leading-6">View Trust Pack</span>
+                </button>
+              </Link>
             </div>
           </div>
 

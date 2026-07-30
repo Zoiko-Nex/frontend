@@ -32,9 +32,11 @@ export default function LeadershipPage() {
                                     Request a Leadership Briefing
                                 </button>
                             </Link>
-                            <button className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] rounded-xl transition-all">
-                                View Governance Model
-                            </button>
+                            <Link href="/contact-us">
+                                <button className="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] rounded-xl transition-all">
+                                    View Governance Model
+                                </button>
+                            </Link>
                         </div>
 
                         <div className="border-l-[1.6px] border-lime-500 pl-4 max-w-lg">
@@ -834,12 +836,12 @@ export default function LeadershipPage() {
                         <span className="text-slate-500 text-xs font-['Plus_Jakarta_Sans'] font-semibold">Continue your evaluation:</span>
                         <div className="flex flex-wrap gap-4">
                             {['Governance Model', 'Security & Trust Pack', 'Compliance', 'Evidence Architecture', 'Partners'].map(link => (
-                                <a key={link} href="#" className="inline-flex items-center gap-3 px-5 py-2.5 bg-white rounded-[999px] outline outline-1 outline-slate-300 hover:outline-slate-400 hover:bg-slate-50 transition-all group">
+                                <Link key={link} href="/contact-us" className="inline-flex items-center gap-3 px-5 py-2.5 bg-white rounded-[999px] outline outline-1 outline-slate-300 hover:outline-slate-400 hover:bg-slate-50 transition-all group">
                                     <span className="text-slate-800 text-xs font-semibold font-['Plus_Jakarta_Sans']">{link}</span>
                                     <svg className="w-3 h-3 text-slate-800 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                                     </svg>
-                                </a>
+                                </Link>
                             ))}
                         </div>
                     </div>

@@ -361,9 +361,11 @@ export default function DocumentationPage() {
                                 Request Platform Briefing
                             </button>
                         </Link>
-                        <button className="px-8 py-3.5 bg-transparent border border-gray-500 hover:bg-white/10 transition-colors rounded-sm text-white text-sm font-semibold">
-                            Request Documentation Access
-                        </button>
+                        <Link href="/contact-us">
+                            <button className="px-8 py-3.5 bg-transparent border border-gray-500 hover:bg-white/10 transition-colors rounded-sm text-white text-sm font-semibold">
+                                Request Documentation Access
+                            </button>
+                        </Link>
                     </div>
                 </div>
             </section>

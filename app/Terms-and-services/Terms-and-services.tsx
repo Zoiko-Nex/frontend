@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
+import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 const FORMS_API_URL = "http://localhost:8099";
@@ -218,7 +219,7 @@ export function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Order Form / MSA</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">Enterprise & procurement</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">The signed commercial agreement and order form that define your subscription and precedence.</p>
-              <button onClick={scrollToForm} className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request document <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <Link href="/contact-us" className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request document <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></Link>
             </div>
 
             {/* Card 3 */}
@@ -254,7 +255,7 @@ export function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Data Processing Addendum</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">Legal & privacy reviewers</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">Processing terms, roles, and subprocessor handling for regulated data.</p>
-              <button onClick={scrollToForm} className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request DPA <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <Link href="/contact-us" className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request DPA <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></Link>
             </div>
 
             {/* Card 6 */}
@@ -266,7 +267,7 @@ export function TermsAndServicesPage() {
               <h3 className="text-slate-800 text-base font-bold leading-6 mt-4">Security & Compliance</h3>
               <p className="text-[#8292a1] text-[9.5px] font-medium font-mono uppercase leading-4 tracking-[0.06em] mt-1.5">Security reviewers</p>
               <p className="text-[#475569] text-xs font-normal leading-[18px] mt-2.5 pr-2">Security controls, evidence, and compliance documentation shared under review.</p>
-              <button onClick={scrollToForm} className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request security pack <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+              <Link href="/contact-us" className="text-sky-700 text-xs font-semibold flex items-center gap-[5px] mt-auto hover:text-sky-800 transition-colors">Request security pack <svg className="w-3 h-3 text-sky-700" viewBox="0 0 12 12" fill="none"><path d="M3 6H9M9 6L6.5 3.5M9 6L6.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></Link>
             </div>
           </div>
         </section>
@@ -852,15 +853,15 @@ export function TermsAndServicesPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-              <button onClick={scrollToForm} className="bg-[#1974c0] text-white font-semibold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-[9px] hover:bg-[#1560a0] transition-all shadow-[0_0_24px_rgba(25,116,192,0.6)]">
+              <Link href="/contact-us" className="bg-[#1974c0] text-white font-semibold py-3 px-6 rounded-lg text-sm flex items-center justify-center gap-[9px] hover:bg-[#1560a0] transition-all shadow-[0_0_24px_rgba(25,116,192,0.6)]">
                 Request Legal Pack
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
-              </button>
-              <button className="bg-transparent text-white font-semibold py-3 px-10 rounded-lg border border-slate-500 text-sm hover:bg-white/5 transition-colors">
+              </Link>
+              <Link href="/contact-us" className="bg-transparent text-white font-semibold py-3 px-10 rounded-lg border border-slate-500 text-sm hover:bg-white/5 transition-colors flex items-center justify-center">
                 Talk to Sales
-              </button>
+              </Link>
             </div>
           </div>
         </section>

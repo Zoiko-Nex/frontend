@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Download, Calendar } from "lucide-react";
 
 export default function PlatformCTA() {
@@ -32,22 +33,24 @@ export default function PlatformCTA() {
               and domain-core documentation to see how ZoikoNex
               fits into your existing network stack.
             </p>
-            <button style={{
-              width: "100%",
-              border: "2px solid #000000",
-              backgroundColor: "transparent",
-              color: "#000000",
-              padding: "1.25rem",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "0.75rem",
-              fontSize: "1rem",
-              fontWeight: 600,
-            }}>
-              Download Architecture Brief
-              <Download size={18} />
-            </button>
+            <Link href="/contact-us" style={{ width: "100%", display: "block" }}>
+              <button style={{
+                width: "100%",
+                border: "2px solid #000000",
+                backgroundColor: "transparent",
+                color: "#000000",
+                padding: "1.25rem",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "0.75rem",
+                fontSize: "1rem",
+                fontWeight: 600,
+              }}>
+                Download Architecture Brief
+                <Download size={18} />
+              </button>
+            </Link>
           </div>
 
           {/* RIGHT */}
@@ -63,22 +66,24 @@ export default function PlatformCTA() {
               and new edge-monetization streams with our
               industry-leading monetization specialists.
             </p>
-            <button style={{
-              width: "100%",
-              backgroundColor: "#3182B7",
-              color: "#ffffff",
-              padding: "1.25rem",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "0.75rem",
-              fontSize: "1rem",
-              fontWeight: 600,
-              border: "none",
-            }}>
-              Book Executive Session
-              <Calendar size={18} />
-            </button>
+            <Link href="/contact-us" style={{ width: "100%", display: "block" }}>
+              <button style={{
+                width: "100%",
+                backgroundColor: "#3182B7",
+                color: "#ffffff",
+                padding: "1.25rem",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "0.75rem",
+                fontSize: "1rem",
+                fontWeight: 600,
+                border: "none",
+              }}>
+                Book Executive Session
+                <Calendar size={18} />
+              </button>
+            </Link>
           </div>
 
         </div>

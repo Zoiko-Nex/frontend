@@ -64,9 +64,11 @@ export default function SecurityGovernancePage() {
                   />
                 </button>
               </Link>
-              <button className="px-8 py-4 border border-white hover:bg-white/10 transition rounded-xs text-white text-sm font-semibold">
-                Request Trust Pack
-              </button>
+              <Link href="/contact-us">
+                <button className="px-8 py-4 border border-white hover:bg-white/10 transition rounded-xs text-white text-sm font-semibold">
+                  Request Trust Pack
+                </button>
+              </Link>
             </div>
           </div>
           
@@ -220,9 +222,11 @@ export default function SecurityGovernancePage() {
                 Request Security Briefing
               </button>
             </Link>
-            <button className="px-10 py-5 border border-gray-500 text-gray-300 hover:bg-white/5 transition rounded-xs text-xs font-semibold tracking-wider uppercase">
-              Request Trust Pack
-            </button>
+            <Link href="/contact-us">
+              <button className="px-10 py-5 border border-gray-500 text-gray-300 hover:bg-white/5 transition rounded-xs text-xs font-semibold tracking-wider uppercase">
+                Request Trust Pack
+              </button>
+            </Link>
           </div>
         </div>
       </section>
