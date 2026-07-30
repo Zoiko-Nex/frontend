@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const FORMS_API_URL =
     process.env.NEXT_PUBLIC_FORMS_API_URL ?? 'http://localhost:8099';
@@ -11,39 +12,45 @@ const routingItems = [
         icon: '/image/contact/platform-sales.svg',
         title: 'Platform Sales',
         subtitle: 'MVNO · MNO · telecom groups',
+        url: '/request-a-demo',
     },
     {
         icon: '/image/contact/customer-support.svg',
         title: 'Customer Support',
         subtitle: 'active customers & teams',
+        url: '/documentation',
     },
     {
         icon: '/image/contact/partnerships.svg',
         title: 'Partnerships',
         subtitle: 'MVNA · payments · eSIM · SIs',
+        url: '/partner',
     },
     {
         icon: '/image/contact/developers.svg',
         title: 'Developers & APIs',
         subtitle: 'sandbox · API · integration',
+        url: '/developer-portal',
     },
     {
         icon: '/image/contact/security.svg',
         title: 'Security & Compliance',
         subtitle: 'diligence · risk · procurement',
+        url: '/security',
     },
     {
         icon: '/image/contact/press.svg',
         title: 'Press & Media',
         subtitle: 'journalists & analysts',
+        url: '/press-media',
     },
 ];
 
 const otherRoutes = [
     { tag: 'Press & media', title: 'Media relations', link: 'Press & Media', url: '/press-media' },
-    { tag: 'Ecosystem', title: 'Partnerships', link: 'Partners page', url: '/partners' },
+    { tag: 'Ecosystem', title: 'Partnerships', link: 'Partners page', url: '/partner' },
     { tag: 'Talent', title: 'Careers', link: 'Open roles', url: '/careers' },
-    { tag: 'Legal', title: 'Legal notices', link: 'Legal Intake', url: '/legal' },
+    { tag: 'Legal', title: 'Legal notices', link: 'Legal Intake', url: '/legal#request-legal-pack' },
 ];
 
 const inquiryOptions = [
@@ -292,7 +299,8 @@ export const ContactUs = () => {
                         {/* Routing items */}
                         <div className="flex flex-col flex-1 justify-between py-1">
                             {routingItems.map((item, idx) => (
-                                <div
+                                <Link
+                                    href={item.url}
                                     key={idx}
                                     className={`flex items-center justify-between px-[23px] h-[54px] hover:bg-white/[0.03] transition-colors cursor-pointer group ${
                                         idx < routingItems.length - 1
@@ -331,7 +339,7 @@ export const ContactUs = () => {
                                         height={14}
                                         className="flex-shrink-0 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
                                     />
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
@@ -637,7 +645,7 @@ export const ContactUs = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {otherRoutes.map((route, idx) => (
-                        <a
+                        <Link
                             href={route.url}
                             key={idx}
                             className="bg-white rounded-2xl border border-slate-200 p-[22px] hover:shadow-md transition-shadow cursor-pointer flex flex-col items-start group"
@@ -679,7 +687,7 @@ export const ContactUs = () => {
                                     />
                                 </svg>
                             </div>
-                        </a>
+                        </Link>
                     ))}
                 </div>
             </section>

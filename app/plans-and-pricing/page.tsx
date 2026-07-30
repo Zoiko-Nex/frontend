@@ -438,7 +438,7 @@ const PlansAndPricing = () => {
                     </div>
 
                     {/* Briefing Call */}
-                    <div className="bg-[#0a0f1d] border border-slate-800/60 hover:border-slate-700/80 rounded-xl p-6 flex flex-col justify-between cursor-pointer group transition-all">
+                    <Link href="/contact-us" className="bg-[#0a0f1d] border border-slate-800/60 hover:border-slate-700/80 rounded-xl p-6 flex flex-col justify-between cursor-pointer group transition-all">
                         <div>
                             <div className="w-9 h-9 bg-blue-600/10 rounded-lg flex items-center justify-center mb-4">
                                 <span className="text-cyan-700 text-lg font-normal leading-7" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -456,7 +456,7 @@ const PlansAndPricing = () => {
                             <span>Book a Briefing</span>
                             <span className="group-hover:translate-x-0.5 transition-transform">→</span>
                         </div>
-                    </div>
+                    </Link>
                 </div>
             </section>
 

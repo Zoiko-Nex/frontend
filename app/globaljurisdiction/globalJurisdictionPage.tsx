@@ -354,7 +354,7 @@ export default function GlobalJurisdiction() {
             </div>
 
             {/* Your Domain? */}
-            <div className="w-full p-8 bg-sky-600/10 border border-[#0088cc]/20 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-sky-600/20 transition-all group">
+            <Link href="/contact-us" className="w-full p-8 bg-sky-600/10 border border-[#0088cc]/20 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-sky-600/20 transition-all group block">
               <div className="w-full pb-4 flex flex-col justify-start items-center">
                 <div className="text-white text-base font-normal font-['Hanken_Grotesk'] leading-6">Your Domain?</div>
               </div>
@@ -365,7 +365,7 @@ export default function GlobalJurisdiction() {
                 <div className="text-[#0088cc] text-sm font-bold font-['Inter'] leading-6">Get a Custom Briefing</div>
                 <ArrowRight className="w-4 h-4 text-[#0088cc]" />
               </div>
-            </div>
+            </Link>
 
           </div>
         </div>
