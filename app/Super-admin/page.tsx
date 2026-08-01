@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 "use client";
 import * as React from 'react';
 import './super-admin.css';
@@ -970,7 +970,7 @@ export default function SuperAdminPage() {
             </div>
             <div class="group">
               <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand code</label>
-              <input type="text" id="t-brandcode" required placeholder="globex-mobile" pattern="[a-zA-Z0-9-]+" title="Alphanumeric and hyphens only" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+              <input type="text" id="t-brandcode" required placeholder="globex-mobile" pattern="[a-zA-Z0-9\-]+" title="Alphanumeric and hyphens only" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
             </div>
           </div>
 
