@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { setSession, decodeJwt } from '@/lib/admin/session';
+import { resolveTenant, ResolvedTenant } from '@/lib/admin/tenant-resolver';
 
 const DEFAULT_TENANT_ID = '';
 
@@ -12,11 +13,44 @@ const LoginPage = () => {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [tenantId, setTenantId] = useState(DEFAULT_TENANT_ID);
+    const [resolvedTenant, setResolvedTenant] = useState<ResolvedTenant | null>(null);
+    const [resolvingDomain, setResolvingDomain] = useState(true);
+    const [customDomainInput, setCustomDomainInput] = useState('');
+    const [showManualTenantInput, setShowManualTenantInput] = useState(false);
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    useEffect(() => {
+        const initDomainResolution = async () => {
+            setResolvingDomain(true);
+            const tenant = await resolveTenant();
+            if (tenant) {
+                setResolvedTenant(tenant);
+                setTenantId(tenant.tenant_id);
+            }
+            setResolvingDomain(false);
+        };
+        initDomainResolution();
+    }, []);
+
+    const handleResolveCustomDomain = async () => {
+        if (!customDomainInput.trim()) return;
+        setLoading(true);
+        setError('');
+        const tenant = await resolveTenant(customDomainInput);
+        if (tenant) {
+            setResolvedTenant(tenant);
+            setTenantId(tenant.tenant_id);
+            setSuccess(`Resolved domain to Tenant: ${tenant.name}`);
+            setTimeout(() => setSuccess(''), 3000);
+        } else {
+            setError(`No active tenant found for domain: "${customDomainInput}"`);
+        }
+        setLoading(false);
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,38 +58,50 @@ const LoginPage = () => {
         setError('');
         setSuccess('');
 
+        if (!tenantId) {
+            setError('Tenant ID is required. Please resolve a valid domain or enter a Tenant ID.');
+            setLoading(false);
+            return;
+        }
+
         try {
-            // Use POST /v1/sessions — the real human login endpoint
-            const res = await fetch('/api/identity/v1/sessions', {
+            // Use POST /v1/sessions via proxy or identity API
+            const res = await fetch('/api/proxy', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Tenant-ID': tenantId,
-                },
-                body: JSON.stringify({ email, password }),
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    port: 8080,
+                    method: 'POST',
+                    path: '/v1/sessions',
+                    headers: {
+                        'x-tenant-id': tenantId,
+                    },
+                    body: { email, password },
+                }),
             });
 
-            const data = await res.json();
+            const payload = await res.json();
+            const data = payload.data || {};
 
-            if (!res.ok || !data.access_token) {
+            if (!res.ok || !payload.ok || !data.access_token) {
                 throw new Error(
-                    data.message || data.error_description || 'Authentication failed. Please check your credentials.'
+                    data.message || data.error_description || data.code || 'Authentication failed. Please check your credentials.'
                 );
             }
 
             // Decode the JWT payload to extract user details (display only, not for authz)
-            const payload = decodeJwt(data.access_token) as Record<string, any>;
+            const claims = decodeJwt(data.access_token) as Record<string, any>;
 
-            // Save session using the shared utility (same key the Header navbar reads)
+            // Save session using the shared utility
             setSession({
                 accessToken: data.access_token,
                 refreshToken: data.refresh_token || '',
                 expiresAt: Date.now() + (data.expires_in || 900) * 1000,
-                tenantId: payload?.tenant_id || tenantId,
-                brandId: payload?.brand_id || '',
-                email: payload?.email || email,
-                userId: payload?.sub || '',
-                roles: payload?.roles || [],
+                tenantId: claims?.tenant_id || tenantId,
+                brandId: claims?.brand_id || '',
+                email: claims?.email || email,
+                userId: claims?.sub || '',
+                roles: claims?.roles || [],
             });
 
             setSuccess('Login successful! Redirecting to Dashboard...');
@@ -74,9 +120,9 @@ const LoginPage = () => {
             {/* Lime radial glow */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_92%_8%,rgba(132,204,22,0.08),transparent_60%)] pointer-events-none" />
 
-            <div className="relative w-[983px] h-[604px] flex rounded-2xl overflow-hidden border border-slate-800 shadow-2xl z-10">
+            <div className="relative w-[983px] min-h-[604px] flex rounded-2xl overflow-hidden border border-slate-800 shadow-2xl z-10">
                 {/* Left Panel */}
-                <div className="w-[483px] h-full relative">
+                <div className="w-[483px] relative min-h-full">
                     <Image
                         src="/image/login/login.jpg"
                         alt="ZoikoNex Professional Team"
@@ -96,14 +142,42 @@ const LoginPage = () => {
                 </div>
 
                 {/* Right Panel */}
-                <div className="w-[500px] h-full bg-white text-slate-800 px-[30px] py-[37px] flex flex-col justify-center rounded-r-2xl">
+                <div className="w-[500px] bg-white text-slate-800 px-[30px] py-[37px] flex flex-col justify-center rounded-r-2xl">
                     <div className="w-full max-w-[400px] mx-auto">
                         <h2 className="text-[28px] font-bold text-slate-800 mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                             Welcome Back!
                         </h2>
-                        <p className="text-slate-500 text-sm font-medium mb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                            Log in to manage your telecom operations seamlessly.
-                        </p>
+
+                        {/* Tenant Identification Banner */}
+                        {resolvingDomain ? (
+                            <div className="mb-6 p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-xs flex items-center gap-2">
+                                <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                                Resolving tenant domain identity...
+                            </div>
+                        ) : resolvedTenant ? (
+                            <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs flex items-center justify-between">
+                                <div>
+                                    <span className="font-semibold text-blue-600 uppercase tracking-wide text-[10px] block">Logging in to</span>
+                                    <span className="text-sm font-bold text-slate-900">{resolvedTenant.name}</span>
+                                    <span className="text-slate-500 block text-[11px] font-mono">{resolvedTenant.domain_suffix}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setResolvedTenant(null);
+                                        setTenantId('');
+                                        setShowManualTenantInput(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 text-[11px] underline font-medium"
+                                >
+                                    Change
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm font-medium mb-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                Log in to manage your telecom operations seamlessly.
+                            </p>
+                        )}
 
                         {error && (
                             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold">
@@ -116,7 +190,7 @@ const LoginPage = () => {
                             </div>
                         )}
 
-                        <form className="space-y-5" onSubmit={handleLogin}>
+                        <form className="space-y-4" onSubmit={handleLogin}>
                             <div>
                                 <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                     Email <span className="text-red-500 font-bold">*</span>
@@ -162,34 +236,82 @@ const LoginPage = () => {
                                         )}
                                     </button>
                                 </div>
-                                <div className="flex justify-end mt-2">
-                                    <Link href="/password-reset" className="text-slate-400 hover:text-slate-600 text-sm font-semibold transition-colors">
+                                <div className="flex justify-end mt-1">
+                                    <Link href="/password-reset" className="text-slate-400 hover:text-slate-600 text-xs font-semibold transition-colors">
                                         Forgot Password?
                                     </Link>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                                    TenantID <span className="text-red-500 font-bold">*</span>
-                                </label>
-                                <input
-                                    id="login-tenant-id"
-                                    type="text"
-                                    placeholder="Enter Your TenantID"
-                                    value={tenantId}
-                                    onChange={(e) => setTenantId(e.target.value)}
-                                    className="w-full h-12 bg-white rounded-xl border border-slate-300 px-4 text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-[#1664B1] transition-colors"
-                                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                                    required
-                                    disabled={loading}
-                                />
-                            </div>
+                            {/* Domain Slug Resolver or Manual TenantID Input */}
+                            {!resolvedTenant && (
+                                <div className="border-t border-slate-200 pt-3">
+                                    {!showManualTenantInput ? (
+                                        <div>
+                                            <label className="flex items-center gap-0.5 mb-1.5 text-slate-500 text-xs font-semibold">
+                                                Tenant Domain (e.g. golite.zoikonex.com)
+                                            </label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="golite.zoikonex.com"
+                                                    value={customDomainInput}
+                                                    onChange={(e) => setCustomDomainInput(e.target.value)}
+                                                    className="flex-1 h-10 bg-white rounded-xl border border-slate-300 px-3 text-slate-800 placeholder-slate-400 text-xs focus:outline-none focus:border-[#1664B1]"
+                                                    disabled={loading}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleResolveCustomDomain}
+                                                    disabled={loading || !customDomainInput.trim()}
+                                                    className="px-3 h-10 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
+                                                >
+                                                    Resolve
+                                                </button>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowManualTenantInput(true)}
+                                                    className="text-slate-400 hover:text-slate-600 text-[11px] underline"
+                                                >
+                                                    Use Manual Tenant UUID
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className="flex items-center gap-0.5 mb-1.5 text-slate-500 text-xs font-semibold">
+                                                Tenant ID (UUID) <span className="text-red-500 font-bold">*</span>
+                                            </label>
+                                            <input
+                                                id="login-tenant-id"
+                                                type="text"
+                                                placeholder="Enter Tenant UUID"
+                                                value={tenantId}
+                                                onChange={(e) => setTenantId(e.target.value)}
+                                                className="w-full h-10 bg-white rounded-xl border border-slate-300 px-3 text-slate-800 placeholder-slate-400 text-xs focus:outline-none focus:border-[#1664B1]"
+                                                required
+                                                disabled={loading}
+                                            />
+                                            <div className="flex justify-between items-center mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowManualTenantInput(false)}
+                                                    className="text-slate-400 hover:text-slate-600 text-[11px] underline"
+                                                >
+                                                    Resolve by Domain Suffix
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <button
                                 id="login-submit-btn"
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || !tenantId}
                                 className="w-full h-12 bg-[#1664B1] hover:bg-[#125394] transition-colors text-white text-base font-semibold rounded-xl mt-4 cursor-pointer disabled:bg-slate-400 flex items-center justify-center gap-2"
                                 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                             >
@@ -209,3 +331,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

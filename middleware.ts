@@ -27,11 +27,13 @@ export function middleware(request: NextRequest) {
     requestHeaders.delete('referer');
     requestHeaders.delete('cookie');
 
-    // Auto-inject X-Tenant-ID if missing
+    // Auto-inject X-Tenant-ID from Bearer JWT if missing
     if (!requestHeaders.has('x-tenant-id')) {
       const authHeader = request.headers.get('authorization');
-      const tenantId = getTenantIdFromToken(authHeader) || '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d';
-      requestHeaders.set('x-tenant-id', tenantId);
+      const tenantId = getTenantIdFromToken(authHeader);
+      if (tenantId) {
+        requestHeaders.set('x-tenant-id', tenantId);
+      }
     }
 
     // Dynamically set the Host header to match the target service so JWT validation doesn't fail with 401
