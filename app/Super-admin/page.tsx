@@ -213,6 +213,82 @@ export default function SuperAdminPage() {
       }
     }
 
+    // Auto-generate fields when Super Admin types Tenant Name
+    window.handleTenantNameInput = function (e) {
+      const raw = e.target.value;
+      const slug = raw.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+      const domainEl = document.getElementById('t-domain');
+      const brandNameEl = document.getElementById('t-brandname');
+      const brandCodeEl = document.getElementById('t-brandcode');
+      const adminEmailEl = document.getElementById('t-admin-email');
+      const adminNameEl = document.getElementById('t-admin-name');
+      const adminPassEl = document.getElementById('t-admin-pass');
+
+      if (domainEl && !domainEl.dataset.customized) {
+        domainEl.value = slug ? (slug + '.zoikonex.com') : '';
+      }
+      if (brandNameEl && !brandNameEl.dataset.customized) {
+        brandNameEl.value = raw.trim();
+      }
+      if (brandCodeEl && !brandCodeEl.dataset.customized) {
+        brandCodeEl.value = slug ? (slug + '-mobile') : '';
+      }
+      if (adminEmailEl && !adminEmailEl.dataset.customized) {
+        adminEmailEl.value = slug ? ('admin@' + slug + '.com') : '';
+      }
+      if (adminNameEl && !adminNameEl.dataset.customized) {
+        adminNameEl.value = raw.trim() ? (raw.trim() + ' Admin') : '';
+      }
+      if (adminPassEl && !adminPassEl.dataset.customized && !adminPassEl.value) {
+        const randSuffix = Math.floor(1000 + Math.random() * 9000);
+        adminPassEl.value = 'Zoiko#2026!' + (slug ? (slug.charAt(0).toUpperCase() + slug.slice(1, 6)) : 'Pass') + randSuffix;
+      }
+    }
+
+    window.markFieldCustomized = function (e) {
+      if (e.target.value.trim() !== '') {
+        e.target.dataset.customized = 'true';
+      } else {
+        delete e.target.dataset.customized;
+      }
+    }
+
+    window.autoFillDemoTenant = function () {
+      const demos = [
+        { name: "Nova Cellular", brand: "Nova Mobile", code: "nova-mobile" },
+        { name: "Apex Wireless", brand: "Apex Mobile", code: "apex-mobile" },
+        { name: "Starlight Telecom", brand: "Starlight Mobile", code: "starlight-mobile" },
+        { name: "Vanguard Net", brand: "Vanguard Mobile", code: "vanguard-mobile" },
+        { name: "Quantum Connect", brand: "Quantum Mobile", code: "quantum-mobile" },
+        { name: "Aether Telecom", brand: "Aether Mobile", code: "aether-mobile" }
+      ];
+
+      const item = demos[Math.floor(Math.random() * demos.length)];
+      const randNum = Math.floor(100 + Math.random() * 900);
+      const slug = item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + randNum;
+
+      const nameEl = document.getElementById('t-name');
+      const domainEl = document.getElementById('t-domain');
+      const brandNameEl = document.getElementById('t-brandname');
+      const brandCodeEl = document.getElementById('t-brandcode');
+      const adminEmailEl = document.getElementById('t-admin-email');
+      const adminNameEl = document.getElementById('t-admin-name');
+      const adminPassEl = document.getElementById('t-admin-pass');
+
+      [nameEl, domainEl, brandNameEl, brandCodeEl, adminEmailEl, adminNameEl, adminPassEl].forEach(el => {
+        if (el) delete el.dataset.customized;
+      });
+
+      if (nameEl) nameEl.value = item.name + " " + randNum;
+      if (domainEl) domainEl.value = slug + ".zoikonex.com";
+      if (brandNameEl) brandNameEl.value = item.brand + " " + randNum;
+      if (brandCodeEl) brandCodeEl.value = item.code + "-" + randNum;
+      if (adminEmailEl) adminEmailEl.value = "admin@" + slug + ".com";
+      if (adminNameEl) adminNameEl.value = item.name + " " + randNum + " Admin";
+      if (adminPassEl) adminPassEl.value = "Zoiko#2026!Demo" + randNum;
+    }
+
     // Dynamic tenant loading from backend
     window.loadTenants = async function () {
       try {
@@ -948,7 +1024,10 @@ export default function SuperAdminPage() {
   <div id="invite-modal" class="modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;display:none;background:var(--bg);border:1px solid var(--border);padding:1.5rem;width:520px;max-width:92%;box-shadow:0 10px 30px rgba(0,0,0,0.5);border-radius:12px;max-height:90vh;overflow-y:auto;">
     <div class="modal-content">
       <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <h2 style="margin:0;font-size:1.1rem;">Onboard tenant</h2>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <h2 style="margin:0;font-size:1.1rem;">Onboard tenant</h2>
+          <button type="button" onclick="window.autoFillDemoTenant()" style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;cursor:pointer;">🎲 Auto-Fill Demo</button>
+        </div>
         <button type="button" class="icon-btn" onclick="document.getElementById('invite-modal').style.display='none'" style="background:transparent;border:none;color:var(--tx);cursor:pointer;font-size:1.2rem;">&times;</button>
       </div>
       <form onsubmit="doCreateTenant(event)" style="margin-top:1rem;">
@@ -956,37 +1035,37 @@ export default function SuperAdminPage() {
           <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);margin-bottom:10px;">Company</div>
           <div class="group">
             <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Tenant name</label>
-            <input type="text" id="t-name" required placeholder="Globex Mobile Ltd" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            <input type="text" id="t-name" required placeholder="Globex Mobile Ltd" oninput="window.handleTenantNameInput(event)" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
           </div>
           <div class="group" style="margin-top:0.8rem;">
             <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Domain suffix</label>
-            <input type="text" id="t-domain" required placeholder="globex.zoikonex.com" class="mono" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;font-size:12px;">
-            <div style="font-size:10px;color:var(--ink-faint);margin-top:3px;">A stable slug, e.g. globex.zoikonex.com</div>
+            <input type="text" id="t-domain" required placeholder="globex.zoikonex.com" oninput="window.markFieldCustomized(event)" class="mono" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;font-size:12px;">
+            <div style="font-size:10px;color:var(--ink-faint);margin-top:3px;">Auto-generated domain slug. Editable if needed.</div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:0.8rem;">
             <div class="group">
               <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand name</label>
-              <input type="text" id="t-brandname" required placeholder="Globex Mobile" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+              <input type="text" id="t-brandname" required placeholder="Globex Mobile" oninput="window.markFieldCustomized(event)" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
             </div>
             <div class="group">
               <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Brand code</label>
-              <input type="text" id="t-brandcode" required placeholder="globex-mobile" pattern="[a-zA-Z0-9\-]+" title="Alphanumeric and hyphens only" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+              <input type="text" id="t-brandcode" required placeholder="globex-mobile" pattern="[a-zA-Z0-9\-]+" title="Alphanumeric and hyphens only" oninput="window.markFieldCustomized(event)" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
             </div>
           </div>
 
           <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);margin-top:18px;margin-bottom:10px;">First admin user</div>
           <div class="group">
             <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Email</label>
-            <input type="email" id="t-admin-email" required placeholder="admin@globex.com" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            <input type="email" id="t-admin-email" required placeholder="admin@globex.com" oninput="window.markFieldCustomized(event)" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
           </div>
           <div class="group" style="margin-top:0.8rem;">
             <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Full name</label>
-            <input type="text" id="t-admin-name" required placeholder="Jane Doe" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            <input type="text" id="t-admin-name" required placeholder="Jane Doe" oninput="window.markFieldCustomized(event)" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
           </div>
           <div class="group" style="margin-top:0.8rem;">
             <label style="display:block;margin-bottom:0.2rem;font-size:0.85rem;color:var(--ink-faint);">Temporary password</label>
-            <input type="password" id="t-admin-pass" required minlength="12" placeholder="At least 12 characters" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
-            <div style="font-size:10px;color:var(--ink-faint);margin-top:3px;">At least 12 characters &mdash; shown once after creation, so save it.</div>
+            <input type="password" id="t-admin-pass" required minlength="12" placeholder="At least 12 characters" oninput="window.markFieldCustomized(event)" style="width:100%;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:6px;padding:0.5rem;box-sizing:border-box;">
+            <div style="font-size:10px;color:var(--ink-faint);margin-top:3px;">Auto-generated password &mdash; shown once after creation. Editable if needed.</div>
           </div>
         </div>
         <div class="modal-footer" style="margin-top:1.5rem;display:flex;justify-content:flex-end;gap:0.5rem;">
