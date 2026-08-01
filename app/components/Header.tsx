@@ -453,7 +453,7 @@ export default function Header() {
 
 
           <Link href="/plans-and-pricing" className={isActive("/plans-and-pricing")}>Pricing</Link>
-          <Link href="/login" className={`${isActive("/login")} ml-18`}>Sign in</Link>
+          <Link href="/request-a-demo" className={`${isActive("/request-a-demo")} ml-18`}>Book a Demo</Link>
 
         </nav>
 
