@@ -65,6 +65,15 @@ export function middleware(request: NextRequest) {
     });
   }
 
+  // Never rewrite Next.js internals or static assets — only actual page navigations
+  if (
+    request.nextUrl.pathname.startsWith('/_next/') ||
+    request.nextUrl.pathname.startsWith('/favicon') ||
+    /\.[a-zA-Z0-9]+$/.test(request.nextUrl.pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   // Subdomain-based routing for page requests (*.zoikonex.com)
   const hostname = request.nextUrl.hostname.toLowerCase();
   const pathname = request.nextUrl.pathname;
