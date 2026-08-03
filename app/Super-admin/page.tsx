@@ -183,7 +183,8 @@ export default function SuperAdminPage() {
 
         // Show credential block
         const tenantName = document.getElementById('t-name').value;
-        const loginUrl = window.location.origin + '/admin';
+        const tenantDomain = document.getElementById('t-domain').value;
+        const loginUrl = 'https://' + tenantDomain + '/login';
         const credBlock = 'ZoikoNex Operations Console login\n' +
           'URL: ' + loginUrl + '\n' +
           'Tenant ID: ' + tenantId + '\n' +
