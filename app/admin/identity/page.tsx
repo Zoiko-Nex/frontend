@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/admin/client";
 import { ApiException } from "@/lib/admin/client";
 import { useAuth } from "../_components/useAuth";
-import { permissionDomains } from "../_components/nav";
+import { PermissionPicker, PolicyRule } from "../_components/PermissionPicker";
 import {
   Card, SectionHeader, Table, Th, Td, Tr, Button, Input, Field, Select, Modal,
   CopyId, EmptyState, LoadingRows, ErrorBanner,
@@ -20,7 +20,6 @@ interface User { user_id?: string; id?: string; email?: string; full_name?: stri
 interface Session { session_id?: string; id?: string; user_id?: string; status?: string; created_at?: string; device_fingerprint?: string; ip_address?: string; }
 interface Role { role_id?: string; id?: string; name?: string; description?: string; }
 interface Group { group_id?: string; id?: string; name?: string; }
-interface PolicyRule { effect: string; action_pattern: string; resource_pattern: string; }
 
 export default function IdentityPage() {
   const [tab, setTab] = useState<Tab>("users");
@@ -91,24 +90,17 @@ function UsersTab() {
 /* ───────── New user: identity + permissions in one screen ───────── */
 function NewUserModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { session } = useAuth();
-  const domains = permissionDomains();
   const [form, setForm] = useState({
     email: "", full_name: "", password: "",
     brand_id: session?.brandId || "",
   });
-  const [granted, setGranted] = useState<Set<string>>(new Set());
+  const [rules, setRules] = useState<PolicyRule[]>([]);
   const [result, setResult] = useState<{ email: string; password: string } | null>(null);
-
-  const toggle = (domain: string) => {
-    const next = new Set(granted);
-    if (next.has(domain)) next.delete(domain); else next.add(domain);
-    setGranted(next);
-  };
 
   const create = useMutation({
     mutationFn: () => api.post("identity", "/v1/users", {
       email: form.email, full_name: form.full_name, brand_id: form.brand_id, password: form.password,
-      rules: Array.from(granted).map((domain) => ({ effect: "allow", action_pattern: `${domain}:*`, resource_pattern: "*" })),
+      rules,
     }),
     onSuccess: () => { toast.success("User created"); onDone(); setResult({ email: form.email, password: form.password }); },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create user"),
@@ -149,15 +141,8 @@ function NewUserModal({ onClose, onDone }: { onClose: () => void; onDone: () => 
           <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ax-text-dim)", marginBottom: 10 }}>
             What can they access?
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
-            {domains.map((d) => (
-              <label key={d.domain} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-                <input type="checkbox" checked={granted.has(d.domain)} onChange={() => toggle(d.domain)} />
-                {d.label}
-              </label>
-            ))}
-          </div>
-          {granted.size === 0 && (
+          <PermissionPicker rules={rules} onChange={setRules} />
+          {rules.length === 0 && (
             <p style={{ fontSize: 12, color: "var(--ax-text-faint)", marginTop: 8 }}>
               Nothing selected — this user will be able to sign in but won&apos;t see any dashboard section yet.
             </p>
@@ -261,7 +246,6 @@ function RolesTab() {
 function RoleManageModal({ role, onClose }: { role: Role; onClose: () => void }) {
   const qc = useQueryClient();
   const roleId = (role.role_id || role.id)!;
-  const domains = permissionDomains();
 
   const permsQ = useQuery({
     queryKey: ["identity", "roles", roleId, "permissions"],
@@ -278,23 +262,11 @@ function RoleManageModal({ role, onClose }: { role: Role; onClose: () => void })
   const users = usersQ.data?.users ?? usersQ.data?.items ?? [];
   const emailFor = (userId: string) => users.find((u) => (u.user_id || u.id) === userId)?.email || userId;
 
-  const [checked, setChecked] = useState<Set<string> | null>(null);
-  const grantedDomains = checked ?? new Set(
-    (permsQ.data?.rules ?? [])
-      .filter((rule) => rule.effect?.toLowerCase() === "allow")
-      .flatMap((rule) => domains.filter((d) => rule.action_pattern === "*" || rule.action_pattern.startsWith(`${d.domain}:`)).map((d) => d.domain)),
-  );
-
-  const toggle = (domain: string) => {
-    const next = new Set(grantedDomains);
-    if (next.has(domain)) next.delete(domain); else next.add(domain);
-    setChecked(next);
-  };
+  const [draftRules, setDraftRules] = useState<PolicyRule[] | null>(null);
+  const currentRules = draftRules ?? permsQ.data?.rules ?? [];
 
   const savePermissions = useMutation({
-    mutationFn: () => api.put("identity", `/v1/roles/${roleId}/permissions`, {
-      rules: Array.from(grantedDomains).map((domain) => ({ effect: "allow", action_pattern: `${domain}:*`, resource_pattern: "*" })),
-    }),
+    mutationFn: () => api.put("identity", `/v1/roles/${roleId}/permissions`, { rules: currentRules }),
     onSuccess: () => { toast.success("Permissions saved"); qc.invalidateQueries({ queryKey: ["identity", "roles", roleId, "permissions"] }); },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to save permissions"),
   });
@@ -320,14 +292,7 @@ function RoleManageModal({ role, onClose }: { role: Role; onClose: () => void })
             Dashboard access
           </div>
           {permsQ.isLoading ? <div style={{ fontSize: 13, color: "var(--ax-text-faint)" }}>Loading…</div> : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
-              {domains.map((d) => (
-                <label key={d.domain} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-                  <input type="checkbox" checked={grantedDomains.has(d.domain)} onChange={() => toggle(d.domain)} />
-                  {d.label}
-                </label>
-              ))}
-            </div>
+            <PermissionPicker rules={currentRules} onChange={setDraftRules} />
           )}
         </div>
 
@@ -433,7 +398,6 @@ function GroupsTab() {
 function GroupManageModal({ group, onClose }: { group: Group; onClose: () => void }) {
   const qc = useQueryClient();
   const groupId = (group.group_id || group.id)!;
-  const domains = permissionDomains();
 
   const permsQ = useQuery({
     queryKey: ["identity", "groups", groupId, "permissions"],
@@ -450,23 +414,11 @@ function GroupManageModal({ group, onClose }: { group: Group; onClose: () => voi
   const users = usersQ.data?.users ?? usersQ.data?.items ?? [];
   const emailFor = (userId: string) => users.find((u) => (u.user_id || u.id) === userId)?.email || userId;
 
-  const [checked, setChecked] = useState<Set<string> | null>(null);
-  const grantedDomains = checked ?? new Set(
-    (permsQ.data?.rules ?? [])
-      .filter((rule) => rule.effect?.toLowerCase() === "allow")
-      .flatMap((rule) => domains.filter((d) => rule.action_pattern === "*" || rule.action_pattern.startsWith(`${d.domain}:`)).map((d) => d.domain)),
-  );
-
-  const toggle = (domain: string) => {
-    const next = new Set(grantedDomains);
-    if (next.has(domain)) next.delete(domain); else next.add(domain);
-    setChecked(next);
-  };
+  const [draftRules, setDraftRules] = useState<PolicyRule[] | null>(null);
+  const currentRules = draftRules ?? permsQ.data?.rules ?? [];
 
   const savePermissions = useMutation({
-    mutationFn: () => api.put("identity", `/v1/groups/${groupId}/permissions`, {
-      rules: Array.from(grantedDomains).map((domain) => ({ effect: "allow", action_pattern: `${domain}:*`, resource_pattern: "*" })),
-    }),
+    mutationFn: () => api.put("identity", `/v1/groups/${groupId}/permissions`, { rules: currentRules }),
     onSuccess: () => { toast.success("Permissions saved"); qc.invalidateQueries({ queryKey: ["identity", "groups", groupId, "permissions"] }); },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to save permissions"),
   });
@@ -492,14 +444,7 @@ function GroupManageModal({ group, onClose }: { group: Group; onClose: () => voi
             Dashboard access
           </div>
           {permsQ.isLoading ? <div style={{ fontSize: 13, color: "var(--ax-text-faint)" }}>Loading…</div> : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
-              {domains.map((d) => (
-                <label key={d.domain} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-                  <input type="checkbox" checked={grantedDomains.has(d.domain)} onChange={() => toggle(d.domain)} />
-                  {d.label}
-                </label>
-              ))}
-            </div>
+            <PermissionPicker rules={currentRules} onChange={setDraftRules} />
           )}
         </div>
 
