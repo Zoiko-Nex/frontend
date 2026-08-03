@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 
-const FORMS_API_URL = "http://localhost:8099";
+
 
 const inputCls =
   "w-full flex-1 bg-stone-50 px-4 py-3.5 text-base text-zinc-900 placeholder-gray-500 outline outline-1 outline-offset-[-1px] outline-slate-200 focus:outline-sky-600 transition-all";
@@ -82,18 +82,24 @@ export function MediaInquiryForm() {
     setStatus("submitting");
     setServerError("");
     try {
-      const res = await fetch(`${FORMS_API_URL}/v1/press-media`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: values.fullName.trim(),
-          organization: values.organization.trim(),
-          inquiry_type: values.inquiryType,
-          deadline_utc: toUtcIso(values.deadline),
-          details: values.details.trim(),
+          port: 8099,
+          method: 'POST',
+          path: '/v1/press-media',
+          body: {
+            full_name: values.fullName.trim(),
+            organization: values.organization.trim(),
+            inquiry_type: values.inquiryType,
+            deadline_utc: toUtcIso(values.deadline),
+            details: values.details.trim(),
+          },
         }),
       });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      const payload = await res.json();
+      if (!payload.ok) throw new Error(`Request failed (${payload.status})`);
       setStatus("success");
       setValues(initialState);
       setTouched({});

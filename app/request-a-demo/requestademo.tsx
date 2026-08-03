@@ -23,7 +23,7 @@ const TELECOM_MARKETS = [
   "India"
 ];
 
-const FORMS_API_URL = "http://localhost:8099";
+
 
 const MAX_REQUIREMENTS = 1500;
 
@@ -93,47 +93,47 @@ export default function DeploymentPage() {
     setErrorMessage("");
 
     try {
-      const res = await fetch(`${FORMS_API_URL}/v1/demo-requests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: name,
-          work_email: email,
-          organization: org,
-          job_title: jobTitle.trim(),
-          country: country,
-          operator_type: operatorType,
-          project_requirements: projectRequirements.trim(),
-          source_page: "/request-a-demo"
+          port: 8099,
+          method: 'POST',
+          path: '/v1/demo-requests',
+          body: {
+            full_name: name,
+            work_email: email,
+            organization: org,
+            job_title: jobTitle.trim(),
+            country: country,
+            operator_type: operatorType,
+            project_requirements: projectRequirements.trim(),
+            source_page: '/request-a-demo'
+          }
         })
       });
 
-      if (!res.ok) {
-        let message = "Something went wrong submitting your request.";
-        try {
-          const data = await res.json();
-          if (data && typeof data.message === "string") message = data.message;
-        } catch {
-          // non-JSON error body; keep the default message
-        }
-        setSubmitStatus("error");
+      const payload = await res.json();
+
+      if (!payload.ok) {
+        let message = 'Something went wrong submitting your request.';
+        if (payload.data && typeof payload.data.message === 'string') message = payload.data.message;
+        setSubmitStatus('error');
         setErrorMessage(message);
         return;
       }
 
-      // 201 Created — the submission is persisted. We intentionally do not
-      // surface mail_status to the lead: even if the admin notification failed,
-      // their request was saved and will be picked up.
-      setSubmitStatus("success");
-      setFullName("");
-      setWorkEmail("");
-      setOrganization("");
-      setJobTitle("");
-      setOperatorType("");
-      setProjectRequirements("");
-      setCountrySearch("");
+      // 201 Created — submission is persisted. Do not surface mail_status to the lead.
+      setSubmitStatus('success');
+      setFullName('');
+      setWorkEmail('');
+      setOrganization('');
+      setJobTitle('');
+      setOperatorType('');
+      setProjectRequirements('');
+      setCountrySearch('');
     } catch {
-      setSubmitStatus("error");
+      setSubmitStatus('error');
       setErrorMessage(
         "We couldn't reach the server. Please check your connection and try again."
       );

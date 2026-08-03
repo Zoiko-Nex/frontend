@@ -60,7 +60,7 @@ export default function HomePage() {
   return (
     <main className="w-full min-h-screen overflow-x-hidden bg-gradient-to-br from-gray-50 via-blue-50 to-lime-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <section className="relative w-full overflow-hidden">
-        
+
         {/* Background Glow */}
         <div className="absolute right-[-300px] top-[-250px] h-[700px] w-[700px] rounded-full bg-sky-500/5 blur-3xl pointer-events-none" />
 
@@ -100,9 +100,9 @@ export default function HomePage() {
                   Request a Demo →
                 </Link>
                 <Link href="/platform-architecture">
-                <button className="px-6 md:px-8 py-3.5 md:py-4 bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 rounded-xl font-semibold text-gray-900 dark:text-white hover:bg-slate-50 dark:hover:bg-gray-700 transition duration-200">
-                  View Platform Architecture
-                </button>
+                  <button className="px-6 md:px-8 py-3.5 md:py-4 bg-white dark:bg-gray-800 border border-slate-300 dark:border-gray-700 rounded-xl font-semibold text-gray-900 dark:text-white hover:bg-slate-50 dark:hover:bg-gray-700 transition duration-200">
+                    View Platform Architecture
+                  </button>
                 </Link>
               </div>
 
@@ -152,7 +152,7 @@ export default function HomePage() {
 
               {/* Main Pack Card */}
               <div className="relative w-full max-w-[544px] bg-white/70 backdrop-blur-md border border-white/95 rounded-3xl p-4 sm:p-6 md:p-7 shadow-[0px_8px_20px_0px_rgba(0,0,0,0.06),0px_24px_60px_0px_rgba(0,0,0,0.12)]">
-                
+
                 {/* Heading Block */}
                 <div className="flex items-center justify-between mb-5">
                   <h4 className="text-xs font-semibold text-slate-600 tracking-wider">
@@ -179,11 +179,10 @@ export default function HomePage() {
                         key={tab.id}
                         onMouseEnter={() => setSelectedTab(tab.id as JurisdictionKey)}
                         onClick={() => setSelectedTab(tab.id as JurisdictionKey)}
-                        className={`h-8 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-2 shrink-0 snap-start ${
-                          isActive
+                        className={`h-8 px-3 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-2 shrink-0 snap-start ${isActive
                             ? "bg-sky-600 text-white shadow-md shadow-sky-600/10 border border-sky-600"
                             : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-                        }`}
+                          }`}
                       >
                         {FlagComponent && (
                           <FlagComponent
@@ -214,13 +213,12 @@ export default function HomePage() {
                         {row.label}
                       </span>
                       <span
-                        className={`text-xs font-medium text-left sm:text-right font-['DM_Mono'] break-words tracking-tight max-w-full sm:max-w-[70%] ${
-                          row.isSky
+                        className={`text-xs font-medium text-left sm:text-right font-['DM_Mono'] break-words tracking-tight max-w-full sm:max-w-[70%] ${row.isSky
                             ? "text-sky-600"
                             : row.isLime
-                            ? "text-lime-700"
-                            : "text-gray-900"
-                        }`}
+                              ? "text-lime-700"
+                              : "text-gray-900"
+                          }`}
                       >
                         {row.value}
                       </span>
@@ -250,7 +248,7 @@ export default function HomePage() {
       <section className="w-full bg-white dark:bg-gray-900 border-y border-slate-200 dark:border-gray-700">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-start lg:justify-center gap-6 py-4 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            
+
             <div className="flex items-center gap-2 shrink-0">
               <div className="w-7 h-7 rounded opacity-60 bg-gray-900 dark:bg-gray-700 flex items-center justify-center text-white text-[9px] font-extrabold">
                 TM

@@ -89,13 +89,45 @@ export default function DashboardsPage() {
     tenantId: string;
   } | null>(null);
 
-  const [tenantUsers, setTenantUsers] = useState([
-    { id: "AM", initials: "AM", name: "Alex Mercer", role: "Account Owner", access: "Full", status: "ACTIVE" },
-    { id: "RT", initials: "RT", name: "Rhea Tan", role: "Tenant Admin", access: "Users · Env · Support", status: "ACTIVE" },
-    { id: "SO", initials: "SO", name: "Sam Okafor", role: "Technical Evaluator", access: "Sandbox · Docs", status: "ACTIVE" },
-    { id: "LV", initials: "LV", name: "Lena Vos", role: "Finance Reviewer", access: "Billing · TCO", status: "ACTIVE" },
-    { id: "DH", initials: "DH", name: "Dana Hill", role: "Viewer", access: "Read-only", status: "INVITED" },
-  ]);
+  const [tenantUsers, setTenantUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+
+  const fetchUsers = useCallback(async (tenantId: string) => {
+    setUsersLoading(true);
+    try {
+      const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8080,
+          method: "GET",
+          path: "/v1/users",
+          headers: { "X-Tenant-ID": tenantId }
+        })
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload.ok && payload.data?.items) {
+          const fetchedUsers = payload.data.items.map((u: any) => {
+            const initials = u.full_name ? u.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() : "U";
+            return {
+              id: u.id || u.email,
+              initials,
+              name: u.full_name || u.email,
+              role: u.roles && u.roles.length > 0 ? u.roles.join(", ") : "User",
+              access: u.access_domains ? u.access_domains.join(" · ") : "None",
+              status: u.is_active ? "ACTIVE" : "INVITED"
+            };
+          });
+          setTenantUsers(fetchedUsers);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch users:", err);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
 
   const handleCreateUser = async () => {
     if (!inviteEmail || !inviteName || !invitePassword) {
@@ -593,6 +625,9 @@ export default function DashboardsPage() {
     const session = getSession();
     if (session && session.accessToken) {
       setSessionData({ email: session.email, tenantId: session.tenantId });
+      if (session.tenantId) {
+        fetchUsers(session.tenantId);
+      }
     } else {
       router.replace('/login');
     }
@@ -620,52 +655,37 @@ export default function DashboardsPage() {
 
     const checkBackendServices = async () => {
       try {
-        const healthRes = await fetch("/api/health");
+        const healthRes = await fetch("/api/proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            port: 8080,
+            method: "GET",
+            path: "/v1/me",
+            headers: { "X-Tenant-ID": sessionData.tenantId || "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" }
+          })
+        });
         if (healthRes.ok) {
-          const healthData = await healthRes.json() as Record<string, boolean>;
+          const payload = await healthRes.json();
+          if (payload.ok) {
+            setOnlineCount(18);
 
-          const activePorts = Object.values(healthData).filter(Boolean).length;
-          setOnlineCount(activePorts);
-
-          setServices((prev) =>
-            prev.map((s) => {
-              const backendService = serviceMapping[s.id];
-              const isOnline = healthData[backendService];
-
-              if (isOnline) {
+            setServices((prev) =>
+              prev.map((s) => {
                 let nextBadges = [...s.badges];
                 if (!nextBadges.includes("INTEGRATED")) nextBadges.push("INTEGRATED");
                 if (!nextBadges.includes("ACTIVE")) nextBadges.push("ACTIVE");
                 if (!nextBadges.includes("HEALTHY")) nextBadges.push("HEALTHY");
-
                 nextBadges = nextBadges.filter(b => b !== "AVAILABLE" && b !== "PROVISIONING");
-
+                
                 return {
                   ...s,
                   active: true,
                   badges: Array.from(new Set(nextBadges))
                 };
-              } else {
-                let nextBadges = [...s.badges].filter(b => b !== "INTEGRATED" && b !== "ACTIVE" && b !== "HEALTHY");
-                const defaultActive = s.id !== "partner-settlement" && s.id !== "notifications-campaigns" && s.id !== "iot-connectivity";
-
-                if (s.id === "partner-settlement" && !nextBadges.includes("PROVISIONING")) {
-                  nextBadges.push("PROVISIONING");
-                } else if ((s.id === "notifications-campaigns" || s.id === "iot-connectivity") && !nextBadges.includes("AVAILABLE")) {
-                  nextBadges.push("AVAILABLE");
-                } else if (defaultActive) {
-                  if (!nextBadges.includes("ACTIVE")) nextBadges.push("ACTIVE");
-                  if (!nextBadges.includes("HEALTHY")) nextBadges.push("HEALTHY");
-                }
-
-                return {
-                  ...s,
-                  active: defaultActive,
-                  badges: Array.from(new Set(nextBadges))
-                };
-              }
-            })
-          );
+              })
+            );
+          }
         }
       } catch (err) {
         console.warn("Backend endpoints sync bypassed:", err);
@@ -1069,14 +1089,21 @@ export default function DashboardsPage() {
                     <button
                       key={item.tabKey}
                       onClick={() => setCurrentTab(item.tabKey as any)}
-                      className={`w-full px-3 py-2.5 rounded-[10px] inline-flex justify-start items-center gap-2.5 transition ${currentTab === item.tabKey ? "bg-indigo-50 text-sky-700" : "text-slate-600 hover:bg-slate-50"
-                        }`}
+                      className={`w-full px-3 py-2.5 rounded-[10px] inline-flex justify-start items-center gap-2.5 transition-all ${
+                        currentTab === item.tabKey 
+                          ? "bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold" 
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                      }`}
                     >
-                      <img src={item.iconPath} className={`w-4 h-4 object-contain ${currentTab === item.tabKey ? "" : "opacity-70"}`} alt={item.label} />
-                      <div className="justify-center text-sm font-semibold font-['Plus_Jakarta_Sans']">{item.label}</div>
+                      <img 
+                        src={item.iconPath} 
+                        className={`w-4 h-4 object-contain transition-all ${currentTab === item.tabKey ? "brightness-0 invert" : "opacity-60 grayscale hover:grayscale-0 hover:opacity-100"}`} 
+                        alt={item.label} 
+                      />
+                      <div className="justify-center text-sm">{item.label}</div>
                       {(item.tabKey === "Services" || item.badge) && (
                         <div className="flex-1 min-w-6 inline-flex flex-col justify-start items-end">
-                          <div className={`px-1.5 py-px rounded-[20px] flex flex-col justify-start items-start ${currentTab === item.tabKey ? "bg-sky-700 text-white" : "bg-slate-200 text-slate-600"}`}>
+                          <div className={`px-1.5 py-px rounded-[20px] flex flex-col justify-start items-start ${currentTab === item.tabKey ? "bg-white/20 text-white backdrop-blur-sm" : "bg-slate-200 text-slate-500"}`}>
                             <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">{item.tabKey === "Services" ? `${onlineCount}/18` : item.badge}</div>
                           </div>
                         </div>
@@ -1674,7 +1701,23 @@ export default function DashboardsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-sans">
-                        {portalInvoices.length > 0 ? (
+                        {portalLoading ? (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-6">
+                              <div className="flex flex-col gap-4">
+                                {[1, 2, 3].map(i => (
+                                  <div key={i} className="flex items-center justify-between animate-pulse">
+                                    <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ) : portalInvoices.length > 0 ? (
                           portalInvoices.map((inv: any) => (
                             <tr key={inv.id}>
                               <td className="px-6 py-4 font-mono text-xs font-bold text-sky-700">{inv.id}</td>
@@ -1729,17 +1772,17 @@ export default function DashboardsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-4">
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-xl border border-slate-200/50 shadow-sm">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenant Health</span>
                     <h3 className="text-3xl font-extrabold text-slate-800 mt-2">100% Online</h3>
                     <p className="text-xs text-slate-500 mt-1">All TM Forum cores connected</p>
                   </div>
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-xl border border-slate-200/50 shadow-sm">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Subscribers</span>
                     <h3 className="text-3xl font-extrabold text-slate-800 mt-2">124,592</h3>
                     <p className="text-xs text-slate-500 mt-1">Across all registered brands</p>
                   </div>
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-xl border border-slate-200/50 shadow-sm">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data Ingested</span>
                     <h3 className="text-3xl font-extrabold text-slate-800 mt-2">42.8 GB</h3>
                     <p className="text-xs text-slate-500 mt-1">Real-time CDR rating mediation</p>
@@ -2189,19 +2232,19 @@ export default function DashboardsPage() {
                 </div>
 
                 <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">OPEN TICKETS</span>
                     <span className="text-2xl font-extrabold text-slate-800 mt-2">2</span>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SLA TIER</span>
                     <span className="text-xl font-bold text-slate-800 mt-2">Enterprise</span>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">P1 RESPONSE</span>
                     <span className="text-xl font-bold text-slate-800 mt-2">1 hour</span>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">HYPERCARE</span>
                     <span className="text-xl font-bold text-slate-800 mt-2">Active</span>
                   </div>
@@ -2473,7 +2516,22 @@ export default function DashboardsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-sans">
-                        {tenantUsers.map(user => (
+                        {usersLoading ? (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-6">
+                              <div className="flex flex-col gap-4">
+                                {[1, 2, 3].map(i => (
+                                  <div key={i} className="flex items-center gap-4 animate-pulse">
+                                    <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ) : tenantUsers.map(user => (
                           <tr key={user.id}>
                             <td className="px-6 py-4 flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">{user.initials}</div>
