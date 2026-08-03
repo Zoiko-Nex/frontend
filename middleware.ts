@@ -17,11 +17,25 @@ function getTenantIdFromToken(authHeader: string | null): string | null {
   }
 }
 
+// Hosts that serve the marketing site / tooling — never treated as a tenant subdomain
+const APEX_HOSTS = new Set([
+  'localhost',
+  '127.0.0.1',
+  'zoikonex.com',
+  'www.zoikonex.com',
+]);
+
+const SUPERADMIN_HOST = 'superadmin.zoikonex.com';
+
+function isApexHost(hostname: string): boolean {
+  return APEX_HOSTS.has(hostname) || hostname.endsWith('.vercel.app');
+}
+
 export function middleware(request: NextRequest) {
   // Only apply to our proxied API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
     const requestHeaders = new Headers(request.headers);
-    
+
     // Strip origin and referer to bypass WAF 403 Forbidden
     requestHeaders.delete('origin');
     requestHeaders.delete('referer');
@@ -50,4 +64,31 @@ export function middleware(request: NextRequest) {
       },
     });
   }
+
+  // Subdomain-based routing for page requests (*.zoikonex.com)
+  const hostname = request.nextUrl.hostname.toLowerCase();
+  const pathname = request.nextUrl.pathname;
+
+  if (hostname === SUPERADMIN_HOST) {
+    // superadmin.zoikonex.com -> our internal Super-admin console
+    if (!pathname.startsWith('/Super-admin')) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/Super-admin${pathname === '/' ? '' : pathname}`;
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
+
+  if (!isApexHost(hostname)) {
+    // Any other *.zoikonex.com is a tenant subdomain (e.g. golite.zoikonex.com).
+    // Land the bare domain on the tenant login screen; the login page resolves
+    // the tenant from the hostname itself (see lib/admin/tenant-resolver.ts).
+    if (pathname === '/') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  return NextResponse.next();
 }

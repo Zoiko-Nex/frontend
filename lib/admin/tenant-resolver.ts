@@ -12,6 +12,7 @@ const APEX_DOMAINS = new Set([
   "www.zoikonex.com",
   "platform.zoikonex.io",
   "app.zoikonex.com",
+  "superadmin.zoikonex.com",
 ]);
 
 /**
