@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-const FORMS_API_URL =
-    process.env.NEXT_PUBLIC_FORMS_API_URL ?? 'http://localhost:8099';
+
 
 const routingItems = [
     {
@@ -163,59 +162,49 @@ export const ContactUs = () => {
         setStatus('submitting');
         setServerError('');
         try {
-            const res = await fetch(`${FORMS_API_URL}/v1/contact-us`, {
+            const res = await fetch('/api/proxy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    inquiry_type: values.inquiryType,
-                    full_name: values.fullName.trim(),
-                    work_email: values.workEmail.trim(),
-                    country: values.country,
-                    message: values.message.trim(),
-                    consent: values.agreement,
+                    port: 8099,
+                    method: 'POST',
+                    path: '/v1/contact-us',
+                    body: {
+                        inquiry_type: values.inquiryType,
+                        full_name: values.fullName.trim(),
+                        work_email: values.workEmail.trim(),
+                        country: values.country,
+                        message: values.message.trim(),
+                        consent: values.agreement,
+                        source_page: '/contact-us',
+                    },
                 }),
             });
 
-            let data: {
-                contact_us_id?: string;
-                mail_status?: string;
-                mail_error?: string;
-                message?: string;
-            } | null = null;
-            try {
-                data = await res.json();
-            } catch {
-                data = null;
-            }
+            const payload = await res.json();
+            const data = payload.data || {};
 
-            // The backend persists the submission first, then attempts the admin
-            // email. It returns 201 whenever the record is saved — even if mail
-            // could not be delivered (mail_status = NOT_SENT). So:
-            //   • saved (mail SENT or NOT_SENT) → green
-            //   • not saved → red (the only case where nothing landed)
-            const saved = res.ok && !!data?.contact_us_id;
+            // Backend persists the lead first, then attempts admin email.
+            // Returns ok whenever the record is saved (mail_status may be NOT_SENT).
+            const saved = payload.ok && !!data.contact_us_id;
 
             if (saved) {
-                // Data is safe. If the admin mail failed we still show green to
-                // the visitor, but surface it for ops visibility.
-                if (data?.mail_status === 'NOT_SENT') {
+                if (data.mail_status === 'NOT_SENT') {
                     console.warn(
                         'Contact inquiry saved but admin email was not sent:',
-                        data?.mail_error
+                        data.mail_error
                     );
                 }
                 setStatus('success');
                 setValues(initialState);
                 setTouched({});
             } else {
-                // Neither saved nor mailed — a real failure.
                 setStatus('error');
                 setServerError(
-                    data?.message || `Something went wrong (${res.status}). Please try again.`
+                    data.message || `Something went wrong (${payload.status}). Please try again.`
                 );
             }
         } catch (err) {
-            // Network / unreachable server — nothing was saved.
             setStatus('error');
             setServerError(
                 err instanceof Error
