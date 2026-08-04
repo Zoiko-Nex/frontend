@@ -48,11 +48,34 @@ const BLOCKED_HEADERS = new Set(["connection", "content-length", "cookie", "host
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    const port = Number(payload.port);
-    const envVar = PORT_TO_ENV_VAR[port];
-    const baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
+    let port = Number(payload.port);
     const method = String(payload.method || "GET").toUpperCase();
     const path = String(payload.path || "/");
+
+    // Auto-route based on path to perfectly integrate all APIs using the deployed links
+    if (port === 8080 || !port) {
+      if (path.startsWith('/v1/customers')) port = 8081;
+      else if (path.startsWith('/v1/products') || path.startsWith('/v1/offers') || path.startsWith('/v1/catalog')) port = 8082;
+      else if (path.startsWith('/v1/orders')) port = 8083;
+      else if (path.startsWith('/v1/finance')) port = 8084;
+      else if (path.startsWith('/v1/rating')) port = 8085;
+      else if (path.startsWith('/v1/settlement')) port = 8086;
+      else if (path.startsWith('/v1/assurance')) port = 8087;
+      else if (path.startsWith('/v1/jurisdiction') || path.startsWith('/v1/tax')) port = 8089;
+      else if (path.startsWith('/v1/fraud')) port = 8090;
+      else if (path.startsWith('/v1/kyc')) port = 8091;
+      else if (path.startsWith('/v1/billing') || path.startsWith('/v1/bill-cycles')) port = 8092;
+      else if (path.startsWith('/v1/evidence')) port = 8093;
+      else if (path.startsWith('/v1/usage')) port = 8094;
+      else if (path.startsWith('/v1/dunning')) port = 8095;
+      else if (path.startsWith('/v1/payments') || path.startsWith('/v1/payment-intents')) port = 8096;
+      else if (path.startsWith('/v1/integration')) port = 8097;
+      else if (path.startsWith('/v1/reporting')) port = 8098;
+      else port = 8080;
+    }
+
+    const envVar = PORT_TO_ENV_VAR[port];
+    const baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
 
     if (!baseUrl || !path.startsWith("/")) {
       return NextResponse.json({ status: 400, ok: false, data: { message: "Unknown service port or invalid path." } });

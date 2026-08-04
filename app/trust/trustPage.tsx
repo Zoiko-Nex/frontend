@@ -135,7 +135,7 @@ export default function TrustPage() {
               <h3 className="text-black text-2xl font-semibold font-['Hanken_Grotesk'] pt-2">Procurement Pack</h3>
               <span className="px-2 py-0.5 bg-lime-800/10 text-lime-800 text-[10px] font-['JetBrains_Mono'] w-max rounded">MOST REQUESTED</span>
               <p className="text-zinc-700 text-base font-normal font-['Inter'] flex-1">Standardized trust questionnaires (CAIQ, VSA) and risk assessment summaries.</p>
-              <Link href="#" className="text-sky-600 text-base font-medium font-['Inter'] flex items-center gap-2 hover:underline pt-4">
+              <Link href="/contact-us" className="text-sky-600 text-base font-medium font-['Inter'] flex items-center gap-2 hover:underline pt-4">
                 Download Pack <img src="/image/trust/Icon12.svg" alt="Arrow Right" className="w-2.5 h-2.5" />
               </Link>
             </div>

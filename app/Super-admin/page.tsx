@@ -55,9 +55,9 @@ export default function SuperAdminPage() {
           // Hide the login overlay immediately
           const overlay = document.getElementById('login-overlay');
           if (overlay) overlay.style.display = 'none';
-          // Start health polling and load tenants
+          // Start health polling and load data
           if (typeof window.pollServicesHealth === 'function') window.pollServicesHealth();
-          if (typeof window.loadTenants === 'function') window.loadTenants();
+          if (typeof window.loadAllData === 'function') window.loadAllData();
         } else {
           // No valid session, redirect to login
           window.location.href = '/Super-admin/login';
@@ -333,6 +333,161 @@ export default function SuperAdminPage() {
       }
     }
 
+    const KYC_CASES = [
+      { acc: 'ACC-33120', t: 'GoLite', typ: 'KYC', stg: 'Document review', risk: 'Medium', ev: 'EV-90214' },
+      { acc: 'ACC-33121', t: 'GoLite', typ: 'KYB', stg: 'Beneficial owner', risk: 'High', ev: 'pending' }
+    ];
+
+    const FRAUD_ALERTS = [
+      { case: 'Velocity fraud cluster', t: 'Zoiko Mobile', dom: 'Fraud', sev: 'Critical', sla: 'Blocker', owner: 'Assurance', ev: 'pending' },
+      { case: 'Rating leakage — data roaming', t: 'GoLite', dom: 'Leakage', sev: 'Warning', sla: 'SLA 08h', owner: 'Rev Assurance', ev: 'EV-90213' },
+      { case: '147 rating exceptions', t: 'DriverX', dom: 'Rating', sev: 'Critical', sla: 'SLA 04h', owner: 'Billing Ops', ev: 'EV-90211' }
+    ];
+
+    const PRODUCTS = [
+      { p: '5G Unlimited', t: 'Plan', m: 'UK, USA', pb: 'PB-UK-3, PB-US-2', rev: 'Over time', appr: 'Approved' },
+      { p: 'eSIM Traveller', t: 'Plan', m: 'Global', pb: 'PB-GL-1', rev: 'Point in time', appr: 'In review' },
+      { p: 'Data Booster 10GB', t: 'Add-on', m: 'USA', pb: 'PB-US-2', rev: 'Point in time', appr: 'Approved' },
+      { p: 'Winter Promo −20%', t: 'Promotion', m: 'UK', pb: 'PB-UK-3', rev: '—', appr: 'Pending' }
+    ];
+
+    // Generic fetch wrapper for proxy
+    async function fetchProxy(method, path, body = null) {
+      const payload = {
+        port: 8080,
+        method,
+        path,
+        headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID }
+      };
+      if (body) payload.body = body;
+      const res = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    // Dynamic data loaders
+    window.loadQueue = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/queue');
+        if (payload.ok && payload.data && payload.data.items) {
+          QUEUE.length = 0;
+          payload.data.items.forEach(q => QUEUE.push({
+            sev: q.severity, dom: q.domain, scope: q.scope, obj: q.object, desc: q.description, sla: q.sla, team: q.team, ev: q.evidence_id || 'pending', cta: 'Review', go: 'control'
+          }));
+          if (typeof renderQueue === 'function') renderQueue();
+        }
+      } catch (err) { console.error('loadQueue failed', err); }
+    }
+
+    window.loadOrders = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/orders');
+        if (payload.ok && payload.data && payload.data.orders) {
+          SAGA.length = 0;
+          payload.data.orders.forEach(o => SAGA.push([
+            o.order_id, o.tenant_id, o.customer_id, 'Plan', 'Provisioning', 'System', '0×', o.status, '00h', 'Unassigned'
+          ]));
+          if (typeof RENDER !== 'undefined' && RENDER.orders) RENDER.orders();
+        }
+      } catch (err) { console.error('loadOrders failed', err); }
+    }
+
+    window.loadBillRuns = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/billing-runs');
+        if (payload.ok && payload.data && payload.data.runs) {
+          BILLCYCLES.length = 0;
+          payload.data.runs.forEach(b => BILLCYCLES.push({
+            t: b.tenant_id, cyc: b.cycle_id, state: b.status, acc: b.accounts_count || '0', exc: b.exceptions_count || '0', rev: b.revenue || '$0', appr: b.approval_status || 'Pending', risk: 'Low'
+          }));
+          if (typeof RENDER !== 'undefined' && RENDER.billing) RENDER.billing();
+        }
+      } catch (err) { console.error('loadBillRuns failed', err); }
+    }
+
+    window.loadJurisdictions = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/jurisdictions/packs');
+        if (payload.ok && payload.data && payload.data.packs) {
+          JURIS.length = 0;
+          payload.data.packs.forEach(j => JURIS.push({
+            t: j.tenant_id || 'Unknown', mkt: j.market_code, pack: j.name, cells: ['OK', j.currency + '/2', 'OK', 'OK', 'OK', 'OK', 'OK'], ready: 100, blk: 'None'
+          }));
+          if (typeof RENDER !== 'undefined' && RENDER.jurisdiction) RENDER.jurisdiction();
+        }
+      } catch (err) { console.error('loadJurisdictions failed', err); }
+    }
+
+    window.loadEvidence = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/evidence');
+        if (payload.ok && payload.data && payload.data.records) {
+          EVIDENCE.length = 0;
+          payload.data.records.forEach(e => EVIDENCE.push([
+            e.timestamp, e.tenant_id, e.domain, e.object_ref, e.actor, e.action, e.evidence_id, e.integrity_status || 'Valid'
+          ]));
+          if (typeof RENDER !== 'undefined' && RENDER.evidence) RENDER.evidence();
+        }
+      } catch (err) { console.error('loadEvidence failed', err); }
+    }
+
+    window.loadKycCases = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/kyc/cases');
+        if (payload.ok && payload.data && payload.data.cases) {
+          KYC_CASES.length = 0;
+          payload.data.cases.forEach(c => KYC_CASES.push({
+            acc: c.account_id, t: c.tenant_id, typ: c.case_type, stg: c.stage, risk: c.risk_level, ev: c.evidence_id || 'pending'
+          }));
+          if (typeof RENDER !== 'undefined' && RENDER.identity) RENDER.identity();
+        }
+      } catch (err) { console.error('loadKycCases failed', err); }
+    }
+
+    window.loadFraudAlerts = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/fraud/alerts');
+        if (payload.ok && payload.data && payload.data.alerts) {
+          FRAUD_ALERTS.length = 0;
+          payload.data.alerts.forEach(a => FRAUD_ALERTS.push({
+            case: a.title, t: a.tenant_id, dom: 'Fraud', sev: a.severity, sla: 'SLA', owner: 'Assurance', ev: a.evidence_id || 'pending'
+          }));
+          if (typeof RENDER !== 'undefined' && RENDER.assurance) RENDER.assurance();
+        }
+      } catch (err) { console.error('loadFraudAlerts failed', err); }
+    }
+
+    window.loadProducts = async function () {
+      try {
+        const payload = await fetchProxy('GET', '/v1/products');
+        if (payload.ok && payload.data && payload.data.products) {
+          PRODUCTS.length = 0;
+          payload.data.products.forEach(p => PRODUCTS.push({
+            p: p.name, t: p.product_type, m: 'Global', pb: 'Default', rev: 'Point in time', appr: p.status || 'Draft'
+          }));
+          if (typeof RENDER !== 'undefined' && RENDER.catalogue) RENDER.catalogue();
+        }
+      } catch (err) { console.error('loadProducts failed', err); }
+    }
+
+    window.loadAllData = async function () {
+      console.log('[superadmin] Loading dynamic data from APIs...');
+      await Promise.allSettled([
+        window.loadTenants?.(),
+        window.loadQueue?.(),
+        window.loadOrders?.(),
+        window.loadBillRuns?.(),
+        window.loadJurisdictions?.(),
+        window.loadEvidence?.(),
+        window.loadKycCases?.(),
+        window.loadFraudAlerts?.(),
+        window.loadProducts?.()
+      ]);
+    }
+
     const REAL_SERVICES = [
       { name: 'Identity & Tenancy', url: 'https://identity.api.zoikonex.com' },
       { name: 'Customer & Account', url: 'https://customer.api.zoikonex.com' },
@@ -590,7 +745,9 @@ export default function SuperAdminPage() {
         return `<tr><td class="strong">${m[0]}</td><td>${m[1]}</td><td>${m[2]}</td><td class="${m[3] !== '0' ? 'rc-bad' : ''}">${m[3]}</td><td class="${m[4] !== '0' ? 'rc-warn' : ''}">${m[4]}</td><td class="${m[5] !== '0' ? 'rc-warn' : ''}">${m[5]}</td><td class="${m[6] !== '0' ? 'rc-warn' : ''}">${m[6]}</td><td>${m[7] === 'None' ? chip('c-green', IC.check, 'Clear') : `<a href="#" data-act="${m[7]}">${m[7]}</a>`}</td></tr>`;
       }).join("");
       $("#m-usage").innerHTML = `
-    <div class="headrow"><div>${crumb('usage')}<div class="ptitle">Usage &amp; Charging</div><div class="psub">OCS, OFCS and Convergent Charging are separate deployable components — independent data stores, queues, SLOs and failure domains (ADR-005). Mediation is a stage-based, stateful, replayable pipeline.</div></div></div>
+    <div class="headrow"><div>${crumb('usage')}<div class="ptitle">Usage &amp; Charging</div><div class="psub">OCS, OFCS and Convergent Charging are separate deployable components — independent data stores, queues, SLOs and failure domains (ADR-005). Mediation is a stage-based, stateful, replayable pipeline.</div></div>
+      <button class="btn btn-primary" id="btnSubmitUsage"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Submit Usage</button>
+    </div>
     <div class="sectitle">Charging services <span class="mono">three separate components · OCS · OFCS · convergent</span></div>
     <div class="grid" style="grid-template-columns:repeat(3,1fr)">
       ${CHARGING.map(c => `<div class="panel"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px"><div style="flex:1"><h3 style="margin:0;font-size:14px;display:block">${c.n}</h3><div class="mono" style="font-size:10px;color:var(--ink-faint);margin-top:5px">${c.sub}</div></div>${chip(c.cls, c.cls === 'c-green' ? IC.check : IC.warn, c.st)}</div>
@@ -607,6 +764,7 @@ export default function SuperAdminPage() {
     <div class="sectitle">Mediation pipeline <span class="mono">ingest → validate → normalise → enrich → deduplicate → correlate → rate → rated · DLQ per stage</span></div>
     <div class="tablewrap"><table><thead><tr><th>Stage</th><th>Received</th><th>Processed</th><th>Rejected</th><th>Duplicates</th><th>Late</th><th>Suspense</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>`;
       $$("#m-usage [data-act]").forEach(a => a.addEventListener('click', e => { e.preventDefault(); toast(a.dataset.act + ' — evidence-backed queue') }));
+      $("#btnSubmitUsage")?.addEventListener('click', () => submitUsageModal());
       bindGo($("#m-usage"));
     }
 
@@ -614,12 +772,19 @@ export default function SuperAdminPage() {
       const rows = BILLCYCLES.map((b, i) => `<tr><td class="strong">${b.t}</td><td>${b.cyc}</td><td>${chip(b.state === 'Exception Review' ? 'c-amber' : b.state === 'Rating Complete' ? 'c-red' : 'c-blue', IC.dot, b.state)}</td><td>${b.acc}</td><td class="${b.exc !== '0' ? 'rc-bad' : ''}">${b.exc}</td><td class="strong">${b.rev}</td><td>${statusChip(b.appr)}</td><td>${statusChip(b.risk)}</td>
     <td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" data-billrun="${i}">Manage</button></td></tr>`).join("");
       $("#m-billing").innerHTML = `
-    <div class="headrow"><div>${crumb('billing')}<div class="ptitle">Bill Run Command</div><div class="psub">Approving, executing, aborting or overriding a bill run is privileged — it requires reason code, simulation evidence, dual approval where policy applies, and immutable Evidence Ledger capture. Amounts are ISO 4217 integer minor units; rounding is jurisdiction-pack governed (ADR-003).</div></div></div>
+    <div class="headrow"><div>${crumb('billing')}<div class="ptitle">Bill Run Command</div><div class="psub">Approving, executing, aborting or overriding a bill run is privileged — it requires reason code, simulation evidence, dual approval where policy applies, and immutable Evidence Ledger capture. Amounts are ISO 4217 integer minor units; rounding is jurisdiction-pack governed (ADR-003).</div></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-sec" id="btnCapturePayment"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Capture Payment</button>
+        <button class="btn btn-primary" id="btnExecuteBillRun"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Execute Bill Run</button>
+      </div>
+    </div>
     <div class="sectitle">Bill cycle workflow</div>
     <div class="flow">${BILLFLOW.map((s, i) => `<span class="fs ${i < 5 ? 'done' : i === 5 ? 'cur' : ''}">${s}</span>`).join("")}</div>
     <div class="sectitle">Active bill runs <span class="mono">Nov 2024</span></div>
     <div class="tablewrap"><table><thead><tr><th>Tenant</th><th>Cycle</th><th>State</th><th>Accounts</th><th>Exceptions</th><th>Revenue</th><th>Approval</th><th>Risk</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
       $$("#m-billing [data-billrun]").forEach(b => b.addEventListener('click', () => billRunModal(BILLCYCLES[+b.dataset.billrun])));
+      $("#btnExecuteBillRun")?.addEventListener('click', () => executeBillRunModal());
+      $("#btnCapturePayment")?.addEventListener('click', () => capturePaymentModal());
     }
 
     function renderJurisdiction() {
@@ -629,11 +794,14 @@ export default function SuperAdminPage() {
     <td style="min-width:120px"><div style="display:flex;align-items:center;gap:8px"><div class="progress"><i style="width:${j.ready}%;background:${j.ready >= 95 ? 'var(--green)' : j.ready >= 60 ? 'var(--amber)' : 'var(--danger)'}"></i></div><b style="font-size:11px">${j.ready}%</b></div></td>
     <td>${j.blk === 'None' ? chip('c-green', IC.check, 'Ready') : chip(j.ready === 0 ? 'c-red' : 'c-amber', IC.warn, j.blk)}</td></tr>`).join("");
       $("#m-jurisdiction").innerHTML = `
-    <div class="headrow"><div>${crumb('jurisdiction')}<div class="ptitle">Compliance Readiness</div><div class="psub">Jurisdiction packs are versioned, independently deployable artefacts (ADR-009) — no country-specific logic in service code. Missing pack elements are a hard production block, and data residency is enforced by infrastructure, not an application checkbox.</div></div></div>
+    <div class="headrow"><div>${crumb('jurisdiction')}<div class="ptitle">Compliance Readiness</div><div class="psub">Jurisdiction packs are versioned, independently deployable artefacts (ADR-009) — no country-specific logic in service code. Missing pack elements are a hard production block, and data residency is enforced by infrastructure, not an application checkbox.</div></div>
+      <button class="btn btn-primary" id="btnCreatePack"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New Pack</button>
+    </div>
     <div class="sectitle">Jurisdiction pack promotion <span class="mono">versioned artefact lifecycle</span></div>
     <div class="flow">${['Draft', 'Review', 'Staged', 'Production'].map((s, i) => `<span class="fs ${i < 3 ? 'done' : i === 3 ? 'cur' : ''}">${s}</span>`).join("")}</div>
     <div class="sectitle">Readiness matrix <span class="mono">Tenant → Market → Pack → Tax → Invoice → Payments → KYC → Residency → Evidence</span></div>
     <div class="tablewrap"><table><thead><tr><th>Tenant</th><th>Market</th><th>Pack</th>${cellHdr.map(h => `<th>${h}</th>`).join("")}<th>Ready</th><th>Blocker</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      $("#btnCreatePack")?.addEventListener('click', () => createJurisdictionPackModal());
     }
 
     function renderEvidence() {
@@ -665,7 +833,9 @@ export default function SuperAdminPage() {
       const rows = SAGA.map(s => `<tr><td class="mono strong" style="font-size:11px">${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td><td class="rc-bad">${s[4]}</td><td class="mono" style="font-size:11px">${s[5]}</td><td>${s[6]}</td><td>${chip(s[7] === 'Rolled back' ? 'c-red' : s[7] === 'Compensating' ? 'c-amber' : 'c-blue', IC.dot, s[7])}</td><td class="mono" style="font-size:11px">${s[8]}</td><td>${s[9] === 'Unassigned' ? chip('c-red', IC.warn, 'Unassigned') : s[9]}</td>
     <td style="text-align:right"><button class="btn btn-ghost btn-sm" data-ord="${s[0]}">Actions</button></td></tr>`).join("");
       $("#m-orders").innerHTML = `
-    <div class="headrow"><div>${crumb('orders')}<div class="ptitle">Provisioning &amp; Saga Monitor</div><div class="psub">Distributed transaction visibility: current step, failed step, retry count, rollback status and compensating action. Every action is permission-gated and evidence-backed.</div></div></div>
+    <div class="headrow"><div>${crumb('orders')}<div class="ptitle">Provisioning &amp; Saga Monitor</div><div class="psub">Distributed transaction visibility: current step, failed step, retry count, rollback status and compensating action. Every action is permission-gated and evidence-backed.</div></div>
+      <button class="btn btn-primary" id="btnSubmitOrder"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Submit Order</button>
+    </div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi"><div class="l">Orders failed</div><div class="v sm" style="color:var(--danger)">23</div></div>
       <div class="kpi"><div class="l">eSIM pending</div><div class="v sm" style="color:var(--amber)">14</div></div>
@@ -677,50 +847,51 @@ export default function SuperAdminPage() {
     <div class="sectitle">Failure queue <span class="mono">not buried inside order details</span></div>
     <div class="tablewrap"><table><thead><tr><th>Order</th><th>Tenant</th><th>Customer</th><th>Product</th><th>Failed step</th><th>External system</th><th>Retry</th><th>Saga</th><th>SLA</th><th>Owner</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
       $$("#m-orders [data-ord]").forEach(b => b.addEventListener('click', () => toast(b.dataset.ord + ' — retry · assign owner · trigger compensation · escalate to carrier · view evidence')));
+      $("#btnSubmitOrder")?.addEventListener('click', () => submitOrderModal());
     }
 
     function renderAssurance() {
+      const rows = FRAUD_ALERTS.map(a => `<tr><td class="strong">${a.case}</td><td>${a.t}</td><td>${chip('c-violet', IC.dot, a.dom)}</td><td>${sevChip(a.sev)}</td><td class="mono" style="font-size:11px">${a.sla}</td><td>${a.owner}</td><td class="mono" style="font-size:11px;color:var(--violet)">${a.ev}</td></tr>`).join("");
       $("#m-assurance").innerHTML = `
     <div class="headrow"><div>${crumb('assurance')}<div class="ptitle">Assurance &amp; Risk</div><div class="psub">Leakage, fraud, rating and billing exceptions, payment risk and regulatory risk register — each item is evidence-linked.</div></div></div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-      <div class="kpi"><div class="l">Open fraud alerts</div><div class="v sm" style="color:var(--danger)">8</div><div class="d">${chip('c-red', IC.warn, 'Zoiko Mobile')}</div></div>
+      <div class="kpi"><div class="l">Open fraud alerts</div><div class="v sm" style="color:var(--danger)">${FRAUD_ALERTS.length}</div><div class="d">${chip('c-red', IC.warn, 'Active')}</div></div>
       <div class="kpi"><div class="l">Leakage alerts</div><div class="v sm" style="color:var(--amber)">2</div></div>
       <div class="kpi"><div class="l">Rating exceptions</div><div class="v sm" style="color:var(--danger)">147</div></div>
       <div class="kpi"><div class="l">High-risk accounts</div><div class="v sm" style="color:var(--amber)">12</div></div>
     </div>
-    <div class="tablewrap" style="margin-top:6px"><table><thead><tr><th>Case</th><th>Tenant</th><th>Domain</th><th>Severity</th><th>SLA</th><th>Owner</th><th>Evidence</th></tr></thead><tbody>
-      <tr><td class="strong">Velocity fraud cluster</td><td>Zoiko Mobile</td><td>${chip('c-violet', IC.dot, 'Fraud')}</td><td>${sevChip('Critical')}</td><td class="mono" style="font-size:11px">Blocker</td><td>Assurance</td><td class="mono" style="font-size:11px;color:var(--violet)">pending</td></tr>
-      <tr><td class="strong">Rating leakage — data roaming</td><td>GoLite</td><td>${chip('c-violet', IC.dot, 'Leakage')}</td><td>${sevChip('Warning')}</td><td class="mono" style="font-size:11px">SLA 08h</td><td>Rev Assurance</td><td class="mono" style="font-size:11px;color:var(--violet)">EV-90213</td></tr>
-      <tr><td class="strong">147 rating exceptions</td><td>DriverX</td><td>${chip('c-violet', IC.dot, 'Rating')}</td><td>${sevChip('Critical')}</td><td class="mono" style="font-size:11px">SLA 04h</td><td>Billing Ops</td><td class="mono" style="font-size:11px;color:var(--violet)">EV-90211</td></tr>
-    </tbody></table></div>`;
+    <div class="tablewrap" style="margin-top:6px"><table><thead><tr><th>Case</th><th>Tenant</th><th>Domain</th><th>Severity</th><th>SLA</th><th>Owner</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
 
     function renderIdentity() {
+      const rows = KYC_CASES.map(c => `<tr><td class="mono strong" style="font-size:11px">${c.acc}</td><td>${c.t}</td><td>${c.typ}</td><td>${chip('c-amber', IC.clock, c.stg)}</td><td>${statusChip(c.risk)}</td><td class="mono" style="font-size:11px;color:var(--violet)">${c.ev}</td></tr>`).join("");
       $("#m-identity").innerHTML = `
-    <div class="headrow"><div>${crumb('identity')}<div class="ptitle">Identity &amp; Customers</div><div class="psub">Customers, accounts, lifecycle, KYC/KYB, consent and payer/subscriber separation — governed across tenants.</div></div></div>
+    <div class="headrow"><div>${crumb('identity')}<div class="ptitle">Identity &amp; Customers</div><div class="psub">Customers, accounts, lifecycle, KYC/KYB, consent and payer/subscriber separation — governed across tenants.</div></div>
+      <button class="btn btn-primary" id="btnCreateCustomer"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New Customer</button>
+    </div>
     <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
       <div class="kpi"><div class="l">Customers</div><div class="v sm">1.24M</div></div>
       <div class="kpi"><div class="l">Accounts</div><div class="v sm">987K</div></div>
-      <div class="kpi"><div class="l">Pending KYC</div><div class="v sm" style="color:var(--amber)">12</div><div class="d">${chip('c-amber', IC.warn, 'GoLite')}</div></div>
+      <div class="kpi"><div class="l">Pending KYC</div><div class="v sm" style="color:var(--amber)">${KYC_CASES.length}</div><div class="d">${chip('c-amber', IC.warn, 'Queue')}</div></div>
       <div class="kpi"><div class="l">Consent gaps</div><div class="v sm">0</div><div class="d">${chip('c-green', IC.check, 'Clear')}</div></div>
     </div>
     <div class="sectitle">KYC / KYB queue</div>
-    <div class="tablewrap"><table><thead><tr><th>Account</th><th>Tenant</th><th>Type</th><th>Stage</th><th>Risk</th><th>Evidence</th></tr></thead><tbody>
-      <tr><td class="mono strong" style="font-size:11px">ACC-33120</td><td>GoLite</td><td>KYC</td><td>${chip('c-amber', IC.clock, 'Document review')}</td><td>${statusChip('Medium')}</td><td class="mono" style="font-size:11px;color:var(--violet)">EV-90214</td></tr>
-      <tr><td class="mono strong" style="font-size:11px">ACC-33121</td><td>GoLite</td><td>KYB</td><td>${chip('c-amber', IC.clock, 'Beneficial owner')}</td><td>${statusChip('High')}</td><td class="mono" style="font-size:11px;color:var(--violet)">pending</td></tr>
-    </tbody></table></div>`;
+    <div class="tablewrap"><table><thead><tr><th>Account</th><th>Tenant</th><th>Type</th><th>Stage</th><th>Risk</th><th>Evidence</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      $("#btnCreateCustomer")?.addEventListener('click', () => createCustomerModal());
     }
 
     function renderCatalogue() {
+      const rows = PRODUCTS.map(p => `<tr><td class="strong">${p.p}</td><td>${p.t}</td><td>${p.m}</td><td class="mono" style="font-size:11px">${p.pb}</td><td>${p.rev}</td><td>${p.appr === 'Approved' ? statusChip('Approved') : chip('c-amber', IC.clock, p.appr)}</td></tr>`).join("");
       $("#m-catalogue").innerHTML = `
     <div class="headrow"><div>${crumb('catalogue')}<div class="ptitle">Catalogue &amp; Commercial</div><div class="psub">Products, plans, tariffs, promotions and eligibility with jurisdiction price books and a catalogue approval workflow.</div></div>
-      <button class="btn btn-primary" onclick="document.querySelector('[data-suspend]')&&0"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New plan</button></div>
-    <div class="tablewrap"><table><thead><tr><th>Product</th><th>Type</th><th>Markets</th><th>Price book</th><th>Rev-rec</th><th>Approval</th></tr></thead><tbody>
-      <tr><td class="strong">5G Unlimited</td><td>Plan</td><td>UK, USA</td><td class="mono" style="font-size:11px">PB-UK-3, PB-US-2</td><td>Over time</td><td>${statusChip('Approved')}</td></tr>
-      <tr><td class="strong">eSIM Traveller</td><td>Plan</td><td>Global</td><td class="mono" style="font-size:11px">PB-GL-1</td><td>Point in time</td><td>${chip('c-amber', IC.clock, 'In review')}</td></tr>
-      <tr><td class="strong">Data Booster 10GB</td><td>Add-on</td><td>USA</td><td class="mono" style="font-size:11px">PB-US-2</td><td>Point in time</td><td>${statusChip('Approved')}</td></tr>
-      <tr><td class="strong">Winter Promo −20%</td><td>Promotion</td><td>UK</td><td class="mono" style="font-size:11px">PB-UK-3</td><td>—</td><td>${chip('c-amber', IC.clock, 'Pending')}</td></tr>
-    </tbody></table></div>`;
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-sec" id="btnNewOffer"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New Offer</button>
+        <button class="btn btn-primary" id="btnNewProd"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New Product</button>
+      </div>
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>Product</th><th>Type</th><th>Markets</th><th>Price book</th><th>Rev-rec</th><th>Approval</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      $("#btnNewProd")?.addEventListener('click', () => createProductModal());
+      $("#btnNewOffer")?.addEventListener('click', () => createOfferModal());
     }
 
     function renderPlatform() {
@@ -839,7 +1010,21 @@ export default function SuperAdminPage() {
     <div class="evnote"><svg viewBox="0 0 24 24">${IC.dot}</svg>This action writes an immutable Evidence Ledger record with actor, timestamp, reason and approval reference.</div>
   </div>
   <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-danger" id="doSuspend">Request suspension</button></div>`);
-      $("#doSuspend").addEventListener('click', () => { if (!$("#dualA").checked) { toast('Dual approval must be acknowledged'); return; } closeModal(); toast(t.n + ' — suspension requested · pending second approval · EV logged'); track('tenant_suspend_request', { tenant: t.n }); });
+      $("#doSuspend").addEventListener('click', async () => {
+        if (!$("#dualA").checked) { toast('Dual approval must be acknowledged'); return; }
+        const btn = $("#doSuspend");
+        btn.textContent = "Requesting...";
+        try {
+          const res = await fetchProxy('POST', '/v1/tenants/' + (t.id || 'default') + '/suspend');
+          if (!res.ok) throw new Error(res.data?.message || 'API failed');
+          closeModal();
+          toast(t.n + ' — suspension requested · pending second approval · EV logged');
+          track('tenant_suspend_request', { tenant: t.n });
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Request suspension";
+        }
+      });
     }
     function promoteModal(t) {
       openModal(`<div class="modal-h danger"><div class="ic"><svg viewBox="0 0 24 24">${IC.lock}</svg></div><div><h3>Production promotion blocked</h3><p>${t.n} cannot be promoted to production until all jurisdiction-pack elements are valid.</p></div></div>
@@ -875,7 +1060,379 @@ export default function SuperAdminPage() {
     <div class="evnote"><svg viewBox="0 0 24 24">${IC.dot}</svg>Hash-chain verification runs before export; the export event is itself recorded in the ledger.</div>
   </div>
   <div class="modal-f"><button class="btn btn-sec" data-close>Reject</button><button class="btn btn-primary" id="doExport">Approve export</button></div>`);
-      $("#doExport").addEventListener('click', () => { if (!$("#dualE").checked) { toast('Approver confirmation required'); return; } closeModal(); toast('Evidence pack approved · export logged · EV-90215'); track('evidence_export_approved'); });
+      $("#doExport").addEventListener('click', async () => {
+        if (!$("#dualE").checked) { toast('Approver confirmation required'); return; }
+        const btn = $("#doExport");
+        btn.textContent = "Exporting...";
+        try {
+          const res = await fetchProxy('POST', '/v1/evidence/export');
+          if (!res.ok) throw new Error(res.data?.message || 'API failed');
+          closeModal();
+          toast('Evidence pack approved · export logged');
+          track('evidence_export_approved');
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Approve & Export";
+        }
+      });
+    }
+
+    function createProductModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg></div><div><h3>Create Product</h3><p>Define a new base product, add-on, or hardware in the catalogue.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Product Name</label><input type="text" id="cp-name" placeholder="e.g. 5G Max Plan"></div>
+    <div class="field"><label>Product Type</label><select id="cp-type"><option value="BASE_PLAN">Base Plan</option><option value="ADDON">Add-on</option><option value="HARDWARE">Hardware</option></select></div>
+    <div class="field"><label>Currency Code</label><select id="cp-curr"><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.dot}</svg>Created products are in DRAFT state initially.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doCreateProduct">Create Product</button></div>`);
+
+      $("#doCreateProduct").addEventListener('click', async () => {
+        const btn = $("#doCreateProduct");
+        btn.textContent = "Creating...";
+        try {
+          const payload = {
+            product_name: $("#cp-name").value,
+            product_type: $("#cp-type").value,
+            currency_code: $("#cp-curr").value
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/products',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Product created successfully: ' + payload.name);
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Create Product";
+        }
+      });
+    }
+
+    function createOfferModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg></div><div><h3>Create Commercial Offer</h3><p>Create a commercial offer attached to a product.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Product ID</label><input type="text" id="co-prodid" placeholder="UUID of the parent product"></div>
+    <div class="field"><label>Offer Name</label><input type="text" id="co-name" placeholder="e.g. Winter Promo Plan"></div>
+    <div class="field"><label>Validity (Days)</label><input type="number" id="co-days" placeholder="30"></div>
+    <div class="field"><label>Country Code</label><select id="co-country"><option value="GB">United Kingdom (GB)</option><option value="US">United States (US)</option></select></div>
+    <div class="field"><label>Jurisdiction Code</label><select id="co-jurisdiction"><option value="UK_MAIN">UK Main</option><option value="US_FEDERAL">US Federal</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.dot}</svg>This offer becomes available for ordering immediately.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doCreateOffer">Create Offer</button></div>`);
+
+      $("#doCreateOffer").addEventListener('click', async () => {
+        const btn = $("#doCreateOffer");
+        btn.textContent = "Creating...";
+        try {
+          const payload = {
+            product_id: $("#co-prodid").value,
+            offer_name: $("#co-name").value,
+            description: "",
+            validity_days: parseInt($("#co-days").value, 10) || 30,
+            country_code: $("#co-country").value,
+            jurisdiction_code: $("#co-jurisdiction").value
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/offers',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Offer created successfully: ' + payload.offer_name);
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Create Offer";
+        }
+      });
+    }
+
+    function submitOrderModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><div><h3>Submit Order</h3><p>Order an offer for a customer. Will begin provisioning saga.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Customer ID</label><input type="text" id="so-cust" placeholder="Customer UUID"></div>
+    <div class="field"><label>Account ID</label><input type="text" id="so-acct" placeholder="Billing Account UUID"></div>
+    <div class="field"><label>Order Type</label><select id="so-type"><option value="NEW_ACTIVATION">New Activation</option><option value="MIGRATION">Migration</option></select></div>
+    <div class="field"><label>Catalog Version ID</label><input type="text" id="so-cat" placeholder="Catalog Version UUID or ID" value="1"></div>
+    <div class="field"><label>Currency</label><select id="so-curr"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.warn}</svg>Order submission initiates the fulfillment saga across systems.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doSubmitOrder">Submit Order</button></div>`);
+
+      $("#doSubmitOrder").addEventListener('click', async () => {
+        const btn = $("#doSubmitOrder");
+        btn.textContent = "Submitting...";
+        try {
+          const payload = {
+            customer_id: $("#so-cust").value,
+            account_id: $("#so-acct").value,
+            order_type: $("#so-type").value,
+            catalog_version_id: $("#so-cat").value,
+            currency_code: $("#so-curr").value
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/orders',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Order submitted successfully!');
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Submit Order";
+        }
+      });
+    }
+
+    function createCustomerModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c1.5-4 5-6 8-6s6.5 2 8 6"/></svg></div><div><h3>Create Customer</h3><p>Create a customer profile. Subject to KYC.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Party ID</label><input type="text" id="cc-party" placeholder="UUID (auto-generated if empty)"></div>
+    <div class="field"><label>Customer Type</label><select id="cc-type"><option value="RETAIL">Retail</option><option value="ENTERPRISE">Enterprise</option><option value="WHOLESALE">Wholesale</option><option value="PARTNER">Partner</option><option value="GOVERNMENT">Government</option></select></div>
+    <div class="field"><label>Segment</label><input type="text" id="cc-seg" placeholder="e.g. High Value"></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.dot}</svg>Customer will be created in PENDING_KYC state.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doCreateCustomer">Create Customer</button></div>`);
+
+      $("#doCreateCustomer").addEventListener('click', async () => {
+        const btn = $("#doCreateCustomer");
+        btn.textContent = "Creating...";
+        try {
+          const payload = {
+            party_id: $("#cc-party").value || crypto.randomUUID(),
+            customer_type: $("#cc-type").value,
+            segment: $("#cc-seg").value || undefined,
+            status: "PENDING_KYC"
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/customers',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Customer created successfully: ' + payload.email);
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Create Customer";
+        }
+      });
+    }
+
+    function submitUsageModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 7 4-14 3 7h4"/></svg></div><div><h3>Submit Usage Event</h3><p>Inject a raw usage event into mediation.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Account ID</label><input type="text" id="su-acct" placeholder="Billing Account UUID"></div>
+    <div class="field"><label>Account ID</label><input type="text" id="su-acct" placeholder="Billing Account UUID"></div>
+    <div class="field"><label>Subscriber ID</label><input type="text" id="su-svc" placeholder="Subscriber UUID"></div>
+    <div class="field"><label>Event Type</label><select id="su-type"><option value="CDR_VOICE">Voice</option><option value="CDR_DATA">Data</option><option value="CDR_SMS">SMS</option></select></div>
+    <div class="field"><label>Quantity</label><input type="number" id="su-vol" placeholder="e.g. 1024"></div>
+    <div class="field"><label>Unit of Measure</label><select id="su-uom"><option value="BYTES">Bytes</option><option value="SECONDS">Seconds</option><option value="EVENTS">Events</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.warn}</svg>This bypasses real network elements and directly seeds the mediation engine.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doSubmitUsage">Submit Event</button></div>`);
+
+      $("#doSubmitUsage").addEventListener('click', async () => {
+        const btn = $("#doSubmitUsage");
+        btn.textContent = "Submitting...";
+        try {
+          const payload = {
+            source_system: "ADMIN_UI",
+            external_record_id: crypto.randomUUID(),
+            account_id: $("#su-acct").value,
+            subscriber_id: $("#su-svc").value,
+            customer_id: $("#su-acct").value,
+            source_type: $("#su-type").value,
+            quantity: parseInt($("#su-vol").value, 10) || 0,
+            quantity_unit: $("#su-uom").value,
+            usage_start_at: new Date().toISOString(),
+            usage_end_at: new Date().toISOString()
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/usage/ingest',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Usage event submitted to mediation.');
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Submit Event";
+        }
+      });
+    }
+
+    function executeBillRunModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></div><div><h3>Execute Bill Run</h3><p>Trigger invoice generation for a cycle.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Account ID</label><input type="text" id="br-acct" placeholder="Billing Account UUID"></div>
+    <div class="field"><label>Customer ID</label><input type="text" id="br-cust" placeholder="Customer UUID"></div>
+    <div class="field"><label>Run Type</label><select id="br-type"><option value="REGULAR">Regular</option><option value="ADHOC">Ad-Hoc</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.warn}</svg>Execution of a bill run is an immutable event logged in evidence.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-danger" id="doExecuteBillRun">Execute Run</button></div>`);
+
+      $("#doExecuteBillRun").addEventListener('click', async () => {
+        const btn = $("#doExecuteBillRun");
+        btn.textContent = "Executing...";
+        try {
+          const payload = {
+            account_id: $("#br-acct").value,
+            customer_id: $("#br-cust").value,
+            cycle_type: $("#br-type").value,
+            cycle_start_at: new Date().toISOString(),
+            cycle_end_at: new Date().toISOString()
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/bill-cycles',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Bill run execution started.');
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Execute Run";
+        }
+      });
+    }
+
+    function capturePaymentModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></div><div><h3>Capture Payment</h3><p>Capture a manual or out-of-band payment.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Account ID</label><input type="text" id="cp-acct" placeholder="Account UUID"></div>
+    <div class="field"><label>Customer ID</label><input type="text" id="cp-cust" placeholder="Customer UUID"></div>
+    <div class="field"><label>Amount (Minor Units)</label><input type="number" id="cp-amt" placeholder="e.g. 5000 (for 50.00)"></div>
+    <div class="field"><label>Currency</label><select id="cp-curr"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option></select></div>
+    <div class="field"><label>Payment Method</label><select id="cp-method"><option value="CARD">Card</option><option value="TRANSFER">Bank Transfer</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.dot}</svg>Payment capture writes immediately to the general ledger.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doCapturePayment">Capture Payment</button></div>`);
+
+      $("#doCapturePayment").addEventListener('click', async () => {
+        const btn = $("#doCapturePayment");
+        btn.textContent = "Capturing...";
+        try {
+          const payload = {
+            account_id: $("#cp-acct").value,
+            customer_id: $("#cp-cust").value,
+            amount_minor_units: parseInt($("#cp-amt").value, 10) || 0,
+            currency_code: $("#cp-curr").value,
+            payment_method: $("#cp-method").value
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/payment-intents',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Payment captured successfully.');
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Capture Payment";
+        }
+      });
+    }
+
+    function createJurisdictionPackModal() {
+      openModal(`<div class="modal-h violet"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/></svg></div><div><h3>New Jurisdiction Pack</h3><p>Define tax and compliance rules for a market.</p></div></div>
+  <div class="modal-b">
+    <div class="field"><label>Jurisdiction Code</label><input type="text" id="jp-code" placeholder="e.g. US-CA"></div>
+    <div class="field"><label>Country Code</label><input type="text" id="jp-country" placeholder="e.g. US"></div>
+    <div class="field"><label>Provider Name</label><input type="text" id="jp-name" placeholder="e.g. Avalara"></div>
+    <div class="field"><label>Currency</label><select id="jp-curr"><option value="GBP">GBP (£)</option><option value="USD">USD ($)</option></select></div>
+    <div class="evnote"><svg viewBox="0 0 24 24">${IC.warn}</svg>Missing jurisdiction pack elements blocks tenant go-live.</div>
+  </div>
+  <div class="modal-f"><button class="btn btn-sec" data-close>Cancel</button><button class="btn btn-primary" id="doCreatePack">Create Pack</button></div>`);
+
+      $("#doCreatePack").addEventListener('click', async () => {
+        const btn = $("#doCreatePack");
+        btn.textContent = "Creating...";
+        try {
+          const payload = {
+            jurisdiction_code: $("#jp-code").value,
+            country_code: $("#jp-country").value,
+            provider_name: $("#jp-name").value,
+            currency_code: $("#jp-curr").value,
+            policy_version: "1.0",
+            tax_category_map: { "default": 2000 }
+          };
+          const res = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              port: 8080,
+              method: 'POST',
+              path: '/v1/jurisdiction-policies',
+              headers: { 'authorization': 'Bearer ' + window.adminToken, 'x-tenant-id': window.adminTenantId || DEFAULT_TENANT_ID },
+              body: payload
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.data?.message || 'API failed');
+          closeModal();
+          toast('Jurisdiction pack created successfully.');
+        } catch (e) {
+          toast('Error: ' + e.message);
+          btn.textContent = "Create Pack";
+        }
+      });
     }
 
     /* ============ STATUS BAR ============ */

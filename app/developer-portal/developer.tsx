@@ -272,7 +272,7 @@ export default function ZoikoNexPage() {
           </div>
           <div className="self-stretch flex flex-col justify-start items-center">
             <p className="text-center justify-center text-gray-500 text-lg font-normal font-['Inter'] leading-7">
-              Connect with Tier-1 architects and community developers building the next<br className="hidden md:block"/>generation of sovereign financial connectivity.
+              Connect with Tier-1 architects and community developers building the next<br className="hidden md:block" />generation of sovereign financial connectivity.
             </p>
           </div>
           <div className="self-stretch pt-6 flex justify-center items-center gap-6">
