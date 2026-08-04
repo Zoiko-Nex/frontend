@@ -250,7 +250,7 @@ export default function DomainDetails() {
                                 <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-current fill-none stroke-[2.2px] stroke-linecap-round stroke-linejoin-round">
                                     <path d="M5 12h14M13 6l6 6-6 6"/>
                                 </svg>
-                            </link>
+                            </Link>
                             <Link href="/platform" className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl outline outline-1 outline-slate-300 dark:outline-slate-700 hover:outline-sky-500 hover:text-sky-700 dark:hover:text-sky-400 px-6 py-3 flex items-center justify-center text-sm font-bold transition-colors">
                                 See it in the platform
                             </Link>
