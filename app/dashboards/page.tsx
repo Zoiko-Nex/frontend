@@ -4,6 +4,59 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSession, clearSession } from "@/lib/admin/session";
+import { fetchMe, canAccessDomain, hasFullAccess, type Me } from "@/lib/admin/permissions";
+
+// Maps this dashboard's own service-card ids and sidebar tabs to the real
+// backend domain vocabulary (ServiceKey in lib/admin/services.ts) so a
+// non-admin role's granted permissions (from GET /v1/me) can gate them.
+// NOT the same as the dead, differently-named `serviceMapping` further down
+// this file (used only for backend proxy port lookups) -- that one doesn't
+// match SERVICES/NAV domain keys and isn't a permission map.
+const SERVICE_DOMAIN: Record<string, string> = {
+  "prod-catalog": "catalogue",
+  "rt-charging": "rating",
+  "rating-engine": "rating",
+  "billing-invoice": "billing",
+  "payments-collections": "payments",
+  "partner-settlement": "partner",
+  "cust-lifecycle": "customer",
+  "notifications-campaigns": "integration",
+  "esim-sim-mgmt": "order",
+  "iot-connectivity": "order",
+  "number-inventory": "order",
+  "taxation-regulatory": "tax",
+  "compliance-kyc": "kyc",
+  "evidence-ledger": "evidence",
+  "ai-gov-controls": "reporting",
+  "analytics-reporting": "reporting",
+  "mediation-usage": "usage",
+  "api-gateway": "integration",
+};
+
+// Only tabs that map cleanly to one gated domain get whole-tab locking;
+// Dashboard/Services/Deployment/Sandbox/Documentation/Support stay visible
+// to everyone (Services is gated per-card instead, via SERVICE_DOMAIN).
+const TAB_DOMAIN: Record<string, string> = {
+  Trust: "evidence",
+  Billing: "billing",
+  Settings: "identity",
+};
+
+function LockedPanel({ label }: { label: string }) {
+  return (
+    <div className="self-stretch flex flex-col items-center justify-center gap-3 w-full py-24 bg-white rounded-2xl border border-slate-200">
+      <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+      </div>
+      <div className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans']">Access blocked</div>
+      <div className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] text-center max-w-[360px]">
+        Your role doesn&apos;t grant access to {label}. Request access from your company admin.
+      </div>
+    </div>
+  );
+}
 
 interface DomainService {
   id: string;
@@ -42,6 +95,15 @@ export default function DashboardsPage() {
   const [sessionData, setSessionData] = useState<{ email?: string; tenantId?: string }>({});
   const [onlineCount, setOnlineCount] = useState(18);
   const [logs, setLogs] = useState<string[]>([]);
+  const [me, setMe] = useState<Me | null>(null);
+  const [meLoaded, setMeLoaded] = useState(false);
+
+  // While /v1/me hasn't resolved yet, treat everything as accessible so
+  // nothing flickers locked-then-unlocked on first paint. A tenant admin or
+  // platform admin (hasFullAccess) always sees everything; anyone else is
+  // gated per-domain against their actual granted permissions.
+  const canAccess = (domain?: string) =>
+    !domain || !meLoaded || hasFullAccess(me) || canAccessDomain(domain, me);
 
   const handleLogout = () => {
     clearSession();
@@ -628,6 +690,10 @@ export default function DashboardsPage() {
       if (session.tenantId) {
         fetchUsers(session.tenantId);
       }
+      fetchMe()
+        .then((m) => setMe(m))
+        .catch(() => setMe(null))
+        .finally(() => setMeLoaded(true));
     } else {
       router.replace('/login');
     }
@@ -1085,23 +1151,33 @@ export default function DashboardsPage() {
                   <div className="text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">{section.section}</div>
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  {section.items.map(item => (
+                  {section.items.map(item => {
+                    const locked = !canAccess(TAB_DOMAIN[item.tabKey]);
+                    return (
                     <button
                       key={item.tabKey}
                       onClick={() => setCurrentTab(item.tabKey as any)}
+                      title={locked ? `Locked -- request access from your company admin` : undefined}
                       className={`w-full px-3 py-2.5 rounded-[10px] inline-flex justify-start items-center gap-2.5 transition-all ${
-                        currentTab === item.tabKey 
-                          ? "bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold" 
+                        currentTab === item.tabKey
+                          ? "bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold"
+                          : locked
+                          ? "text-slate-400 hover:bg-slate-100 font-medium"
                           : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-medium"
                       }`}
                     >
-                      <img 
-                        src={item.iconPath} 
-                        className={`w-4 h-4 object-contain transition-all ${currentTab === item.tabKey ? "brightness-0 invert" : "opacity-60 grayscale hover:grayscale-0 hover:opacity-100"}`} 
-                        alt={item.label} 
+                      <img
+                        src={item.iconPath}
+                        className={`w-4 h-4 object-contain transition-all ${currentTab === item.tabKey ? "brightness-0 invert" : "opacity-60 grayscale hover:grayscale-0 hover:opacity-100"}`}
+                        alt={item.label}
                       />
                       <div className="justify-center text-sm">{item.label}</div>
-                      {(item.tabKey === "Services" || item.badge) && (
+                      {locked && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-slate-400">
+                          <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                        </svg>
+                      )}
+                      {!locked && (item.tabKey === "Services" || item.badge) && (
                         <div className="flex-1 min-w-6 inline-flex flex-col justify-start items-end">
                           <div className={`px-1.5 py-px rounded-[20px] flex flex-col justify-start items-start ${currentTab === item.tabKey ? "bg-white/20 text-white backdrop-blur-sm" : "bg-slate-200 text-slate-500"}`}>
                             <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">{item.tabKey === "Services" ? `${onlineCount}/18` : item.badge}</div>
@@ -1109,7 +1185,8 @@ export default function DashboardsPage() {
                         </div>
                       )}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -1333,11 +1410,14 @@ export default function DashboardsPage() {
                         <div className="self-stretch grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[25px] w-full">
                           {groupServices.map((service) => {
                             const isProvisioning = service.id === "partner-settlement" && !service.active;
+                            const cardLocked = !canAccess(SERVICE_DOMAIN[service.id]);
 
                             return (
                               <div
                                 key={service.id}
-                                className="bg-white rounded-2xl border border-slate-200 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] flex flex-col justify-between p-6 hover:shadow-md transition duration-300 min-h-[220px]"
+                                className={`bg-white rounded-2xl border border-slate-200 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] flex flex-col justify-between p-6 transition duration-300 min-h-[220px] ${
+                                  cardLocked ? "opacity-60 grayscale" : "hover:shadow-md"
+                                }`}
                               >
                                 <div className="self-stretch flex flex-col justify-start items-start w-full">
                                   {/* Card Header */}
@@ -1421,7 +1501,14 @@ export default function DashboardsPage() {
                                 {/* Footer Actions */}
                                 <div className="self-stretch pt-3.5 flex flex-col justify-start items-start">
                                   <div className="self-stretch pt-3 border-t-[0.80px] border-slate-200 inline-flex justify-start items-center gap-2.5 w-full">
-                                    {isProvisioning ? (
+                                    {cardLocked ? (
+                                      <div className="w-full flex items-center gap-1.5 text-slate-500" title="Request access from your company admin">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                                          <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                                        </svg>
+                                        <div className="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Access blocked — request access from your company admin</div>
+                                      </div>
+                                    ) : isProvisioning ? (
                                       <div className="px-2 py-[2.80px] bg-indigo-500/10 rounded-md outline outline-1 outline-offset-[-1px] outline-indigo-500/40 flex justify-start items-center gap-[5px] text-indigo-500">
                                         <svg className="w-2.5 h-2.5 shrink-0 animate-spin" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                                           <path d="M5 2V4M5 6V8M2 5H4M6 5H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1429,6 +1516,7 @@ export default function DashboardsPage() {
                                         <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">PROVISIONING</div>
                                       </div>
                                     ) : (
+                                      <>
                                       <div
                                         onClick={() => handleToggle(service.id)}
                                         className={`w-10 h-6 relative cursor-pointer rounded-[999px] transition-colors duration-300 flex flex-col justify-start items-start py-[3px] px-[3px] shrink-0 ${service.active ? "bg-lime-600 pl-5 pr-[3px]" : "bg-slate-200 pl-[3px] pr-5"
@@ -1436,24 +1524,25 @@ export default function DashboardsPage() {
                                       >
                                         <div className="size-4 bg-white rounded-lg shadow-[0px_1px_2px_0px_rgba(0,0,0,0.30)] transition-all duration-300"></div>
                                       </div>
-                                    )}
 
-                                    <div className="flex-1 min-w-20 inline-flex flex-col justify-start items-end">
-                                      <button
-                                        onClick={() => {
-                                          setSelectedService(service);
-                                          setRequestMethod("GET");
-                                          setRequestPath("/health");
-                                          setRequestHeaders(`{\n  "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"\n}`);
-                                          setRequestBody("");
-                                          setApiResponse(null);
-                                          setSelectedEndpoint("");
-                                        }}
-                                        className="px-3 py-1.5 bg-slate-50 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex justify-center items-center hover:bg-slate-100 transition"
-                                      >
-                                        <div className="text-center justify-center text-slate-600 text-xs font-bold font-['Plus_Jakarta_Sans']">Manage</div>
-                                      </button>
-                                    </div>
+                                      <div className="flex-1 min-w-20 inline-flex flex-col justify-start items-end">
+                                        <button
+                                          onClick={() => {
+                                            setSelectedService(service);
+                                            setRequestMethod("GET");
+                                            setRequestPath("/health");
+                                            setRequestHeaders(`{\n  "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"\n}`);
+                                            setRequestBody("");
+                                            setApiResponse(null);
+                                            setSelectedEndpoint("");
+                                          }}
+                                          className="px-3 py-1.5 bg-slate-50 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex justify-center items-center hover:bg-slate-100 transition"
+                                        >
+                                          <div className="text-center justify-center text-slate-600 text-xs font-bold font-['Plus_Jakarta_Sans']">Manage</div>
+                                        </button>
+                                      </div>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1792,7 +1881,7 @@ export default function DashboardsPage() {
             )}
 
             {/* Trust Vault Tab */}
-            {currentTab === "Trust" && (
+            {currentTab === "Trust" && (canAccess(TAB_DOMAIN.Trust) ? (
               <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
                 <div className="self-stretch inline-flex justify-start items-center">
                   <div className="w-[1132px] h-20 relative">
@@ -1892,7 +1981,9 @@ export default function DashboardsPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : (
+              <LockedPanel label="Trust Vault" />
+            ))}
 
             {/* Documentation Tab */}
             {currentTab === "Documentation" && (
@@ -2295,7 +2386,7 @@ export default function DashboardsPage() {
             )}
 
             {/* Billing Tab */}
-            {currentTab === "Billing" && (
+            {currentTab === "Billing" && (canAccess(TAB_DOMAIN.Billing) ? (
               <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
                 <div className="self-stretch inline-flex justify-between items-center">
                   <div className="inline-flex flex-col justify-start items-start gap-1">
@@ -2404,10 +2495,12 @@ export default function DashboardsPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : (
+              <LockedPanel label="Billing & Commercials" />
+            ))}
 
             {/* Admin Settings Tab */}
-            {currentTab === "Settings" && (
+            {currentTab === "Settings" && (canAccess(TAB_DOMAIN.Settings) ? (
               <div className="self-stretch flex flex-col justify-start items-start gap-4 w-full font-sans transition-all duration-300">
                 <div className="self-stretch inline-flex justify-between items-center">
                   <div className="inline-flex flex-col justify-start items-start gap-1">
@@ -2610,7 +2703,9 @@ export default function DashboardsPage() {
                 </div>
 
               </div>
-            )}
+            ) : (
+              <LockedPanel label="Admin Settings" />
+            ))}
 
 
             {/* Live Integration Logs Terminal */}
