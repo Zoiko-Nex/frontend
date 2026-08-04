@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSession, clearSession } from "@/lib/admin/session";
 import { fetchMe, canAccessDomain, hasFullAccess, type Me } from "@/lib/admin/permissions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { api, ApiException } from "@/lib/admin/client";
+import { PermissionPicker, type PolicyRule } from "../admin/_components/PermissionPicker";
+
+interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
 // Maps this dashboard's own service-card ids and sidebar tabs to the real
 // backend domain vocabulary (ServiceKey in lib/admin/services.ts) so a
@@ -53,6 +59,436 @@ function LockedPanel({ label }: { label: string }) {
       <div className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans']">Access blocked</div>
       <div className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] text-center max-w-[360px]">
         Your role doesn&apos;t grant access to {label}. Request access from your company admin.
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Real role management, ported from app/admin/identity's RolesTab +
+ * RoleManageModal into this page's Tailwind visual language. This is now
+ * where the tenant admin creates custom roles (e.g. "payment_operator"),
+ * grants them real fine-grained permissions via PermissionPicker, and
+ * assigns people to them -- /admin/identity remains a separate demo tool,
+ * not the source of truth for this flow anymore.
+ */
+function RolesPanel({ tenantUsers, usersLoading }: { tenantUsers: any[]; usersLoading: boolean }) {
+  const qc = useQueryClient();
+
+  const rolesQ = useQuery({
+    queryKey: ["dash", "roles"],
+    queryFn: () => api.get<{ roles?: TenantRole[] }>("identity", "/v1/roles"),
+  });
+  const roles = rolesQ.data?.roles ?? [];
+  const roleIds = roles.map((r) => (r.role_id || r.id)!);
+
+  const membersQ = useQuery({
+    queryKey: ["dash", "role-members", roleIds.join(",")],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        roleIds.map(async (id) => {
+          const res = await api.get<{ user_ids?: string[] }>("identity", `/v1/roles/${id}/members`);
+          return [id, res.user_ids ?? []] as const;
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, string[]>;
+    },
+    enabled: roleIds.length > 0,
+  });
+  const roleMembers = membersQ.data ?? {};
+  const rolesForUser = (userId: string) => roles.filter((r) => (roleMembers[(r.role_id || r.id)!] ?? []).includes(userId));
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", description: "" });
+  const createRole = useMutation({
+    mutationFn: () => api.post("identity", "/v1/roles", createForm),
+    onSuccess: () => {
+      toast.success("Role created");
+      setCreateOpen(false);
+      setCreateForm({ name: "", description: "" });
+      qc.invalidateQueries({ queryKey: ["dash", "roles"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create role"),
+  });
+
+  const [managingRole, setManagingRole] = useState<TenantRole | null>(null);
+  const [assigningUser, setAssigningUser] = useState<any | null>(null);
+
+  return (
+    <>
+      {/* Roles card */}
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Roles</h3>
+            <p className="text-slate-500 text-xs mt-0.5">Create a role, pick its permissions, then assign people to it.</p>
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            + New role
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ROLE</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">DESCRIPTION</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">MEMBERS</th>
+                <th className="px-6 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {rolesQ.isLoading ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">Loading roles…</td></tr>
+              ) : rolesQ.isError ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-rose-500">Failed to load roles.</td></tr>
+              ) : roles.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">No custom roles yet — create one to start assigning fine-grained access.</td></tr>
+              ) : roles.map((r) => {
+                const id = (r.role_id || r.id)!;
+                return (
+                  <tr key={id}>
+                    <td className="px-6 py-4 font-bold text-slate-800 text-xs">{r.name}</td>
+                    <td className="px-6 py-4 text-xs">{r.description || "—"}</td>
+                    <td className="px-6 py-4 text-xs">{(roleMembers[id] ?? []).length}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setManagingRole(r)}
+                        className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Users & roles card */}
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+        <div className="px-5 py-4 border-b border-slate-200">
+          <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Users & roles</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">USER</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ROLE</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">STATUS</th>
+                <th className="px-6 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {usersLoading ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">Loading…</td></tr>
+              ) : tenantUsers.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">No users yet.</td></tr>
+              ) : tenantUsers.map((user) => {
+                const userRoles = rolesForUser(user.id);
+                return (
+                  <tr key={user.id}>
+                    <td className="px-6 py-4 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">{user.initials}</div>
+                      <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">{user.name}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {userRoles.length === 0 ? (
+                        <span className="text-slate-400 text-xs">No role</span>
+                      ) : userRoles.map((r) => (
+                        <span key={r.role_id || r.id} className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono'] mr-1">{r.name}</span>
+                      ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.status === "ACTIVE" ? (
+                        <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
+                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          ACTIVE
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-indigo-50 rounded text-indigo-500 border border-indigo-200 text-[10px] font-bold font-mono uppercase inline-flex items-center gap-1">{user.status}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setAssigningUser(user)}
+                        className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {createOpen && (
+        <CreateRoleModal
+          form={createForm}
+          setForm={setCreateForm}
+          onClose={() => setCreateOpen(false)}
+          onSubmit={() => createRole.mutate()}
+          loading={createRole.isPending}
+        />
+      )}
+      {managingRole && <RoleManageModal role={managingRole} onClose={() => setManagingRole(null)} />}
+      {assigningUser && (
+        <AssignRoleModal
+          user={assigningUser}
+          roles={roles}
+          assignedRoleIds={roleIds.filter((id) => (roleMembers[id] ?? []).includes(assigningUser.id))}
+          onClose={() => setAssigningUser(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function CreateRoleModal({ form, setForm, onClose, onSubmit, loading }: {
+  form: { name: string; description: string };
+  setForm: (f: { name: string; description: string }) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-5 border-b border-slate-200">
+          <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New role</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-700 text-sm font-semibold">Name</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="payment_operator"
+              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-700 text-sm font-semibold">Description</label>
+            <input
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+            />
+          </div>
+        </div>
+        <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Cancel</button>
+          <button
+            onClick={onSubmit}
+            disabled={loading || !form.name.trim()}
+            className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+          >
+            {loading ? "Creating…" : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RoleManageModal({ role, onClose }: { role: TenantRole; onClose: () => void }) {
+  const qc = useQueryClient();
+  const roleId = (role.role_id || role.id)!;
+
+  const permsQ = useQuery({
+    queryKey: ["dash", "roles", roleId, "permissions"],
+    queryFn: () => api.get<{ rules?: PolicyRule[] }>("identity", `/v1/roles/${roleId}/permissions`),
+  });
+  const membersQ = useQuery({
+    queryKey: ["dash", "roles", roleId, "members"],
+    queryFn: () => api.get<{ user_ids?: string[] }>("identity", `/v1/roles/${roleId}/members`),
+  });
+  const usersQ = useQuery({
+    queryKey: ["dash", "identity-users"],
+    queryFn: () => api.get<{ users?: any[] }>("identity", "/v1/users"),
+  });
+  const users = usersQ.data?.users ?? [];
+  const emailFor = (userId: string) => users.find((u) => (u.user_id || u.id) === userId)?.email || userId;
+
+  const [draftRules, setDraftRules] = useState<PolicyRule[] | null>(null);
+  const currentRules = draftRules ?? permsQ.data?.rules ?? [];
+
+  const savePermissions = useMutation({
+    mutationFn: () => api.put("identity", `/v1/roles/${roleId}/permissions`, { rules: currentRules }),
+    onSuccess: () => {
+      toast.success("Permissions saved");
+      qc.invalidateQueries({ queryKey: ["dash", "roles", roleId, "permissions"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to save permissions"),
+  });
+
+  const [assignId, setAssignId] = useState("");
+  const assign = useMutation({
+    mutationFn: () => api.post("identity", `/v1/roles/${roleId}/members`, { user_id: assignId }),
+    onSuccess: () => {
+      toast.success("User assigned");
+      setAssignId("");
+      qc.invalidateQueries({ queryKey: ["dash", "roles", roleId, "members"] });
+      qc.invalidateQueries({ queryKey: ["dash", "role-members"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to assign user"),
+  });
+  const unassign = useMutation({
+    mutationFn: (userId: string) => api.del("identity", `/v1/roles/${roleId}/members/${userId}`),
+    onSuccess: () => {
+      toast.success("User removed");
+      qc.invalidateQueries({ queryKey: ["dash", "roles", roleId, "members"] });
+      qc.invalidateQueries({ queryKey: ["dash", "role-members"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to remove user"),
+  });
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[600px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-5 border-b border-slate-200">
+          <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Manage &quot;{role.name}&quot;</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
+          <div>
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-2.5">Dashboard access</div>
+            {permsQ.isLoading ? (
+              <div className="text-slate-400 text-sm">Loading…</div>
+            ) : (
+              <PermissionPicker rules={currentRules} onChange={setDraftRules} />
+            )}
+          </div>
+
+          <div>
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-2.5">Assigned users</div>
+            {membersQ.isLoading ? (
+              <div className="text-slate-400 text-sm">Loading…</div>
+            ) : (
+              <div className="flex flex-col gap-1.5 mb-3">
+                {(membersQ.data?.user_ids ?? []).length === 0 ? (
+                  <div className="text-slate-400 text-xs">No users assigned yet.</div>
+                ) : membersQ.data!.user_ids!.map((userId) => (
+                  <div key={userId} className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                    <span className="text-slate-700 text-xs">{emailFor(userId)}</span>
+                    <button onClick={() => unassign.mutate(userId)} disabled={unassign.isPending} className="text-slate-500 hover:text-slate-700 text-xs font-semibold cursor-pointer">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <select
+                value={assignId}
+                onChange={(e) => setAssignId(e.target.value)}
+                className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 text-xs outline-none focus:border-sky-500"
+              >
+                <option value="">Select a user to assign…</option>
+                {users.map((u) => {
+                  const id = u.user_id || u.id;
+                  return <option key={id} value={id}>{u.email || id}</option>;
+                })}
+              </select>
+              <button
+                onClick={() => assign.mutate()}
+                disabled={!assignId || assign.isPending}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition disabled:opacity-60 cursor-pointer"
+              >
+                Assign
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Close</button>
+          <button
+            onClick={() => savePermissions.mutate()}
+            disabled={savePermissions.isPending}
+            className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+          >
+            {savePermissions.isPending ? "Saving…" : "Save permissions"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssignRoleModal({ user, roles, assignedRoleIds, onClose }: {
+  user: any;
+  roles: TenantRole[];
+  assignedRoleIds: string[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<string[]>(assignedRoleIds);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const toAdd = selected.filter((id) => !assignedRoleIds.includes(id));
+      const toRemove = assignedRoleIds.filter((id) => !selected.includes(id));
+      await Promise.all([
+        ...toAdd.map((roleId) => api.post("identity", `/v1/roles/${roleId}/members`, { user_id: user.id })),
+        ...toRemove.map((roleId) => api.del("identity", `/v1/roles/${roleId}/members/${user.id}`)),
+      ]);
+    },
+    onSuccess: () => {
+      toast.success("Roles updated");
+      qc.invalidateQueries({ queryKey: ["dash", "role-members"] });
+      onClose();
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to update roles"),
+  });
+
+  const toggle = (id: string) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[440px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-5 border-b border-slate-200">
+          <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Roles for {user.name}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6 flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
+          {roles.length === 0 ? (
+            <div className="text-slate-400 text-sm">No roles exist yet — create one first.</div>
+          ) : roles.map((r) => {
+            const id = (r.role_id || r.id)!;
+            return (
+              <label key={id} className="flex items-center gap-2.5 text-sm cursor-pointer py-1">
+                <input type="checkbox" checked={selected.includes(id)} onChange={() => toggle(id)} />
+                <span className="text-slate-700 font-medium">{r.name}</span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Cancel</button>
+          <button
+            onClick={() => save.mutate()}
+            disabled={save.isPending}
+            className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+          >
+            {save.isPending ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -169,16 +605,17 @@ export default function DashboardsPage() {
       });
       if (res.ok) {
         const payload = await res.json();
-        if (payload.ok && payload.data?.items) {
-          const fetchedUsers = payload.data.items.map((u: any) => {
+        // Backend returns {users: [{user_id, email, full_name, status, created_at}]} --
+        // NOT {items: [...]} with roles/access_domains/is_active, which never existed
+        // on this response and meant this table always rendered "User"/"None"/"INVITED".
+        if (payload.ok && payload.data?.users) {
+          const fetchedUsers = payload.data.users.map((u: any) => {
             const initials = u.full_name ? u.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() : "U";
             return {
-              id: u.id || u.email,
+              id: u.user_id || u.email,
               initials,
               name: u.full_name || u.email,
-              role: u.roles && u.roles.length > 0 ? u.roles.join(", ") : "User",
-              access: u.access_domains ? u.access_domains.join(" · ") : "None",
-              status: u.is_active ? "ACTIVE" : "INVITED"
+              status: (u.status || "invited").toUpperCase(),
             };
           });
           setTenantUsers(fetchedUsers);
@@ -2592,70 +3029,7 @@ export default function DashboardsPage() {
                   </div>
                 </div>
 
-                {/* Users & roles */}
-                <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
-                  <div className="px-5 py-4 border-b border-slate-200">
-                    <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Users & roles</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                      <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
-                        <tr>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">USER</th>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ROLE</th>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACCESS</th>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">STATUS</th>
-                          <th className="px-6 py-3"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-sans">
-                        {usersLoading ? (
-                          <tr>
-                            <td colSpan={5} className="px-6 py-6">
-                              <div className="flex flex-col gap-4">
-                                {[1, 2, 3].map(i => (
-                                  <div key={i} className="flex items-center gap-4 animate-pulse">
-                                    <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
-                                    <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
-                                    <div className="h-4 bg-slate-200 rounded w-1/3"></div>
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        ) : tenantUsers.map(user => (
-                          <tr key={user.id}>
-                            <td className="px-6 py-4 flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">{user.initials}</div>
-                              <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">{user.name}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono']">{user.role}</span>
-                            </td>
-                            <td className="px-6 py-4 text-xs font-normal">{user.access}</td>
-                            <td className="px-6 py-4">
-                              {user.status === "ACTIVE" ? (
-                                <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
-                                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                  ACTIVE
-                                </span>
-                              ) : (
-                                <span className="px-2 py-1 bg-indigo-50 rounded text-indigo-500 border border-indigo-200 text-[10px] font-bold font-mono uppercase inline-flex items-center gap-1">
-                                  <div className="w-1 h-2 border-r border-b border-indigo-500 rotate-45 mb-0.5 ml-1"></div>
-                                  INVITED
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <button className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition">Manage</button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <RolesPanel tenantUsers={tenantUsers} usersLoading={usersLoading} />
 
                 {/* Audit Log */}
                 <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">

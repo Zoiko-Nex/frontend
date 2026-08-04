@@ -52,8 +52,8 @@ export function PermissionPicker({ rules, onChange }: { rules: PolicyRule[]; onC
     ]);
   };
 
-  if (q.isLoading) return <div style={{ fontSize: 13, color: "var(--ax-text-faint)" }}>Loading permissions…</div>;
-  if (q.isError) return <div style={{ fontSize: 13, color: "var(--ax-red)" }}>Failed to load the permission catalog.</div>;
+  if (q.isLoading) return <div style={{ fontSize: 13, color: "var(--ax-text-faint, #94a3b8)" }}>Loading permissions…</div>;
+  if (q.isError) return <div style={{ fontSize: 13, color: "var(--ax-red, #f43f5e)" }}>Failed to load the permission catalog.</div>;
 
   const groups = new Map<string, Permission[]>();
   for (const p of catalog) {
@@ -64,20 +64,20 @@ export function PermissionPicker({ rules, onChange }: { rules: PolicyRule[]; onC
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {[...groups.entries()].map(([group, perms]) => (
-        <details key={group} open style={{ border: "1px solid var(--ax-border)", borderRadius: "var(--ax-radius-sm)" }}>
+        <details key={group} open style={{ border: "1px solid var(--ax-border, #e2e8f0)", borderRadius: "var(--ax-radius-sm, 8px)" }}>
           <summary style={{
             cursor: "pointer", padding: "8px 12px", fontSize: 12, fontWeight: 600, textTransform: "uppercase",
-            letterSpacing: "0.05em", color: "var(--ax-text-dim)", background: "var(--ax-bg-overlay)",
+            letterSpacing: "0.05em", color: "var(--ax-text-dim, #64748b)", background: "var(--ax-bg-overlay, #f8fafc)",
           }}>
             {group}
           </summary>
           <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
             {perms.map((p) => (
-              <label key={p.action} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, cursor: "pointer" }}>
+              <label key={p.action} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, cursor: "pointer", color: "var(--ax-text, #1e293b)" }}>
                 <input type="checkbox" style={{ marginTop: 2 }} checked={checkedActions.has(p.action)} onChange={() => toggle(p)} />
                 <span>
                   <span style={{ display: "block" }}>{p.description || p.name}</span>
-                  <span className="mono" style={{ display: "block", fontSize: 11, color: "var(--ax-text-faint)" }}>{p.action}</span>
+                  <span className="mono" style={{ display: "block", fontSize: 11, color: "var(--ax-text-faint, #94a3b8)" }}>{p.action}</span>
                 </span>
               </label>
             ))}
@@ -85,7 +85,7 @@ export function PermissionPicker({ rules, onChange }: { rules: PolicyRule[]; onC
         </details>
       ))}
       {legacyRules.length > 0 && (
-        <p style={{ fontSize: 11.5, color: "var(--ax-text-faint)" }}>
+        <p style={{ fontSize: 11.5, color: "var(--ax-text-faint, #94a3b8)" }}>
           {legacyRules.length} additional grant{legacyRules.length > 1 ? "s" : ""} not shown above (
           {legacyRules.map((r) => r.action_pattern).join(", ")}) will be kept as-is on save.
         </p>
