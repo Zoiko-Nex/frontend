@@ -134,7 +134,7 @@ export default function ESIMAndLifecyclePage() {
                             <p className="text-center justify-center text-gray-500 text-base font-normal font-['Inter'] leading-6">The ZoikoNex SIM/eSIM Lifecycle domain replaces legacy manual triggers with an<br className="hidden md:block" />event-driven activation sequence.</p>
                         </div>
                     </div>
-                    
+
                     <div className="self-stretch flex flex-col md:flex-row justify-center items-center gap-8 w-full">
                         <div className="flex-1 w-full p-6 bg-white/5 rounded-lg outline outline-1 outline-offset-[-1px] outline-white/10 backdrop-blur-[5px] flex flex-col justify-start items-start gap-2">
                             <div className="self-stretch flex flex-col justify-start items-start">
@@ -147,12 +147,12 @@ export default function ESIMAndLifecyclePage() {
                                 <p className="justify-center text-gray-500 text-sm font-normal font-['Inter'] leading-5">API Gateway receives purchase<br />event.</p>
                             </div>
                         </div>
-                        
+
                         {/* Connecting Line */}
                         <div className="hidden md:block flex-1 h-px relative bg-lime-300/50">
                             <div className="w-2 h-2 absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-lime-300 rounded-full"></div>
                         </div>
-                        
+
                         <div className="flex-1 w-full p-6 bg-white/5 rounded-lg outline outline-1 outline-offset-[-1px] outline-white/10 backdrop-blur-[5px] flex flex-col justify-start items-start gap-2">
                             <div className="self-stretch flex flex-col justify-start items-start">
                                 <span className="justify-center text-lime-300 text-[10px] font-bold font-mono uppercase tracking-wider leading-4">STEP 02</span>
@@ -164,7 +164,7 @@ export default function ESIMAndLifecyclePage() {
                                 <p className="justify-center text-gray-500 text-sm font-normal font-['Inter'] leading-5">Real-time SM-DP+ routing for eSIM<br />profile.</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex-1 w-full p-6 bg-white/5 rounded-lg outline outline-1 outline-offset-[-1px] outline-lime-300 backdrop-blur-[5px] flex flex-col justify-start items-start gap-2">
                             <div className="self-stretch flex flex-col justify-start items-start">
                                 <span className="justify-center text-lime-300 text-[10px] font-bold font-mono uppercase tracking-wider leading-4">STEP 03</span>
@@ -190,7 +190,7 @@ export default function ESIMAndLifecyclePage() {
                         </div>
                         <div className="self-stretch flex flex-col justify-start items-start overflow-x-auto">
                             <pre className="justify-center text-lime-300 text-sm font-bold font-mono leading-5 whitespace-pre">
-{`{
+                                {`{
   "event": "eSIM_PROVISION_START",
   "subscriber_id": "ZNX-9921-X",
   "region": "EU_ROAMING_ZONE_1",
@@ -246,11 +246,11 @@ export default function ESIMAndLifecyclePage() {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="flex-1 flex justify-center items-center w-full">
                         <div className="w-full p-8 bg-zinc-100 rounded-2xl outline outline-1 outline-offset-[-1px] outline-stone-300/20 flex flex-col justify-start items-start gap-4">
                             <div className="self-stretch flex flex-col justify-start items-start">
-                                <h3 className="justify-center text-cyan-700 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Core Innovation: Real-time Balance<br className="hidden lg:block"/>Enforcement</h3>
+                                <h3 className="justify-center text-cyan-700 text-2xl font-semibold font-['Hanken_Grotesk'] leading-8">Core Innovation: Real-time Balance<br className="hidden lg:block" />Enforcement</h3>
                             </div>
                             <div className="self-stretch flex flex-col justify-start items-start">
                                 <p className="justify-center text-slate-600 text-base font-normal font-['Inter'] leading-6">Unlike traditional systems that batch process data usage every 15-30 minutes, ZoikoNex SIM domain enforces data caps in sub-second intervals, preventing "bill shock" and protecting carrier margins across all 180+ countries.</p>

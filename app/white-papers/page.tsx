@@ -1,7 +1,7 @@
 import WhitePapersPage from "./white";
 
-export default function(){
-  return(
-    <WhitePapersPage/>
+export default function () {
+  return (
+    <WhitePapersPage />
   )
 }

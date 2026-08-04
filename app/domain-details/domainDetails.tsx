@@ -124,7 +124,7 @@ export default function DomainDetails() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#020817] pt-16 pb-24 font-['Plus_Jakarta_Sans']">
             {/* Fonts */}
-            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+            <link href="/contact-us" rel="stylesheet" />
 
             <div className="max-w-[1240px] mx-auto px-6 sm:px-8">
                 {/* Intro Section */}

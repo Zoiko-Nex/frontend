@@ -31,7 +31,7 @@ export default function WhitePapersPage() {
               </svg>
               Technical Briefs
             </Link>
-            <Link href="/evidence" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 text-xs font-semibold tracking-wider hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors">
+            <Link href="/contact-us" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 text-xs font-semibold tracking-wider hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors">
               <svg className="w-3.5 h-5 text-zinc-600 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 14 20" stroke="currentColor" strokeWidth="1.5">
                 <path d="M7 1L2 4v8l5 3 5-3V4L7 1z" />
               </svg>
