@@ -72,6 +72,27 @@ function buildHeaders(svc: ServiceDef, session: AdminSession | null, opts: ApiOp
   return h;
 }
 
+// Concurrent requests that all hold the same (now-expired) access token will
+// all get a 401 at roughly the same instant. Refresh tokens are single-use
+// (the backend atomically consumes them — see ConsumeByRefreshToken), so if
+// each request independently calls tryRefresh with the same stale refresh
+// token, only the first one to land actually succeeds; every other
+// concurrent caller finds the token already consumed and fails outright.
+// This dedupes concurrent refreshes into one in-flight call that every
+// caller awaits, so a page that fires several queries at once (e.g. a modal
+// loading roles + permissions + members together) doesn't spuriously fail
+// most of them the moment the token expires mid-session.
+let inFlightRefresh: Promise<AdminSession | null> | null = null;
+
+function refreshOnce(session: AdminSession): Promise<AdminSession | null> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = tryRefresh(session).finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
 /** Refresh against identity-tenancy. Returns the new session or null. */
 async function tryRefresh(session: AdminSession): Promise<AdminSession | null> {
   try {
@@ -143,7 +164,7 @@ async function request<T>(method: string, serviceKey: string, path: string, body
 
   // Silent refresh-and-retry once on auth failure.
   if (proxyPayload.status === 401 && !opts.noAuth && session) {
-    const refreshed = await tryRefresh(session);
+    const refreshed = await refreshOnce(session);
     if (refreshed) {
       session = refreshed;
       try {
