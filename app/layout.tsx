@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Zoiko Nex",
+  title: "ZoikoNex | Governed Telecom OSS/BSS Monetization Platform",
   description: "Zoiko Nex Website",
   icons: {
     icon: "/icon.png",
