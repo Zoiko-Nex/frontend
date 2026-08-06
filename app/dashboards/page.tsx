@@ -64,6 +64,127 @@ function LockedPanel({ label }: { label: string }) {
   );
 }
 
+interface Brand { id: string; name: string; code_name: string; created_at: string }
+
+/**
+ * Lets a multi-brand tenant (e.g. "VI Group") add every brand it operates
+ * under this one account (Vodafone, Idea, Vi, ...) -- backed by the new
+ * POST/GET /v1/brands endpoints (tenant-scoped via X-Tenant-ID, deliberately
+ * NOT under /v1/tenants/{id}/* which is reserved for platform-admin-only
+ * operations). Previously there was no way to add a brand after tenant
+ * creation at all.
+ */
+function BrandsPanel() {
+  const qc = useQueryClient();
+  const brandsQ = useQuery({
+    queryKey: ["dash", "brands"],
+    queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
+  });
+  const brands = brandsQ.data?.brands ?? [];
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", code_name: "" });
+  const createBrand = useMutation({
+    mutationFn: () => api.post("identity", "/v1/brands", form),
+    onSuccess: () => {
+      toast.success("Brand added");
+      setCreateOpen(false);
+      setForm({ name: "", code_name: "" });
+      qc.invalidateQueries({ queryKey: ["dash", "brands"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to add brand"),
+  });
+
+  return (
+    <>
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Brands</h3>
+            <p className="text-slate-500 text-xs mt-0.5">Every brand your company operates under this account (e.g. Vodafone, Idea, Vi).</p>
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            + New brand
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">BRAND</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">CODE</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ADDED</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {brandsQ.isLoading ? (
+                <tr><td colSpan={3} className="px-6 py-6 text-xs text-slate-400">Loading brands…</td></tr>
+              ) : brandsQ.isError ? (
+                <tr><td colSpan={3} className="px-6 py-6 text-xs text-rose-500">Failed to load brands.</td></tr>
+              ) : brands.length === 0 ? (
+                <tr><td colSpan={3} className="px-6 py-6 text-xs text-slate-400">No additional brands yet — add one to run more than one storefront/brand under this account.</td></tr>
+              ) : brands.map((b) => (
+                <tr key={b.id}>
+                  <td className="px-6 py-4 font-bold text-slate-800 text-xs">{b.name}</td>
+                  <td className="px-6 py-4 text-xs font-mono">{b.code_name}</td>
+                  <td className="px-6 py-4 text-xs text-slate-500">{new Date(b.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {createOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New brand</h2>
+              <button onClick={() => setCreateOpen(false)} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-700 text-sm font-semibold">Brand name</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Idea"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-700 text-sm font-semibold">Code name</label>
+                <input
+                  value={form.code_name}
+                  onChange={(e) => setForm({ ...form, code_name: e.target.value.toLowerCase() })}
+                  placeholder="idea"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm font-mono"
+                />
+                <span className="text-slate-400 text-xs">Lowercase letters, numbers and hyphens only.</span>
+              </div>
+            </div>
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button onClick={() => setCreateOpen(false)} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Cancel</button>
+              <button
+                onClick={() => createBrand.mutate()}
+                disabled={createBrand.isPending || !form.name.trim() || !form.code_name.trim()}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+              >
+                {createBrand.isPending ? "Adding…" : "Add brand"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /**
  * Real role management, ported from app/admin/identity's RolesTab +
  * RoleManageModal into this page's Tailwind visual language. This is now
@@ -3028,6 +3149,8 @@ export default function DashboardsPage() {
                     </div>
                   </div>
                 </div>
+
+                <BrandsPanel />
 
                 <RolesPanel tenantUsers={tenantUsers} usersLoading={usersLoading} />
 
