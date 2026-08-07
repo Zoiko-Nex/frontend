@@ -143,7 +143,7 @@ function BrandsPanel() {
           <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
             <div className="flex justify-between items-center p-5 border-b border-slate-200">
               <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New brand</h2>
-              <button onClick={() => setCreateOpen(false)} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+              <button onClick={() => setCreateOpen(false)} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
@@ -193,7 +193,7 @@ function BrandsPanel() {
  * assigns people to them -- /admin/identity remains a separate demo tool,
  * not the source of truth for this flow anymore.
  */
-function RolesPanel({ tenantUsers, usersLoading }: { tenantUsers: any[]; usersLoading: boolean }) {
+function RolesPanel({ tenantUsers, usersLoading, usersError }: { tenantUsers: any[]; usersLoading: boolean; usersError?: string | null }) {
   const qc = useQueryClient();
 
   const rolesQ = useQuery({
@@ -309,6 +309,8 @@ function RolesPanel({ tenantUsers, usersLoading }: { tenantUsers: any[]; usersLo
             <tbody className="divide-y divide-slate-100 font-sans">
               {usersLoading ? (
                 <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">Loading…</td></tr>
+              ) : usersError ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-rose-500">{usersError}</td></tr>
               ) : tenantUsers.length === 0 ? (
                 <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">No users yet.</td></tr>
               ) : tenantUsers.map((user) => {
@@ -386,7 +388,7 @@ function CreateRoleModal({ form, setForm, onClose, onSubmit, loading }: {
       <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
         <div className="flex justify-between items-center p-5 border-b border-slate-200">
           <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New role</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -481,7 +483,7 @@ function RoleManageModal({ role, onClose }: { role: TenantRole; onClose: () => v
       <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[600px] flex flex-col overflow-hidden">
         <div className="flex justify-between items-center p-5 border-b border-slate-200">
           <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Manage &quot;{role.name}&quot;</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -583,7 +585,7 @@ function AssignRoleModal({ user, roles, assignedRoleIds, onClose }: {
       <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[440px] flex flex-col overflow-hidden">
         <div className="flex justify-between items-center p-5 border-b border-slate-200">
           <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Roles for {user.name}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -710,9 +712,11 @@ export default function DashboardsPage() {
 
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async (tenantId: string) => {
     setUsersLoading(true);
+    setUsersError(null);
     try {
       const res = await fetch("/api/proxy", {
         method: "POST",
@@ -740,18 +744,31 @@ export default function DashboardsPage() {
             };
           });
           setTenantUsers(fetchedUsers);
+        } else {
+          setUsersError(payload.error || "Failed to load users.");
         }
+      } else {
+        setUsersError(`Failed to load users (HTTP ${res.status}).`);
       }
     } catch (err) {
       console.warn("Failed to fetch users:", err);
+      setUsersError("Failed to load users — check your connection and try again.");
     } finally {
       setUsersLoading(false);
     }
   }, []);
 
+  const closeInviteModal = () => {
+    setInviteModalOpen(false);
+    setInviteEmail("");
+    setInviteName("");
+    setInvitePassword("");
+    setInviteAccess([]);
+  };
+
   const handleCreateUser = async () => {
     if (!inviteEmail || !inviteName || !invitePassword) {
-      alert("Please fill in email, name, and generate a password");
+      toast.error("Please fill in email, name, and generate a password");
       return;
     }
 
@@ -797,16 +814,12 @@ export default function DashboardsPage() {
           }
         ]);
 
-        setInviteModalOpen(false);
-        setInviteEmail("");
-        setInviteName("");
-        setInvitePassword("");
-        setInviteAccess([]);
+        closeInviteModal();
       } else {
-        alert("Failed to create user. Status: " + res.status);
+        toast.error("Failed to create user. Status: " + res.status);
       }
     } catch (err) {
-      alert("Error creating user: " + String(err));
+      toast.error("Error creating user: " + String(err));
     } finally {
       setIsCreatingUser(false);
     }
@@ -949,14 +962,14 @@ export default function DashboardsPage() {
       });
       const resultOrder = await resOrder.json();
 
-      // --- POC Bypass ---
       if (!resOrder.ok || resultOrder.status !== 201) {
         const errMsg = resultOrder.data?.message || resultOrder.error || "";
-        if (errMsg.includes("relation") || errMsg.includes("does not exist") || resultOrder.status === 422 || resultOrder.status >= 500) {
-          console.warn("Backend DB missing tables, bypassing order flow for POC.");
+        const backendUnavailable = errMsg.includes("relation") || errMsg.includes("does not exist") || resultOrder.status === 422 || resultOrder.status >= 500;
+        if (backendUnavailable) {
+          console.warn("Order backend unavailable:", errMsg);
           setPortalMessage({
-            text: `Order placed successfully (ID: MOCK-ORD-${Math.floor(Math.random() * 10000)})! eSIM Profile provisioned (ID: MOCK-PROF-${Math.floor(Math.random() * 10000)}) and registered.`,
-            type: "success"
+            text: `Order was NOT placed — the order-management backend is unavailable right now (${errMsg || `HTTP ${resultOrder.status}`}). Nothing was provisioned or billed.`,
+            type: "error"
           });
           return;
         }
@@ -1022,14 +1035,15 @@ export default function DashboardsPage() {
       });
       const resultDraft = await resDraft.json();
 
-      // --- POC Bypass ---
       if (!resDraft.ok || resultDraft.status !== 201) {
         const errMsg = resultDraft.data?.message || resultDraft.error || "";
-        if (errMsg.includes("relation") || errMsg.includes("does not exist") || resultDraft.status === 422 || resultDraft.status >= 500) {
-          console.warn("Backend DB missing tables, bypassing billing flow for POC.");
-          const mockInvoiceId = `INV-MOCK-${Math.floor(Math.random() * 10000)}`;
-          setPortalMessage({ text: `Billing run succeeded! Invoice issued: ${mockInvoiceId}`, type: "success" });
-          setPortalInvoices(prev => [{ id: mockInvoiceId, account_id: custPortalAccountId, status: "ISSUED", amount_minor_units: Math.floor(Math.random() * 5000) + 1000, currency_code: "USD", created_at: new Date().toISOString() }, ...prev]);
+        const backendUnavailable = errMsg.includes("relation") || errMsg.includes("does not exist") || resultDraft.status === 422 || resultDraft.status >= 500;
+        if (backendUnavailable) {
+          console.warn("Billing backend unavailable:", errMsg);
+          setPortalMessage({
+            text: `Billing run did NOT succeed — the billing backend is unavailable right now (${errMsg || `HTTP ${resultDraft.status}`}). No invoice was issued.`,
+            type: "error"
+          });
           return;
         }
         throw new Error(errMsg || "Failed to create draft invoice.");
@@ -1507,7 +1521,7 @@ export default function DashboardsPage() {
               className="bg-transparent text-white text-xs font-normal font-['Plus_Jakarta_Sans'] flex-1 outline-none placeholder-slate-400"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-white transition cursor-pointer">
+              <button onClick={() => setSearchQuery("")} aria-label="Clear search" className="text-slate-400 hover:text-white transition cursor-pointer">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             )}
@@ -3152,7 +3166,7 @@ export default function DashboardsPage() {
 
                 <BrandsPanel />
 
-                <RolesPanel tenantUsers={tenantUsers} usersLoading={usersLoading} />
+                <RolesPanel tenantUsers={tenantUsers} usersLoading={usersLoading} usersError={usersError} />
 
                 {/* Audit Log */}
                 <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
@@ -3470,7 +3484,8 @@ export default function DashboardsPage() {
               <div className="flex justify-between items-center p-5 border-b border-slate-200">
                 <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New user</h2>
                 <button
-                  onClick={() => setInviteModalOpen(false)}
+                  onClick={closeInviteModal}
+                  aria-label="Close"
                   className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -3563,7 +3578,7 @@ export default function DashboardsPage() {
               {/* Footer */}
               <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
                 <button
-                  onClick={() => setInviteModalOpen(false)}
+                  onClick={closeInviteModal}
                   className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm"
                 >
                   Cancel
@@ -3598,6 +3613,7 @@ export default function DashboardsPage() {
                 <h2 className="text-white text-lg font-bold">User created</h2>
                 <button
                   onClick={() => setCreatedUserDetails(null)}
+                  aria-label="Close"
                   className="text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

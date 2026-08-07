@@ -175,6 +175,12 @@ async function request<T>(method: string, serviceKey: string, path: string, body
     }
     if (proxyPayload.status === 401) {
       clearSession();
+      // Without this, the caller just gets a thrown ApiException and every
+      // subsequent request on the page silently fails with no auth header --
+      // the admin is stuck on a dead dashboard with no prompt to re-login.
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        window.location.href = `/login?reason=session_expired&next=${encodeURIComponent(window.location.pathname)}`;
+      }
     }
   }
 
