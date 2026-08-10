@@ -1,17 +1,52 @@
 "use client";
 
 import { useState } from "react";
+import { isApexDomain } from "@/lib/admin/tenant-resolver";
 import { Button } from "./ui";
 
-/** Absolute URL of this tenant console's login screen, for share-invite text. */
-export function loginUrl(): string {
-  if (typeof window === "undefined") return "https://zoikonex.com/admin";
-  return `${window.location.origin}/admin`;
+/**
+ * Absolute URL of a tenant console's login screen, for share-invite text.
+ *
+ * Pass `domainSuffix` (tenants.domain_suffix, e.g. "driverz.zoikonex.com")
+ * whenever the caller knows which tenant the invite is for — a super admin on
+ * super-admin.zoikonex.com inviting a DriverZ operator must hand out DriverZ's
+ * domain, not their own. Without it we fall back to the current origin, which is
+ * correct when a tenant admin invites a colleague from their own subdomain.
+ *
+ * The path is /login (the real tenant sign-in, which redirects to /dashboards).
+ * /admin is a separate demo console and was never the right link to send.
+ */
+export function loginUrl(domainSuffix?: string): string {
+  if (domainSuffix) return `https://${domainSuffix}/login`;
+  if (typeof window === "undefined") return "https://zoikonex.com/login";
+  return `${window.location.origin}/login`;
 }
 
-export function buildInvite(opts: { label: string; tenantId?: string; email: string; password?: string }): string {
-  const lines = [`ZoikoNex login — ${opts.label}`, `URL: ${loginUrl()}`];
-  if (opts.tenantId) lines.push(`Tenant ID: ${opts.tenantId}`);
+/**
+ * A tenant subdomain login page resolves the tenant from its own hostname (see
+ * lib/admin/tenant-resolver.ts), so the invitee never needs the raw UUID. It's
+ * only required when the link lands on an apex host that can't self-resolve.
+ */
+function urlSelfResolvesTenant(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return !isApexDomain(host);
+  } catch {
+    return false;
+  }
+}
+
+export function buildInvite(opts: {
+  label: string;
+  tenantId?: string;
+  email: string;
+  password?: string;
+  /** tenants.domain_suffix of the tenant being invited into, when known. */
+  domainSuffix?: string;
+}): string {
+  const url = loginUrl(opts.domainSuffix);
+  const lines = [`ZoikoNex login — ${opts.label}`, `URL: ${url}`];
+  if (opts.tenantId && !urlSelfResolvesTenant(url)) lines.push(`Tenant ID: ${opts.tenantId}`);
   lines.push(`Email: ${opts.email}`);
   if (opts.password) lines.push(`Temporary password: ${opts.password}`);
   return lines.join("\n");

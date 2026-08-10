@@ -15,9 +15,21 @@ import {
 } from "../admin/_components/ui";
 import StatusBadge from "../admin/_components/StatusBadge";
 import { loginUrl, buildInvite as buildInviteBase, CopyButton, generatePassword } from "../admin/_components/invite";
+import { superAdminLoginUrl } from "@/lib/admin/platform/host";
 
-function buildInvite(opts: { tenantName: string; tenantId: string; email: string; password?: string }) {
-  return buildInviteBase({ label: opts.tenantName, tenantId: opts.tenantId, email: opts.email, password: opts.password });
+/**
+ * A platform operator invites people into OTHER tenants, so the invite must
+ * carry that tenant's own domain (tenants.domain_suffix) — the current origin is
+ * super-admin.zoikonex.com and would send the customer to the wrong console.
+ */
+function buildInvite(opts: { tenantName: string; tenantId: string; domainSuffix?: string; email: string; password?: string }) {
+  return buildInviteBase({
+    label: opts.tenantName,
+    tenantId: opts.tenantId,
+    domainSuffix: opts.domainSuffix,
+    email: opts.email,
+    password: opts.password,
+  });
 }
 
 type PlatformTab = "tenants" | "team" | "audit";
@@ -271,7 +283,9 @@ function AddPlatformStaffModal({ onClose, onDone }: { onClose: () => void; onDon
   const valid = form.email && form.full_name && form.password.length >= 12;
 
   if (result) {
-    const platformLoginUrl = typeof window !== "undefined" ? `${window.location.origin}/platform-admin` : "https://zoikonex.com/platform-admin";
+    // Always the canonical super-admin host — internal operators can only sign
+    // in there (see lib/admin/platform/host.ts).
+    const platformLoginUrl = superAdminLoginUrl();
     const invite = [
       "ZoikoNex Platform Control Room login",
       `URL: ${platformLoginUrl}`,
@@ -425,7 +439,7 @@ function OnboardTenantModal({ onClose, onDone }: { onClose: () => void; onDone: 
     && form.admin_email && form.admin_full_name && form.admin_password.length >= 12;
 
   if (result) {
-    const invite = buildInvite({ tenantName: form.name, tenantId: result.tenantId, email: form.admin_email, password: form.admin_password });
+    const invite = buildInvite({ tenantName: form.name, tenantId: result.tenantId, domainSuffix: form.domain_suffix, email: form.admin_email, password: form.admin_password });
     return (
       <Modal open onClose={onClose} title={`${form.name} is onboarded`} width={480}
         footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
@@ -475,7 +489,7 @@ function AddAdminUserModal({ tenant, onClose, onDone }: { tenant: PlatformTenant
   const valid = form.email && form.full_name && form.password.length >= 12 && form.brand_id;
 
   if (done) {
-    const invite = buildInvite({ tenantName: tenant.name, tenantId: tenant.tenant_id, email: form.email, password: form.password });
+    const invite = buildInvite({ tenantName: tenant.name, tenantId: tenant.tenant_id, domainSuffix: tenant.domain_suffix, email: form.email, password: form.password });
     return (
       <Modal open onClose={onClose} title="Admin user created" width={460}
         footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
@@ -515,10 +529,11 @@ function TenantUsersModal({ tenant, onClose }: { tenant: PlatformTenant; onClose
   });
   const list = users.data ?? [];
 
+  // This tenant's own login domain, not the super-admin host we're viewing from.
+  // Its login page resolves the tenant from the hostname, so no UUID is needed.
   const shareText = [
     `ZoikoNex login — ${tenant.name}`,
-    `URL: ${loginUrl()}`,
-    `Tenant ID: ${tenant.tenant_id}`,
+    `URL: ${loginUrl(tenant.domain_suffix)}`,
     ...(list.length ? [`Admins: ${list.map((u) => u.email).join(", ")}`] : []),
   ].join("\n");
 

@@ -22,6 +22,7 @@
 
 import { decodeJwt } from "../session";
 import { ApiException } from "../client";
+import { SUPER_ADMIN_HOST, isSuperAdminHost } from "./host";
 import {
   getPlatformSession,
   setPlatformSession,
@@ -73,6 +74,17 @@ async function resolvePlatformTenantId(): Promise<string> {
 }
 
 export async function platformLogin(email: string, password: string): Promise<void> {
+  // Super-admin credentials may only ever be posted from the dedicated
+  // super-admin host (see ./host.ts). middleware.ts already prevents the console
+  // from being served elsewhere; this guard means a stale bundle or a spoofed
+  // local host still can't turn another origin into a super-admin login page.
+  if (!isSuperAdminHost()) {
+    throw new ApiException(403, {
+      code: "WRONG_DOMAIN",
+      message: `Platform super-admin sign-in is only available at https://${SUPER_ADMIN_HOST}.`,
+    });
+  }
+
   const tenantId = await resolvePlatformTenantId();
 
   const payload = await proxy("POST", "/v1/sessions", {

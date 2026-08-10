@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { platformLogin } from "@/lib/admin/platform/auth";
 import { ApiException } from "@/lib/admin/client";
+import { SUPER_ADMIN_HOST, isSuperAdminHost, superAdminLoginUrl } from "@/lib/admin/platform/host";
 
 export default function SuperAdminLoginPage() {
   const router = useRouter();
+  // Super-admin sign-in is pinned to one host (see lib/admin/platform/host.ts).
+  // middleware.ts redirects before this renders in production; this is the
+  // client-side fallback. Checked after mount so SSR and hydration agree.
+  const [wrongDomain, setWrongDomain] = useState(false);
+  useEffect(() => { setWrongDomain(!isSuperAdminHost()); }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,6 +35,35 @@ export default function SuperAdminLoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (wrongDomain) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh", backgroundColor: "#ffffff", color: "#000000", display: "grid",
+          placeItems: "center", padding: 24, textAlign: "center",
+          fontFamily: "Inter, system-ui, -apple-system, sans-serif",
+        }}
+      >
+        <div style={{ maxWidth: 420 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 10 }}>Wrong domain</h1>
+          <p style={{ fontSize: 13.5, color: "#4b5563", lineHeight: 1.6, marginBottom: 20 }}>
+            Internal super-admin sign-in is only available at <strong>{SUPER_ADMIN_HOST}</strong>.
+            Tenant administrators should sign in on their own tenant domain.
+          </p>
+          <a
+            href={superAdminLoginUrl()}
+            style={{
+              display: "inline-block", padding: "9px 16px", borderRadius: 6, fontSize: 13,
+              fontWeight: 600, textDecoration: "none", color: "#ffffff", background: "#111827",
+            }}
+          >
+            Go to {SUPER_ADMIN_HOST}
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -47,7 +47,11 @@ export default function SuperAdminPage() {
       const raw = localStorage.getItem('zx_platform_session');
       if (raw) {
         const session = JSON.parse(raw);
-        if (session && session.accessToken) {
+        // A session alone isn't enough: it must carry role_platform_admin, the
+        // same claim platformLogin() requires. Guards against a stale or
+        // hand-written localStorage entry rendering this console.
+        const isPlatformAdmin = !!(session && session.roles && session.roles.indexOf('role_platform_admin') !== -1);
+        if (session && session.accessToken && isPlatformAdmin) {
           window.adminToken = session.accessToken;
           window.adminTenantId = session.tenantId || DEFAULT_TENANT_ID;
           window.adminUserEmail = session.email || '';
@@ -73,59 +77,15 @@ export default function SuperAdminPage() {
       return;
     }
 
-    window.doLogin = async function (e) {
-      e.preventDefault();
-      const btn = document.getElementById('login-btn');
-      btn.textContent = 'Logging in...';
-      const emailEl = document.getElementById('login-email') || document.getElementById('login-username');
-      const passEl = document.getElementById('login-password');
-      const emailVal = emailEl ? emailEl.value.trim() : '';
-      const passVal = passEl ? passEl.value : '';
-      try {
-        // Use the correct sessions endpoint (NOT /oauth/v1/token which is for machine clients)
-        const res = await fetch('/api/identity/v1/sessions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Tenant-ID': DEFAULT_TENANT_ID
-          },
-          body: JSON.stringify({
-            email: emailVal || 'admin@acme.com',
-            password: passVal || 'SecurePassword123'
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          const errMsg = data.message || ('Login failed: ' + res.status);
-          throw new Error(errMsg);
-        }
-        window.adminToken = data.access_token || '';
-        if (!window.adminToken) {
-          console.error('Session response:', data);
-          throw new Error('No access_token in response.');
-        }
-        window.adminTenantId = data.tenant_id || DEFAULT_TENANT_ID;
-        const session = {
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token || '',
-          sessionId: data.session_id,
-          expiresAt: Date.now() + (data.expires_in || 900) * 1000,
-          tenantId: window.adminTenantId,
-          brandId: data.brand_id || '',
-          email: emailVal || 'admin@acme.com',
-          roles: []
-        };
-        localStorage.setItem('zx_admin_session', JSON.stringify(session));
-        window.dispatchEvent(new Event('zx-auth-change'));
-        setUserChrome(session);
-        document.getElementById('login-overlay').style.display = 'none';
-        toast('Logged in as ' + (emailVal || 'admin@acme.com'));
-        window.pollServicesHealth();
-      } catch (err) {
-        toast('Login error: ' + err.message);
-        btn.textContent = 'Login';
-      }
-    }
+    // The inline login overlay that used to live here has been removed. It
+    // authenticated against the seeded Acme demo tenant with hardcoded fallback
+    // credentials (admin@acme.com / SecurePassword123), stored a TENANT session
+    // under zx_admin_session, and never checked role_platform_admin -- a second
+    // way into the super-admin console that wasn't a super-admin login at all.
+    // Sign-in now happens only at /Super-admin/login (or /platform-admin), both
+    // of which go through platformLogin(): pinned to the super-admin host and
+    // gated on role_platform_admin. No markup in this page referenced the
+    // overlay, so there is no UI to replace.
 
     window.doCreateTenant = async function (e) {
       e.preventDefault();

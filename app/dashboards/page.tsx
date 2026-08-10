@@ -9,8 +9,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
 import { PermissionPicker, type PolicyRule } from "../admin/_components/PermissionPicker";
+import { buildInvite, generatePassword } from "../admin/_components/invite";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Maps this dashboard's own service-card ids and sidebar tabs to the real
 // backend domain vocabulary (ServiceKey in lib/admin/services.ts) so a
@@ -561,6 +564,14 @@ function AssignRoleModal({ user, roles, assignedRoleIds, onClose }: {
 
   const save = useMutation({
     mutationFn: async () => {
+      // role_members.user_id is a UUID column, so anything else (an email from a
+      // half-populated users table, say) fails deep in the DB as a 500.
+      if (!UUID_RE.test(String(user.id))) {
+        throw new ApiException(400, {
+          code: "INVALID_USER",
+          message: "This row has no backend user id yet — reload the users list and try again.",
+        });
+      }
       const toAdd = selected.filter((id) => !assignedRoleIds.includes(id));
       const toRemove = assignedRoleIds.filter((id) => !selected.includes(id));
       await Promise.all([
@@ -702,7 +713,11 @@ export default function DashboardsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
-  const [inviteAccess, setInviteAccess] = useState<string[]>([]);
+  // Real policy rules from the backend permission catalog (GET /v1/permissions),
+  // which is what POST /v1/users actually accepts as `rules`. The old 18
+  // free-text checkbox labels were sent as `access_domains` -- a field no
+  // endpoint has ever read.
+  const [inviteRules, setInviteRules] = useState<PolicyRule[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [createdUserDetails, setCreatedUserDetails] = useState<{
     email: string;
@@ -714,45 +729,39 @@ export default function DashboardsPage() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async (tenantId: string) => {
+  // GET /v1/users is tenant-scoped and requires a Bearer token
+  // (authTenantChain + "tenant:user:read"). It must go through the api client,
+  // which attaches the session token and X-Tenant-ID and throws on a non-2xx --
+  // a raw fetch to /api/proxy sends no Authorization header and, because the
+  // proxy always answers HTTP 200 wrapping {status, ok, data}, a bare `res.ok`
+  // check reads a backend 401 as success.
+  const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     setUsersError(null);
     try {
-      const res = await fetch("/api/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          port: 8080,
-          method: "GET",
-          path: "/v1/users",
-          headers: { "X-Tenant-ID": tenantId }
-        })
-      });
-      if (res.ok) {
-        const payload = await res.json();
-        // Backend returns {users: [{user_id, email, full_name, status, created_at}]} --
-        // NOT {items: [...]} with roles/access_domains/is_active, which never existed
-        // on this response and meant this table always rendered "User"/"None"/"INVITED".
-        if (payload.ok && payload.data?.users) {
-          const fetchedUsers = payload.data.users.map((u: any) => {
-            const initials = u.full_name ? u.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() : "U";
-            return {
-              id: u.user_id || u.email,
-              initials,
-              name: u.full_name || u.email,
-              status: (u.status || "invited").toUpperCase(),
-            };
-          });
-          setTenantUsers(fetchedUsers);
-        } else {
-          setUsersError(payload.error || "Failed to load users.");
-        }
-      } else {
-        setUsersError(`Failed to load users (HTTP ${res.status}).`);
-      }
+      // Backend returns {users: [{user_id, email, full_name, status, created_at}]} --
+      // NOT {items: [...]} with roles/access_domains/is_active, which never existed
+      // on this response and meant this table always rendered "User"/"None"/"INVITED".
+      const data = await api.get<{ users?: any[] }>("identity", "/v1/users");
+      const fetchedUsers = (data.users ?? [])
+        // user_id is the only usable identity here: role membership is keyed on
+        // a UUID (authorization.role_members.user_id), so a row without one
+        // cannot be assigned a role and must not reach the table.
+        .filter((u: any) => u.user_id)
+        .map((u: any) => {
+          const initials = u.full_name ? u.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() : "U";
+          return {
+            id: u.user_id,
+            initials,
+            name: u.full_name || u.email,
+            email: u.email,
+            status: (u.status || "invited").toUpperCase(),
+          };
+        });
+      setTenantUsers(fetchedUsers);
     } catch (err) {
       console.warn("Failed to fetch users:", err);
-      setUsersError("Failed to load users — check your connection and try again.");
+      setUsersError(err instanceof ApiException ? err.message : "Failed to load users — check your connection and try again.");
     } finally {
       setUsersLoading(false);
     }
@@ -763,63 +772,55 @@ export default function DashboardsPage() {
     setInviteEmail("");
     setInviteName("");
     setInvitePassword("");
-    setInviteAccess([]);
+    setInviteRules([]);
   };
 
+  /**
+   * POST /v1/users (identity-tenancy OnboardUser). The backend requires
+   * email + full_name + brand_id + password (>= 12 chars) and optional `rules`;
+   * it is behind authTenantChain, so the call must carry the session Bearer
+   * token. Going through the api client means a rejection throws instead of
+   * being mistaken for success -- previously any backend error still showed the
+   * "User created" modal and printed credentials for an account that did not
+   * exist, which is exactly why those invitees could never sign in.
+   */
   const handleCreateUser = async () => {
     if (!inviteEmail || !inviteName || !invitePassword) {
       toast.error("Please fill in email, name, and generate a password");
       return;
     }
+    if (invitePassword.length < 12) {
+      toast.error("Temporary password must be at least 12 characters");
+      return;
+    }
+
+    const brandId = me?.brand_id || getSession()?.brandId;
+    if (!brandId) {
+      toast.error("No brand is associated with your session — sign out and back in, then try again.");
+      return;
+    }
 
     setIsCreatingUser(true);
     try {
-      const res = await fetch("/api/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          port: 8080,
-          method: "POST",
-          path: "/v1/users",
-          headers: {
-            "X-Tenant-ID": sessionData.tenantId || "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
-          },
-          body: {
-            email: inviteEmail,
-            full_name: inviteName,
-            temporary_password: invitePassword,
-            access_domains: inviteAccess
-          }
-        })
+      await api.post("identity", "/v1/users", {
+        email: inviteEmail,
+        full_name: inviteName,
+        brand_id: brandId,
+        password: invitePassword,
+        rules: inviteRules,
       });
 
-      if (res.ok) {
-        setCreatedUserDetails({
-          email: inviteEmail,
-          password: invitePassword,
-          tenantId: sessionData.tenantId || "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
-        });
-
-        // Append new user to the table
-        const newInitials = inviteName.trim() ? inviteName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() : "U";
-        setTenantUsers(prev => [
-          ...prev,
-          {
-            id: inviteEmail,
-            initials: newInitials,
-            name: inviteName || "New User",
-            role: "Custom",
-            access: inviteAccess.length > 0 ? inviteAccess.slice(0, 2).join(" · ") + (inviteAccess.length > 2 ? ` +${inviteAccess.length - 2}` : "") : "None",
-            status: "INVITED"
-          }
-        ]);
-
-        closeInviteModal();
-      } else {
-        toast.error("Failed to create user. Status: " + res.status);
-      }
+      setCreatedUserDetails({
+        email: inviteEmail,
+        password: invitePassword,
+        tenantId: sessionData.tenantId || "",
+      });
+      closeInviteModal();
+      // Re-read from the backend rather than appending a synthetic row: role
+      // assignment needs the server-generated user_id (a UUID).
+      fetchUsers();
     } catch (err) {
-      toast.error("Error creating user: " + String(err));
+      toast.error(err instanceof ApiException ? err.message : "Error creating user: " + String(err));
     } finally {
       setIsCreatingUser(false);
     }
@@ -1259,9 +1260,7 @@ export default function DashboardsPage() {
     const session = getSession();
     if (session && session.accessToken) {
       setSessionData({ email: session.email, tenantId: session.tenantId });
-      if (session.tenantId) {
-        fetchUsers(session.tenantId);
-      }
+      fetchUsers();
       fetchMe()
         .then((m) => setMe(m))
         .catch(() => setMe(null))
@@ -3525,10 +3524,7 @@ export default function DashboardsPage() {
                       className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm font-mono"
                     />
                     <button
-                      onClick={() => {
-                        const newPass = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-4).toUpperCase() + "!";
-                        setInvitePassword(newPass);
-                      }}
+                      onClick={() => setInvitePassword(generatePassword())}
                       className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold transition border border-slate-300 shadow-sm cursor-pointer"
                     >
                       Generate
@@ -3539,39 +3535,13 @@ export default function DashboardsPage() {
 
                 <div className="pt-2">
                   <h3 className="text-slate-500 text-[11px] font-bold tracking-wider uppercase mb-3">What can they access?</h3>
-                  <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                    {[
-                      "Identity & Tenancy", "Customers & Accounts",
-                      "Lifecycle & KYC", "Product Catalogue",
-                      "Orders & Provisioning", "Integration Ecosystem",
-                      "Usage & Mediation", "Rating & Charging",
-                      "Tax & Jurisdiction", "Billing & Invoice",
-                      "Payments", "Finance Ledger",
-                      "Evidence Ledger", "Partner Settlement",
-                      "Revenue Assurance", "Dunning & Disputes",
-                      "Fraud & Risk", "Reporting & Regulatory"
-                    ].map(access => (
-                      <label key={access} className="flex items-center gap-3 cursor-pointer group">
-                        <div className="relative flex items-center justify-center w-4 h-4 rounded-sm border border-slate-300 bg-white group-hover:border-sky-400 transition-colors shadow-sm overflow-hidden">
-                          <input
-                            type="checkbox"
-                            className="opacity-0 absolute inset-0 cursor-pointer peer"
-                            checked={inviteAccess.includes(access)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setInviteAccess(prev => [...prev, access]);
-                              } else {
-                                setInviteAccess(prev => prev.filter(a => a !== access));
-                              }
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-sky-500 opacity-0 peer-checked:opacity-100 transition-opacity"></div>
-                          <svg className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                        <span className="text-slate-700 text-sm font-medium">{access}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <PermissionPicker rules={inviteRules} onChange={setInviteRules} />
+                  {inviteRules.length === 0 && (
+                    <p className="text-slate-500 text-xs mt-2">
+                      Nothing selected — this user will be able to sign in but won&apos;t see any dashboard
+                      section yet. You can also assign them a role later.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -3626,19 +3596,24 @@ export default function DashboardsPage() {
                   This is the only time the temporary password is shown. Copy it now and share it with them securely.
                 </p>
 
-                <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 flex flex-col gap-1 font-mono text-[13px] text-slate-300 shadow-inner">
-                  <div><span className="text-white font-semibold">ZoikoNex login — your account</span></div>
-                  <div className="mt-1">URL: <span className="text-white">https://www.zoikonex.com/admin</span></div>
-                  <div>Tenant ID: <span className="text-white">{createdUserDetails.tenantId}</span></div>
-                  <div>Email: <span className="text-white">{createdUserDetails.email}</span></div>
-                  <div>Temporary password: <span className="text-white">{createdUserDetails.password}</span></div>
+                <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 font-mono text-[13px] text-slate-300 shadow-inner whitespace-pre-wrap">
+                  {buildInvite({
+                    label: "your account",
+                    tenantId: createdUserDetails.tenantId,
+                    email: createdUserDetails.email,
+                    password: createdUserDetails.password,
+                  })}
                 </div>
 
                 <button
                   onClick={() => {
-                    const text = `ZoikoNex login - your account\nURL: https://www.zoikonex.com/admin\nTenant ID: ${createdUserDetails.tenantId}\nEmail: ${createdUserDetails.email}\nTemporary password: ${createdUserDetails.password}`;
-                    navigator.clipboard.writeText(text);
-                    alert("Copied to clipboard!");
+                    navigator.clipboard.writeText(buildInvite({
+                      label: "your account",
+                      tenantId: createdUserDetails.tenantId,
+                      email: createdUserDetails.email,
+                      password: createdUserDetails.password,
+                    }));
+                    toast.success("Login details copied");
                   }}
                   className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white border border-slate-600 rounded-lg text-sm font-semibold transition cursor-pointer"
                 >

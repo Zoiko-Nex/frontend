@@ -17,18 +17,39 @@ function getTenantIdFromToken(authHeader: string | null): string | null {
   }
 }
 
+// The one host the internal super-admin console is served from. Kept in sync
+// with lib/admin/platform/host.ts (which can't be imported here — middleware
+// runs in the edge runtime and that module is a client module).
+const SUPERADMIN_HOST = 'super-admin.zoikonex.com';
+// Pre-existing un-hyphenated spelling: redirected to the canonical host, never
+// served, so old bookmarks keep working without becoming a second login origin.
+const LEGACY_SUPERADMIN_HOST = 'superadmin.zoikonex.com';
+
+// Page paths that make up the super-admin console. These are only ever served
+// on SUPERADMIN_HOST; requests for them on any other host are redirected there.
+const SUPERADMIN_PATHS = ['/platform-admin', '/Super-admin'];
+
 // Hosts that serve the marketing site / tooling — never treated as a tenant subdomain
 const APEX_HOSTS = new Set([
   'localhost',
   '127.0.0.1',
   'zoikonex.com',
   'www.zoikonex.com',
+  SUPERADMIN_HOST,
+  LEGACY_SUPERADMIN_HOST,
 ]);
-
-const SUPERADMIN_HOST = 'superadmin.zoikonex.com';
 
 function isApexHost(hostname: string): boolean {
   return APEX_HOSTS.has(hostname) || hostname.endsWith('.vercel.app');
+}
+
+/** Local dev / preview, where there is no super-admin subdomain to serve from. */
+function isDevHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.vercel.app');
+}
+
+function isSuperAdminPath(pathname: string): boolean {
+  return SUPERADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 export function middleware(request: NextRequest) {
@@ -78,14 +99,40 @@ export function middleware(request: NextRequest) {
   const hostname = request.nextUrl.hostname.toLowerCase();
   const pathname = request.nextUrl.pathname;
 
+  // Old un-hyphenated host: send everything to the canonical one, so there is
+  // exactly one origin where super-admin credentials are ever entered.
+  if (hostname === LEGACY_SUPERADMIN_HOST) {
+    const url = request.nextUrl.clone();
+    url.hostname = SUPERADMIN_HOST;
+    url.protocol = 'https';
+    url.port = '';
+    return NextResponse.redirect(url, 308);
+  }
+
   if (hostname === SUPERADMIN_HOST) {
-    // superadmin.zoikonex.com -> our internal Super-admin console
+    // super-admin.zoikonex.com -> our internal super-admin consoles only.
+    // /platform-admin is served as-is; anything else is mapped under
+    // /Super-admin so the bare domain lands on the console.
+    if (pathname.startsWith('/platform-admin')) {
+      return NextResponse.next();
+    }
     if (!pathname.startsWith('/Super-admin')) {
       const url = request.nextUrl.clone();
       url.pathname = `/Super-admin${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);
     }
     return NextResponse.next();
+  }
+
+  // The super-admin console is not served from the apex, from a tenant
+  // subdomain, or from anywhere else — this is what makes
+  // super-admin.zoikonex.com the only place a super admin can sign in.
+  if (isSuperAdminPath(pathname) && !isDevHost(hostname)) {
+    const url = request.nextUrl.clone();
+    url.hostname = SUPERADMIN_HOST;
+    url.protocol = 'https';
+    url.port = '';
+    return NextResponse.redirect(url, 307);
   }
 
   if (!isApexHost(hostname)) {

@@ -12,8 +12,20 @@ const APEX_DOMAINS = new Set([
   "www.zoikonex.com",
   "platform.zoikonex.io",
   "app.zoikonex.com",
+  // Super-admin console hosts — never a customer tenant. See
+  // lib/admin/platform/host.ts.
+  "super-admin.zoikonex.com",
   "superadmin.zoikonex.com",
 ]);
+
+/**
+ * True for hosts that serve the marketing site or an internal console and can
+ * therefore never be resolved to a customer tenant.
+ */
+export function isApexDomain(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/:\d+$/, "");
+  return APEX_DOMAINS.has(host) || host.endsWith(".vercel.app");
+}
 
 /**
  * Extracts a target domain suffix from the current browser location or explicit input.
@@ -36,7 +48,7 @@ export function extractDomainSlug(overrideDomain?: string): string | null {
 
   // 2. Extract from hostname (e.g. golite.zoikonex.com)
   const hostname = window.location.hostname.toLowerCase();
-  if (!hostname || APEX_DOMAINS.has(hostname)) {
+  if (!hostname || isApexDomain(hostname)) {
     return null;
   }
 

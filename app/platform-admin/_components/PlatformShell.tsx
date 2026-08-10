@@ -1,14 +1,30 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformAuth } from "./usePlatformAuth";
 import { platformLogout } from "@/lib/admin/platform/auth";
+import { isSuperAdminHost } from "@/lib/admin/platform/host";
 import PlatformLoginScreen from "./PlatformLoginScreen";
+import WrongDomainNotice from "./WrongDomainNotice";
 
 export default function PlatformShell({ children }: { children: React.ReactNode }) {
   const { session, authenticated } = usePlatformAuth();
   const router = useRouter();
+
+  // Resolved after mount only — the host isn't known during SSR, and rendering
+  // a different tree on the server would trip hydration.
+  const [hostChecked, setHostChecked] = useState(false);
+  const [allowedHost, setAllowedHost] = useState(true);
+  useEffect(() => {
+    setAllowedHost(isSuperAdminHost());
+    setHostChecked(true);
+  }, []);
+
+  if (hostChecked && !allowedHost) {
+    return <WrongDomainNotice />;
+  }
 
   if (!authenticated) {
     return <PlatformLoginScreen />;
