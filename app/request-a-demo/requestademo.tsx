@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { submitDemoRequest } from "../actions/submitDemoRequest";
 
 // Pre-defined key target telecommunication markets
 const TELECOM_MARKETS = [
@@ -93,33 +94,20 @@ export default function DeploymentPage() {
     setErrorMessage("");
 
     try {
-      const res = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          port: 8099,
-          method: 'POST',
-          path: '/v1/demo-requests',
-          body: {
-            full_name: name,
-            work_email: email,
-            organization: org,
-            job_title: jobTitle.trim(),
-            country: country,
-            operator_type: operatorType,
-            project_requirements: projectRequirements.trim(),
-            source_page: '/request-a-demo'
-          }
-        })
+      const res = await submitDemoRequest({
+        full_name: name,
+        work_email: email,
+        organization: org,
+        job_title: jobTitle.trim(),
+        country: country,
+        operator_type: operatorType,
+        project_requirements: projectRequirements.trim(),
+        source_page: '/request-a-demo'
       });
 
-      const payload = await res.json();
-
-      if (!payload.ok) {
-        let message = 'Something went wrong submitting your request.';
-        if (payload.data && typeof payload.data.message === 'string') message = payload.data.message;
+      if (!res.success) {
         setSubmitStatus('error');
-        setErrorMessage(message);
+        setErrorMessage(res.error || 'Something went wrong submitting your request.');
         return;
       }
 
