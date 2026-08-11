@@ -1,0 +1,67 @@
+import React from 'react';
+import { CanonicalLayout } from '../../components/CanonicalLayout';
+import { KeyFactsBlock } from '../../components/KeyFactsBlock';
+import { CanonicalEmailPayload } from '../../types/CanonicalEmail';
+import { Text } from '@react-email/components';
+
+export interface UserInvitationData {
+  recipient_first_name?: string;
+  user_masked_email: string;
+  tenant_display_name: string;
+}
+
+export interface UserInvitationEmailProps {
+  payload: CanonicalEmailPayload;
+}
+
+export const UserInvitationEmail: React.FC<UserInvitationEmailProps> = ({ payload }) => {
+  const data = payload.eventData as UserInvitationData;
+  const firstName = data?.recipient_first_name || 'there';
+
+  const facts = [
+    { label: 'Account', value: data?.user_masked_email || 'Unknown' },
+    { label: 'Tenant', value: data?.tenant_display_name || 'Unknown' },
+    { label: 'Reference', value: payload.traceability.message_reference },
+    { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
+  ];
+
+  return (
+    <CanonicalLayout
+      payload={payload}
+      subject="You have been invited to ZoikoNex"
+      preheader="Confirmation, key details and the next available action."
+      openingText={`Hello ${firstName}, This email relates to user invitation.`}
+      primaryCtaText="Accept invitation"
+      primaryCtaLink={`https://zoikonex.com/accept-invitation?ref=${payload.traceability.message_reference}`}
+    >
+      <KeyFactsBlock facts={facts} />
+      
+      <Text style={actionCopy}>
+        You can select <strong>Accept invitation</strong> to review the authoritative record and available next steps.
+      </Text>
+      
+      <Text style={protectionCopy}>
+        If you did not expect this activity, do not forward this email or share credentials. Use the verified ZoikoNex sign-in page or contact your authorized administrator immediately.
+      </Text>
+    </CanonicalLayout>
+  );
+};
+
+export default UserInvitationEmail;
+
+const actionCopy = {
+  fontSize: '14px',
+  color: '#484848',
+  lineHeight: '1.5',
+  marginTop: '16px',
+};
+
+const protectionCopy = {
+  fontSize: '14px',
+  color: '#484848',
+  lineHeight: '1.5',
+  marginTop: '16px',
+  padding: '12px',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
+};
