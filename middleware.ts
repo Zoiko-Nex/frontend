@@ -27,7 +27,7 @@ const LEGACY_SUPERADMIN_HOST = 'superadmin.zoikonex.com';
 
 // Page paths that make up the super-admin console. These are only ever served
 // on SUPERADMIN_HOST; requests for them on any other host are redirected there.
-const SUPERADMIN_PATHS = ['/platform-admin', '/Super-admin'];
+const SUPERADMIN_PATHS = ['/Super-admin'];
 
 // Hosts that serve the marketing site / tooling — never treated as a tenant subdomain
 const APEX_HOSTS = new Set([

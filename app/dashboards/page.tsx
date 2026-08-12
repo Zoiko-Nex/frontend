@@ -8,8 +8,9 @@ import { fetchMe, canAccessDomain, hasFullAccess, type Me } from "@/lib/admin/pe
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
-import { PermissionPicker, type PolicyRule } from "../admin/_components/PermissionPicker";
-import { buildInvite, generatePassword } from "../admin/_components/invite";
+import { PermissionPicker, type PolicyRule } from "../components/admin/PermissionPicker";
+import { buildInvite, generatePassword } from "../components/admin/invite";
+import IntegrationTab from "./IntegrationTab";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -48,6 +49,7 @@ const SERVICE_DOMAIN: Record<string, string> = {
 const TAB_DOMAIN: Record<string, string> = {
   Trust: "evidence",
   Billing: "billing",
+  Integration: "integration",
   Settings: "identity",
 };
 
@@ -846,6 +848,7 @@ export default function DashboardsPage() {
     { label: "Documentation", tabKey: "Documentation", category: "Navigation" },
     { label: "Support & Success", tabKey: "Support", category: "Navigation" },
     { label: "Billing & Commercials", tabKey: "Billing", category: "Navigation" },
+    { label: "Integrations", tabKey: "Integration", category: "Navigation" },
     { label: "Admin Settings", tabKey: "Settings", category: "Navigation" },
     { label: "Product Catalog", tabKey: "Services", category: "Service" },
     { label: "Real-Time Charging", tabKey: "Services", category: "Service" },
@@ -1431,6 +1434,7 @@ export default function DashboardsPage() {
       section: "OPERATE", items: [
         { label: "Support & Success", tabKey: "Support", iconPath: "/image/dashboard/sidebar-notification.svg" },
         { label: "Billing & Commercials", tabKey: "Billing", iconPath: "/image/dashboard/credit-card.svg" },
+        { label: "Integrations", tabKey: "Integration", iconPath: "/image/dashboard/api-braces.svg" },
         { label: "Admin Settings", tabKey: "Settings", iconPath: "/image/dashboard/settings-gear.svg" }
       ]
     }
@@ -3215,6 +3219,13 @@ export default function DashboardsPage() {
               </div>
             ) : (
               <LockedPanel label="Admin Settings" />
+            ))}
+
+            {/* Integration Tab */}
+            {currentTab === "Integration" && (canAccess(TAB_DOMAIN.Integration) ? (
+              <IntegrationTab />
+            ) : (
+              <LockedPanel label="Integrations" />
             ))}
 
 

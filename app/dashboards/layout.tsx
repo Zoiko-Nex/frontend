@@ -1,4 +1,4 @@
-import Providers from "../admin/_components/Providers";
+import Providers from "../components/admin/Providers";
 
 // Scopes a React Query context to /dashboards only (the root layout has
 // none) so this route can reuse admin-panel components like PermissionPicker
