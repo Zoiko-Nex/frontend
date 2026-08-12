@@ -46,11 +46,14 @@ const PORT_TO_ENV_VAR: Record<number, string> = {
 const BLOCKED_HEADERS = new Set(["connection", "content-length", "cookie", "host", "origin", "referer"]);
 
 export async function POST(req: NextRequest) {
+  let method = "UNKNOWN";
+  let baseUrl = "UNKNOWN";
+  let path = "UNKNOWN";
   try {
     const payload = await req.json();
     let port = Number(payload.port);
-    const method = String(payload.method || "GET").toUpperCase();
-    const path = String(payload.path || "/");
+    method = String(payload.method || "GET").toUpperCase();
+    path = String(payload.path || "/");
 
     // Auto-route based on path to perfectly integrate all APIs using the deployed links
     if (port === 8080 || !port) {
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
     const envVar = PORT_TO_ENV_VAR[port];
-    const baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
+    baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
 
     if (!baseUrl || !path.startsWith("/")) {
       return NextResponse.json({ status: 400, ok: false, data: { message: "Unknown service port or invalid path." } });
@@ -104,8 +107,13 @@ export async function POST(req: NextRequest) {
       data = text;
     }
 
+    if (!upstream.ok) {
+      console.error(`[Proxy Error] Upstream returned non-OK status: ${upstream.status} for ${method} ${baseUrl}${path}. Response:`, data);
+    }
+
     return NextResponse.json({ status: upstream.status, ok: upstream.ok, data });
   } catch (error) {
+    console.error(`[Proxy Exception] Failed to fetch upstream ${method} ${baseUrl}${path}:`, error);
     return NextResponse.json({
       status: 502,
       ok: false,

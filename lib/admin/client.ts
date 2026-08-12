@@ -154,7 +154,8 @@ async function request<T>(method: string, serviceKey: string, path: string, body
   let proxyPayload: { status: number, ok: boolean, data: any };
   try {
     proxyPayload = await doFetch(session);
-  } catch {
+  } catch (error) {
+    console.error(`[API Network Error] Service "${svc.label}" unreachable via proxy at path "${path}":`, error);
     throw new ApiException(502, {
       code: "SERVICE_UNREACHABLE",
       message: `${svc.label} is not reachable via proxy. Ensure the backend is running.`,
@@ -169,8 +170,8 @@ async function request<T>(method: string, serviceKey: string, path: string, body
       session = refreshed;
       try {
         proxyPayload = await doFetch(session);
-      } catch {
-        /* fall through */
+      } catch (error) {
+        console.error(`[API Retry Network Error] Retry failed to reach service "${svc.label}" via proxy at path "${path}":`, error);
       }
     }
     if (proxyPayload.status === 401) {
@@ -185,7 +186,9 @@ async function request<T>(method: string, serviceKey: string, path: string, body
   }
 
   if (!proxyPayload.ok) {
-    throw new ApiException(proxyPayload.status, typeof proxyPayload.data === "object" ? proxyPayload.data : { message: String(proxyPayload.data) });
+    const errorBody = typeof proxyPayload.data === "object" ? proxyPayload.data : { message: String(proxyPayload.data) };
+    console.error(`[API Error] Request failed status=${proxyPayload.status} service=${serviceKey} path=${path}:`, errorBody);
+    throw new ApiException(proxyPayload.status, errorBody);
   }
 
   return proxyPayload.data as T;
