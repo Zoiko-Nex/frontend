@@ -1873,9 +1873,9 @@ export default function DashboardsPage() {
                 {/* Domain Workspaces Grid — All 18 TM Forum Aligned Microservice Domains */}
                 <div className="self-stretch flex flex-col justify-start items-start gap-3.5 w-full mt-2">
                   <div className="flex flex-col gap-0.5">
-                    <h2 className="text-base font-extrabold text-slate-900 font-['Plus_Jakarta_Sans']">Domain Workspaces (18/18 Microservices)</h2>
+                    <h2 className="text-base font-extrabold text-slate-900 font-['Plus_Jakarta_Sans']">Domain Workspaces (18 Microservices + Security & Access)</h2>
                     <p className="text-xs text-slate-500 font-['Plus_Jakarta_Sans'] font-normal">
-                      All 18 TM Forum aligned OSS/BSS domain microservices. Select any domain card arrow to open its dedicated management workspace.
+                      All TM Forum aligned OSS/BSS domain microservices and Role & Access Control. Select any domain card arrow to open its dedicated management workspace.
                     </p>
                   </div>
 
@@ -2060,6 +2060,16 @@ export default function DashboardsPage() {
                         tabKey: "Integration",
                         badge: "Configured",
                         badgeStyle: "bg-indigo-50 text-sky-700 border-sky-200"
+                      },
+                      {
+                        id: "role-access-control",
+                        title: "Role & Access Control",
+                        category: "Identity & Security",
+                        desc: "Team users, custom permission roles, SAML/OIDC SSO, & security rules.",
+                        icon: "/image/dashboard/settings-gear.svg",
+                        tabKey: "Settings",
+                        badge: "Gated",
+                        badgeStyle: "bg-[#1d64b8]/10 text-[#1d64b8] border-[#1d64b8]/30"
                       }
                     ].map((card) => (
                       <div
