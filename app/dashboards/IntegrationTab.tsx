@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
+import { getSession } from "@/lib/admin/session";
 
 /* ───────── Types mirroring integration-ecosystem domain models ───────── */
 
@@ -377,6 +378,7 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
     mutationFn: () =>
       api.post<{ connector_id: string }>("integration", "/v1/connectors", {
         ...form,
+        brand_id: getSession()?.brandId || "00000000-0000-0000-0000-000000000000",
         vault_credential_path: `zoikonex/pending/${form.provider_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       }),
     onSuccess: () => {
