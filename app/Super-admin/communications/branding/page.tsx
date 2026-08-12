@@ -19,6 +19,7 @@ export default function TenantBrandingPage() {
     setIsLoading(true);
     const timeoutId = setTimeout(async () => {
       const result = await renderPreviewEmail(
+        'ZNX-EM-IAM-001',
         { display_name: brandName, logo_url: logoUrl, primary_color: primaryColor },
         { from_name: senderName, reply_to: replyTo },
         { url: supportUrl }
