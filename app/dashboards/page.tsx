@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSession, clearSession } from "@/lib/admin/session";
+import { getSession, clearSession, patchSession } from "@/lib/admin/session";
 import { fetchMe, canAccessDomain, hasFullAccess, type Me } from "@/lib/admin/permissions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -664,11 +664,37 @@ const docGuides = [
 
 export default function DashboardsPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [sessionData, setSessionData] = useState<{ email?: string; tenantId?: string }>({});
   const [onlineCount, setOnlineCount] = useState(18);
   const [logs, setLogs] = useState<string[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [meLoaded, setMeLoaded] = useState(false);
+
+  const [activeBrandId, setActiveBrandId] = useState<string>("");
+  const [brandSelectorOpen, setBrandSelectorOpen] = useState(false);
+  const brandRef = useRef<HTMLDivElement>(null);
+
+  const brandsQ = useQuery({
+    queryKey: ["dash", "brands"],
+    queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
+  });
+  const brands = brandsQ.data?.brands ?? [];
+
+  const handleBrandChange = (brandId: string) => {
+    patchSession({ brandId });
+    setActiveBrandId(brandId);
+    setBrandSelectorOpen(false);
+    toast.success("Switched active brand context");
+    qc.invalidateQueries();
+  };
+
+  const activeBrand = brands.find((b) => b.id === activeBrandId);
+  const activeBrandLabel = activeBrand
+    ? activeBrand.name
+    : activeBrandId
+    ? `Brand: ${activeBrandId.substring(0, 6)}`
+    : "Select Brand";
 
   // While /v1/me hasn't resolved yet, treat everything as accessible so
   // nothing flickers locked-then-unlocked on first paint. A tenant admin or
@@ -873,6 +899,7 @@ export default function DashboardsPage() {
       if (helpRef.current && !helpRef.current.contains(t)) setHelpOpen(false);
       if (userRef.current && !userRef.current.contains(t)) setUserMenuOpen(false);
       if (tenantRef.current && !tenantRef.current.contains(t)) setTenantInfoOpen(false);
+      if (brandRef.current && !brandRef.current.contains(t)) setBrandSelectorOpen(false);
     }
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
@@ -893,6 +920,7 @@ export default function DashboardsPage() {
         setHelpOpen(false);
         setUserMenuOpen(false);
         setTenantInfoOpen(false);
+        setBrandSelectorOpen(false);
       }
     }
     document.addEventListener("keydown", handleKeyDown);
@@ -1263,6 +1291,7 @@ export default function DashboardsPage() {
     const session = getSession();
     if (session && session.accessToken) {
       setSessionData({ email: session.email, tenantId: session.tenantId });
+      setActiveBrandId(session.brandId || "");
       fetchUsers();
       fetchMe()
         .then((m) => setMe(m))
@@ -1495,6 +1524,65 @@ export default function DashboardsPage() {
                   </div>
                   <div className="p-3 border-t border-white/10">
                     <button onClick={() => { setCurrentTab("Settings"); setTenantInfoOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">Manage Tenant Settings →</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Brand Info Pill */}
+            <div className="relative" ref={brandRef}>
+              <button
+                onClick={() => { setBrandSelectorOpen(!brandSelectorOpen); setTenantInfoOpen(false); setNotificationsOpen(false); setHelpOpen(false); setUserMenuOpen(false); }}
+                className={`h-10 px-3 py-1.5 rounded-[10px] outline outline-1 flex items-center gap-2 cursor-pointer transition-all duration-200 ${brandSelectorOpen
+                  ? "bg-white/20 outline-white/40 ring-1 ring-sky-400/40"
+                  : "bg-white/10 outline-white/20 hover:bg-white/20"
+                  }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-lime-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">
+                  {activeBrandLabel}
+                </div>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`text-slate-400 transition-transform duration-200 ${brandSelectorOpen ? "rotate-180" : ""}`} strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+
+              {/* Brand Selector Dropdown */}
+              {brandSelectorOpen && (
+                <div className="absolute top-[calc(100%+8px)] left-0 w-64 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                  <div className="p-4 border-b border-white/10">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-lime-400 mb-2">Switch Active Brand</div>
+                    <div className="text-slate-400 text-[11px] leading-4">Select the brand context for operations, users and providers.</div>
+                  </div>
+                  <div className="p-2 max-h-56 overflow-y-auto space-y-0.5">
+                    {brandsQ.isLoading ? (
+                      <div className="px-3 py-2.5 text-xs text-slate-400">Loading brands…</div>
+                    ) : brands.length === 0 ? (
+                      <div className="px-3 py-2.5 text-xs text-slate-400">No brands registered. Go to Settings to add one.</div>
+                    ) : (
+                      brands.map((b) => (
+                        <button
+                          key={b.id}
+                          onClick={() => handleBrandChange(b.id)}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center justify-between cursor-pointer ${
+                            b.id === activeBrandId
+                              ? "bg-white/10 text-white font-bold"
+                              : "text-slate-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-xs">{b.name}</span>
+                            <span className="text-[10px] text-slate-500 font-mono mt-0.5">{b.code_name}</span>
+                          </div>
+                          {b.id === activeBrandId && (
+                            <svg className="w-3.5 h-3.5 text-lime-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <div className="p-3 border-t border-white/10">
+                    <button onClick={() => { setCurrentTab("Settings"); setBrandSelectorOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">Manage Brands →</button>
                   </div>
                 </div>
               )}

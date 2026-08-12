@@ -30,6 +30,13 @@ export interface Connector {
   created_at?: string;
 }
 
+export interface Brand {
+  id: string;
+  name: string;
+  code_name: string;
+  created_at: string;
+}
+
 export interface Operation {
   operation_id: string;
   operation_name: string;
@@ -353,6 +360,7 @@ function ProvidersTab() {
 
 function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({
+    brand_id: getSession()?.brandId || "",
     connector_name: "",
     provider_name: "",
     connector_type: "PAYMENT_GATEWAY",
@@ -374,11 +382,17 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
 
   const isPaymentLike = form.connector_type === "PAYMENT_GATEWAY" || form.connector_type === "MOBILE_MONEY";
 
+  const brandsQ = useQuery({
+    queryKey: ["dash", "brands"],
+    queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
+  });
+  const brands = brandsQ.data?.brands ?? [];
+
   const create = useMutation({
     mutationFn: () =>
       api.post<{ connector_id: string }>("integration", "/v1/connectors", {
         ...form,
-        brand_id: getSession()?.brandId || "00000000-0000-0000-0000-000000000000",
+        brand_id: form.brand_id || "00000000-0000-0000-0000-000000000000",
         vault_credential_path: `zoikonex/pending/${form.provider_name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       }),
     onSuccess: () => {
@@ -388,7 +402,7 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to register connector"),
   });
 
-  const valid = form.connector_name && form.provider_name && form.base_url && form.tenancy_mode;
+  const valid = form.connector_name && form.provider_name && form.base_url && form.tenancy_mode && form.brand_id;
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -411,6 +425,22 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
           <p className="text-slate-600 leading-relaxed">
             This registers the connection in <strong>DRAFT</strong> state. Next, submit credentials (stored directly in Vault), register permitted operations, and request activation.
           </p>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-700 mb-1 block">Brand</label>
+            <select
+              className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8] cursor-pointer"
+              value={form.brand_id}
+              onChange={(e) => setForm({ ...form, brand_id: e.target.value })}
+            >
+              <option value="">-- Select Brand --</option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({b.code_name})
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <label className="text-xs font-semibold text-slate-700 mb-1 block">Display Name</label>
@@ -551,17 +581,23 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1 block">Funds Flow Mode</label>
-                <input
-                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
+                <select
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8] cursor-pointer"
                   value={form.funds_flow_mode}
-                  placeholder="direct-to-tenant"
                   onChange={(e) => setForm({ ...form, funds_flow_mode: e.target.value })}
-                />
+                >
+                  <option value="">-- Select --</option>
+                  <option value="direct-to-tenant">Direct to Tenant</option>
+                  <option value="direct-to-customer">Direct to Customer</option>
+                  <option value="escrow">Escrow / Deferred Settlement</option>
+                  <option value="zoiko-facilitated">Zoiko Facilitated</option>
+                  <option value="n-a">Not Applicable (N/A)</option>
+                </select>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1 block">Merchant of Record</label>
                 <select
-                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8] cursor-pointer"
                   value={form.merchant_or_payee_role}
                   onChange={(e) => setForm({ ...form, merchant_or_payee_role: e.target.value })}
                 >
@@ -569,6 +605,33 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
                   <option value="ZOIKO">Zoiko</option>
                   <option value="PROVIDER">Provider</option>
                   <option value="N-A">N/A</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 mb-1 block">Regulated Role</label>
+                <select
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8] cursor-pointer"
+                  value={form.regulated_role}
+                  onChange={(e) => setForm({ ...form, regulated_role: e.target.value })}
+                >
+                  <option value="">-- Select --</option>
+                  <option value="n-a">Not Applicable (N/A)</option>
+                  <option value="licensed-intermediary">Licensed Intermediary / Agent</option>
+                  <option value="payment-facilitator">Payment Facilitator</option>
+                  <option value="e-money-issuer">E-Money Issuer</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 mb-1 block">Revenue Presentation</label>
+                <select
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8] cursor-pointer"
+                  value={form.revenue_presentation}
+                  onChange={(e) => setForm({ ...form, revenue_presentation: e.target.value })}
+                >
+                  <option value="N-A">Not Applicable (N/A)</option>
+                  <option value="GROSS">Gross Revenue</option>
+                  <option value="NET">Net Revenue</option>
+                  <option value="UNDER_REVIEW">Under Review</option>
                 </select>
               </div>
             </div>
