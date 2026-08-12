@@ -1870,90 +1870,200 @@ export default function DashboardsPage() {
                   </button>
                 </div>
 
-                {/* Domain Workspaces Grid */}
+                {/* Domain Workspaces Grid — All 18 TM Forum Aligned Microservice Domains */}
                 <div className="self-stretch flex flex-col justify-start items-start gap-3.5 w-full mt-2">
                   <div className="flex flex-col gap-0.5">
-                    <h2 className="text-base font-extrabold text-slate-900 font-['Plus_Jakarta_Sans']">Domain Workspaces</h2>
-                    <p className="text-xs text-slate-500 font-['Plus_Jakarta_Sans']">Select any domain card to open its dedicated management workspace.</p>
+                    <h2 className="text-base font-extrabold text-slate-900 font-['Plus_Jakarta_Sans']">Domain Workspaces (18/18 Microservices)</h2>
+                    <p className="text-xs text-slate-500 font-['Plus_Jakarta_Sans'] font-normal">
+                      All 18 TM Forum aligned OSS/BSS domain microservices. Select any domain card arrow to open its dedicated management workspace.
+                    </p>
                   </div>
 
-                  <div className="self-stretch grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                  <div className="self-stretch grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
                     {[
                       {
-                        title: "Order Management",
+                        id: "prod-catalog",
+                        title: "Product Catalogue",
+                        category: "Monetization",
+                        desc: "Plans, bundles, add-ons, eligibility rules, and offer lifecycle.",
+                        icon: "/image/dashboard/services.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "rt-charging",
+                        title: "Real-Time Charging",
+                        category: "Monetization",
+                        desc: "Online charging, real-time balance reservations & policies.",
+                        icon: "/image/dashboard/charging-lightning.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "rating-engine",
+                        title: "Rating & Pricing",
+                        category: "Monetization",
+                        desc: "Usage rating matrix, tiering, discounts & price calculation.",
+                        icon: "/image/dashboard/bar-chart.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "billing-invoice",
+                        title: "Billing & Invoicing",
+                        category: "Monetization",
+                        desc: "Bill cycles, automated invoicing, statement PDF generation.",
+                        icon: "/image/dashboard/billing-document.svg",
+                        tabKey: "Billing",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "payments-collections",
+                        title: "Payments & Collections",
+                        category: "Monetization",
+                        desc: "Payment methods, gateways, retries, refunds, and dunning.",
+                        icon: "/image/dashboard/credit-card.svg",
+                        tabKey: "Billing",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "partner-settlement",
+                        title: "Partner & Settlement",
+                        category: "Monetization",
+                        desc: "Wholesale, interconnect, revenue share, and partner billing.",
+                        icon: "/image/dashboard/user-profile.svg",
+                        tabKey: "Services",
+                        badge: "Provisioning",
+                        badgeStyle: "bg-indigo-50 text-indigo-700 border-indigo-200"
+                      },
+                      {
+                        id: "cust-lifecycle",
+                        title: "Customer Lifecycle",
+                        category: "Customer & Engagement",
+                        desc: "Subscriber accounts, lifecycle states, self-care & multi-brand CRM.",
+                        icon: "/image/dashboard/user-profile.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "notifications-campaigns",
+                        title: "Notifications & Campaigns",
+                        category: "Customer & Engagement",
+                        desc: "Transactional and promotional SMS, email, & push messaging.",
+                        icon: "/image/dashboard/notifications-bell.svg",
+                        tabKey: "Services",
+                        badge: "Available",
+                        badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
+                      },
+                      {
+                        id: "esim-sim-mgmt",
+                        title: "eSIM & SIM Management",
                         category: "Connectivity & Provisioning",
-                        desc: "Customer orders, SIM inventory, eSIM profiles, and provisioning workflows.",
+                        desc: "GSMA eSIM RSP profile sync, activation & SIM inventory.",
                         icon: "/image/dashboard/mobile-sim.svg",
                         tabKey: "Services",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
                       {
-                        title: "Integrations & Ecosystem",
-                        category: "Platform & Connectors",
-                        desc: "Stripe payment gateway, HashiCorp Vault secrets, API allow-lists & webhooks.",
-                        icon: "/image/dashboard/api-braces.svg",
-                        tabKey: "Integration",
-                        badge: "Configured",
-                        badgeStyle: "bg-indigo-50 text-sky-700 border-sky-200"
+                        id: "iot-connectivity",
+                        title: "IoT Connectivity",
+                        category: "Connectivity & Provisioning",
+                        desc: "Device fleet orchestration, usage aggregation, and remote actions.",
+                        icon: "/image/dashboard/settings-compass.svg",
+                        tabKey: "Services",
+                        badge: "Available",
+                        badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
                       },
                       {
-                        title: "Role & Access Control",
-                        category: "Identity & Security",
-                        desc: "Team users, custom permission roles, SAML/OIDC SSO, and policy rules.",
-                        icon: "/image/dashboard/settings-gear.svg",
-                        tabKey: "Settings",
-                        badge: "Gated",
-                        badgeStyle: "bg-[#1d64b8]/10 text-[#1d64b8] border-[#1d64b8]/30"
+                        id: "number-inventory",
+                        title: "Number & Inventory",
+                        category: "Connectivity & Provisioning",
+                        desc: "MSISDN number ranges, MNP porting, reservation & inventory.",
+                        icon: "/image/dashboard/services.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
                       {
-                        title: "Taxation & Jurisdiction",
-                        category: "Compliance & Rating",
-                        desc: "Jurisdiction tax calculation rules, tax providers, and compliance rules.",
+                        id: "taxation-regulatory",
+                        title: "Taxation & Regulatory",
+                        category: "Compliance & Trust",
+                        desc: "Jurisdiction tax engine, regulatory fees, exemptions & rules.",
                         icon: "/image/dashboard/shield.svg",
                         tabKey: "Services",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
                       {
-                        title: "Billing & Commercials",
-                        category: "Financials & Monetization",
-                        desc: "Invoices, payment intent metrics, revenue assurance, and customer billing.",
-                        icon: "/image/dashboard/credit-card.svg",
-                        tabKey: "Billing",
-                        badge: "Wired",
-                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      },
-                      {
-                        title: "Real-Time Charging",
-                        category: "Rating Engine",
-                        desc: "Real-time balance reservation, rating matrix rules, and usage charging meters.",
-                        icon: "/image/dashboard/activity-pulse.svg",
-                        tabKey: "Services",
-                        badge: "100% Online",
-                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      },
-                      {
-                        title: "Customer Lifecycle",
-                        category: "Monetization & CRM",
-                        desc: "Customer accounts, multi-brand subscriptions, and CRM self-care.",
-                        icon: "/image/dashboard/user-profile.svg",
-                        tabKey: "Services",
-                        badge: "Wired",
-                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      },
-                      {
-                        title: "Trust Vault & Evidence",
-                        category: "Governance",
-                        desc: "Immutable audit ledger of charging, billing, and compliance events.",
+                        id: "compliance-kyc",
+                        title: "Compliance & KYC",
+                        category: "Compliance & Trust",
+                        desc: "Identity verification, sanction screening & onboarding checks.",
                         icon: "/image/dashboard/shield-check.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "evidence-ledger",
+                        title: "Evidence Ledger",
+                        category: "Compliance & Trust",
+                        desc: "Immutable evidence of charging, billing & governance events.",
+                        icon: "/image/dashboard/document.svg",
                         tabKey: "Trust",
                         badge: "Protected",
                         badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
+                      },
+                      {
+                        id: "ai-gov-controls",
+                        title: "AI Governance",
+                        category: "Intelligence",
+                        desc: "Tiered AI controls with human approval for material actions.",
+                        icon: "/image/dashboard/code-tags.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "analytics-reporting",
+                        title: "Analytics & Reporting",
+                        category: "Intelligence",
+                        desc: "Operational dashboards, revenue assurance, and reports.",
+                        icon: "/image/dashboard/bar-chart.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "mediation-usage",
+                        title: "Mediation & Usage",
+                        category: "Platform & Integration",
+                        desc: "CDR ingestion, normalization, deduplication & enrichment.",
+                        icon: "/image/dashboard/activity-pulse.svg",
+                        tabKey: "Services",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "api-gateway",
+                        title: "Integrations & Webhooks",
+                        category: "Platform & Integration",
+                        desc: "Stripe payment gateway, Vault keys, API allow-lists & webhooks.",
+                        icon: "/image/dashboard/api-braces.svg",
+                        tabKey: "Integration",
+                        badge: "Configured",
+                        badgeStyle: "bg-indigo-50 text-sky-700 border-sky-200"
                       }
                     ].map((card) => (
                       <div
-                        key={card.title}
+                        key={card.id}
                         onClick={() => setCurrentTab(card.tabKey as any)}
                         className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md hover:border-[#1d64b8]/40 transition-all flex flex-col justify-between group cursor-pointer min-h-[190px]"
                       >
