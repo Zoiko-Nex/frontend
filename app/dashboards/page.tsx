@@ -11,6 +11,9 @@ import { api, ApiException } from "@/lib/admin/client";
 import { PermissionPicker, type PolicyRule } from "../components/admin/PermissionPicker";
 import { buildInvite, generatePassword } from "../components/admin/invite";
 import IntegrationTab from "./IntegrationTab";
+import CatalogManagement from "./CatalogManagement";
+import CustomerManagement from "./CustomerManagement";
+import OrderManagement from "./OrderManagement";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -51,6 +54,9 @@ const TAB_DOMAIN: Record<string, string> = {
   Billing: "billing",
   Integration: "integration",
   Settings: "identity",
+  CatalogManagement: "catalogue",
+  CustomerManagement: "customer",
+  OrderManagement: "order",
 };
 
 function LockedPanel({ label }: { label: string }) {
@@ -1457,6 +1463,13 @@ export default function DashboardsPage() {
         { label: "Sandbox / POC", tabKey: "Sandbox", iconPath: "/image/dashboard/code-tags.svg" },
         { label: "Trust Vault", tabKey: "Trust", iconPath: "/image/dashboard/shield.svg" },
         { label: "Documentation", tabKey: "Documentation", iconPath: "/image/dashboard/document.svg" }
+      ]
+    },
+    {
+      section: "COMMERCIAL LIFECYCLE", items: [
+        { label: "Catalog Management", tabKey: "CatalogManagement", iconPath: "/image/dashboard/services.svg" },
+        { label: "Subscriber KYC", tabKey: "CustomerManagement", iconPath: "/image/dashboard/user-profile.svg" },
+        { label: "Orders & Sagas", tabKey: "OrderManagement", iconPath: "/image/dashboard/checkbox-list.svg" },
       ]
     },
     {
@@ -3507,6 +3520,27 @@ export default function DashboardsPage() {
               <IntegrationTab />
             ) : (
               <LockedPanel label="Integrations" />
+            ))}
+
+            {/* Catalog Management Tab */}
+            {currentTab === "CatalogManagement" && (canAccess(TAB_DOMAIN.CatalogManagement) ? (
+              <CatalogManagement />
+            ) : (
+              <LockedPanel label="Catalog Management" />
+            ))}
+
+            {/* Customer & KYC Management Tab */}
+            {currentTab === "CustomerManagement" && (canAccess(TAB_DOMAIN.CustomerManagement) ? (
+              <CustomerManagement />
+            ) : (
+              <LockedPanel label="Customer & KYC Management" />
+            ))}
+
+            {/* Order Management Tab */}
+            {currentTab === "OrderManagement" && (canAccess(TAB_DOMAIN.OrderManagement) ? (
+              <OrderManagement />
+            ) : (
+              <LockedPanel label="Order Management" />
             ))}
 
 
