@@ -1172,10 +1172,32 @@ function PlaceOrderModal({
     [priceRules, priceRuleId]
   );
 
+  // The catalog version that priced this product. ordering.orders and
+  // ordering.order_items both require it: it is the record of which catalog
+  // produced the agreed price, and without it the order cannot be re-rated or
+  // defended later. It is read from the catalogue rather than assumed — the
+  // previous hardcoded "v2026-06-01" claimed provenance that never existed.
+  const commercialVersionQ = useQuery({
+    queryKey: ["catalog", "commercial-version", productId],
+    queryFn: () =>
+      api.get<{ catalog_version_id: string; policy_version_id?: string }>(
+        "catalogue",
+        `/v1/products/${productId}/commercial-version`
+      ),
+    enabled: !!productId,
+    retry: false, // a 422 here is a product configuration problem, not a transient fault
+  });
+  const commercialVersion = commercialVersionQ.data ?? null;
+
   const createOrder = useMutation({
     mutationFn: async () => {
       if (!selectedRule) {
         throw new Error("no price rule selected");
+      }
+      if (!commercialVersion?.catalog_version_id) {
+        // The backend now rejects this too, but failing here gives a clearer
+        // message than a 422 from two calls deep.
+        throw new Error("no catalog version resolved for this product");
       }
       const order = await api.post<Order>(
         "order",
@@ -1189,6 +1211,10 @@ function PlaceOrderModal({
           currency_code: selectedRule.currency_code,
           jurisdiction_code: jurisdiction,
           country_code: country,
+          // Read from the catalogue, never invented: this is what proves which
+          // catalog version produced the agreed price.
+          catalog_version_id: commercialVersion.catalog_version_id,
+          policy_version_id: commercialVersion.policy_version_id || undefined,
         },
         { idempotencyKey: api.uuid() }
       );
@@ -1201,6 +1227,7 @@ function PlaceOrderModal({
           quantity,
           amount_minor_units: selectedRule.amount_minor_units,
           currency_code: selectedRule.currency_code,
+          catalog_version_id: commercialVersion.catalog_version_id,
         },
         { idempotencyKey: api.uuid() }
       );
@@ -1232,7 +1259,15 @@ function PlaceOrderModal({
   });
 
   const canSubmit =
-    !!customerId && !!accountId && !!productId && !!selectedRule && quantity >= 1 && !createOrder.isPending;
+    !!customerId &&
+    !!accountId &&
+    !!productId &&
+    !!selectedRule &&
+    // No catalog version means the order could not record which catalog priced it,
+    // and the backend now refuses it. Blocking here explains why.
+    !!commercialVersion?.catalog_version_id &&
+    quantity >= 1 &&
+    !createOrder.isPending;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
@@ -1467,6 +1502,35 @@ function PlaceOrderModal({
               />
             </div>
           </div>
+
+          {/* Catalog provenance. Surfaced rather than hidden, because it is what
+              makes the price defensible later. */}
+          {productId && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-slate-700 font-semibold">Catalog version</label>
+              {commercialVersionQ.isLoading ? (
+                <div className="text-slate-400 italic">Resolving catalog version...</div>
+              ) : commercialVersionQ.isError ? (
+                <div className="text-rose-600 text-[11px] leading-relaxed">
+                  {errMessage(
+                    commercialVersionQ.error,
+                    "Could not resolve the catalog version for this product."
+                  )}
+                  <div className="text-slate-500 mt-1">
+                    An order cannot be placed without it: there would be no record of
+                    which catalog priced it.
+                  </div>
+                </div>
+              ) : (
+                <div className="font-mono text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5">
+                  {commercialVersion?.catalog_version_id}
+                  {commercialVersion?.policy_version_id
+                    ? ` · policy ${commercialVersion.policy_version_id}`
+                    : ""}
+                </div>
+              )}
+            </div>
+          )}
 
           {selectedRule && quantity >= 1 && (
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex justify-between items-center">
