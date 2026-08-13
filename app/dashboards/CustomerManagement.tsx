@@ -53,8 +53,11 @@ export default function CustomerManagement() {
   const customersQ = useQuery({
     queryKey: ["customers", "list"],
     queryFn: async () => {
-      const res = await api.get<{ items?: Customer[] }>("customer", "/v1/customers");
-      const list = res.items ?? [];
+      // customer-account returns {"customers": [...]}, not {"items": [...]}.
+      // Reading the wrong key yields an empty array, which looks like "no
+      // customers" rather than a bug.
+      const res = await api.get<{ customers?: Customer[] }>("customer", "/v1/customers");
+      const list = res.customers ?? [];
       
       // Resolve party details for each customer to show names
       const withParties = await Promise.all(
@@ -220,7 +223,7 @@ export default function CustomerManagement() {
                 ) : customers.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-xs text-slate-400">
-                      No subscribers onboarded. Click "Onboard Subscriber" to add.
+                      No subscribers onboarded. Click &quot;Onboard Subscriber&quot; to add.
                     </td>
                   </tr>
                 ) : (

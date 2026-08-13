@@ -48,27 +48,53 @@ export default function CatalogManagement() {
     amount_minor_units: 999, // default £9.99
   });
 
-  const [offerForm, setOfferForm] = useState({
-    offer_name: "",
-    description: "",
-    product_ids: [] as string[],
-    status: "ACTIVE",
-    start_date: new Date().toISOString().split("T")[0],
-    end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  const [offerForm, setOfferForm] = useState(() => {
+    const today = new Date();
+    const inAYear = new Date(today);
+    inAYear.setFullYear(inAYear.getFullYear() + 1);
+    return {
+      offer_name: "",
+      description: "",
+      product_ids: [] as string[],
+      status: "ACTIVE",
+      start_date: today.toISOString().split("T")[0],
+      end_date: inAYear.toISOString().split("T")[0],
+    };
   });
 
   // Queries
+  // The catalogue returns {"products": [...]}, not {"items": [...]}. Reading the
+  // wrong key yields an empty array, which reads as "no products" rather than a bug.
   const productsQ = useQuery({
     queryKey: ["catalog", "products"],
-    queryFn: () => api.get<{ items?: Product[] }>("catalogue", "/v1/products"),
+    queryFn: () => api.get<{ products?: Product[] }>("catalogue", "/v1/products"),
   });
-  const products = productsQ.data?.items ?? [];
+  const products = productsQ.data?.products ?? [];
 
+  // There is no GET /v1/offers — offers are only reachable per product
+  // (GET /v1/products/{id}/offers), so they are gathered across products here.
   const offersQ = useQuery({
-    queryKey: ["catalog", "offers"],
-    queryFn: () => api.get<{ items?: Offer[] }>("catalogue", "/v1/offers"),
+    queryKey: ["catalog", "offers", products.map((p) => p.id).join(",")],
+    enabled: products.length > 0,
+    queryFn: async () => {
+      const perProduct = await Promise.all(
+        products.map(async (p) => {
+          try {
+            const res = await api.get<{ offers?: Offer[] }>(
+              "catalogue",
+              `/v1/products/${p.id}/offers`
+            );
+            return res.offers ?? [];
+          } catch {
+            // One product's offers failing must not blank the whole list.
+            return [] as Offer[];
+          }
+        })
+      );
+      return perProduct.flat();
+    },
   });
-  const offers = offersQ.data?.items ?? [];
+  const offers = offersQ.data ?? [];
 
   // Mutations
   const createProduct = useMutation({
