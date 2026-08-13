@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
+import { formatMoney } from "@/lib/admin/money";
+import { OFFER_TRANSITIONS, PRODUCT_TRANSITIONS } from "@/lib/admin/transitions";
+import { DetailToggle, RecordDetail, StatusPill, TransitionButtons } from "@/components/admin/primitives";
 
 interface Product {
   id: string;
@@ -24,18 +27,6 @@ interface Product {
  * amount_minor_units it was sent — meaning no product created here could ever be
  * ordered, because ordering requires a price rule.
  */
-const MINOR_UNIT_EXPONENT: Record<string, number> = {
-  JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0,
-  BHD: 3, IQD: 3, JOD: 3, KWD: 3, OMR: 3, TND: 3,
-};
-
-/** Format integer minor units by ISO 4217 exponent — JPY has 0, KWD has 3. */
-function formatMinorUnits(minorUnits: number | undefined, currency: string | undefined): string {
-  if (minorUnits === undefined || minorUnits === null || !currency) return "—";
-  const exp = MINOR_UNIT_EXPONENT[currency.toUpperCase()] ?? 2;
-  return `${currency.toUpperCase()} ${(minorUnits / 10 ** exp).toFixed(exp)}`;
-}
-
 interface PriceRule {
   id: string;
   product_id: string;
@@ -54,11 +45,13 @@ interface Offer {
   end_date: string;
 }
 
+
 export default function CatalogManagement() {
   const qc = useQueryClient();
   const [activeSubTab, setActiveSubTab] = useState<"products" | "offers">("products");
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [createOfferOpen, setCreateOfferOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   // Forms
   const [productForm, setProductForm] = useState({
@@ -79,6 +72,17 @@ export default function CatalogManagement() {
   // Price-rule creation. Without a price rule a product cannot be ordered at all,
   // which is why this belongs here rather than being left to a DB insert.
   const [priceProduct, setPriceProduct] = useState<Product | null>(null);
+  const [editRule, setEditRule] = useState<PriceRule | null>(null);
+
+  // Read the rule back by id when the edit modal opens. The table row may be stale
+  // (another operator may have repriced it), and editing against a stale amount is
+  // how two people silently overwrite each other.
+  const editRuleQ = useQuery({
+    queryKey: ["catalog", "price-rule", editRule?.id],
+    queryFn: () => api.get<PriceRule>("catalogue", `/v1/price-rules/${editRule!.id}`),
+    enabled: !!editRule?.id,
+  });
+  const authoritativeRule = editRuleQ.data ?? editRule;
   const [priceForm, setPriceForm] = useState({
     amount_minor_units: 0,
     currency_code: "GBP",
@@ -220,6 +224,39 @@ export default function CatalogManagement() {
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "State transition failed"),
   });
 
+  // Offer lifecycle. The backend accepts ACTIVATE | EXPIRE | RETIRE; anything else
+  // is a 400, so only these are offered.
+  const transitionOffer = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: string }) =>
+      api.patch("catalogue", `/v1/offers/${id}`, {
+        action,
+        reason: action === "RETIRE" ? "Retired by operator from the catalog console" : undefined,
+      }),
+    onSuccess: (_r, v) => {
+      toast.success(`Offer ${v.action} accepted`);
+      qc.invalidateQueries({ queryKey: ["catalog", "offers"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Offer transition failed"),
+  });
+
+  // Correcting a price. PATCH /v1/price-rules/{id} replaces the amount, currency and
+  // rounding policy — it is the only way to fix a mistyped price without creating a
+  // second rule that competes with the first.
+  const updatePriceRule = useMutation({
+    mutationFn: ({ id, amount, currency }: { id: string; amount: number; currency: string }) =>
+      api.patch("catalogue", `/v1/price-rules/${id}`, {
+        amount_minor_units: amount,
+        currency_code: currency,
+        rounding_policy_id: priceForm.rounding_policy_id,
+      }),
+    onSuccess: () => {
+      toast.success("Price rule updated");
+      setEditRule(null);
+      qc.invalidateQueries({ queryKey: ["catalog", "price-rules"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to update the price rule"),
+  });
+
   const createOffer = useMutation({
     mutationFn: () => api.post("catalogue", "/v1/offers", offerForm),
     onSuccess: () => {
@@ -324,6 +361,12 @@ export default function CatalogManagement() {
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-800 text-xs">{p.product_name}</div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5">{p.id}</div>
+                        
+                        <DetailToggle
+                          open={expanded === `products:${p.id}`}
+                          onToggle={() => setExpanded(expanded === `products:${p.id}` ? null : `products:${p.id}`)}
+                        />
+                        {expanded === `products:${p.id}` && <RecordDetail service="catalogue" path={`/v1/products/${p.id}`} queryKey={["catalog", "product", p.id]} />}
                       </td>
                       <td className="px-6 py-4 text-xs font-semibold text-slate-700">
                         {p.charging_model} ({p.product_type})
@@ -341,59 +384,32 @@ export default function CatalogManagement() {
                           </span>
                         ) : (
                           rulesFor(p.id).map((r) => (
-                            <div key={r.id}>
-                              {formatMinorUnits(r.amount_minor_units, r.currency_code)}
+                            <button
+                              key={r.id}
+                              onClick={() => {
+                                setPriceForm((f) => ({
+                                  ...f,
+                                  amount_minor_units: r.amount_minor_units,
+                                  currency_code: r.currency_code,
+                                }));
+                                setEditRule(r);
+                              }}
+                              title="Edit this price"
+                              className="block text-left hover:text-sky-700 transition cursor-pointer"
+                            >
+                              {formatMoney(r.amount_minor_units, r.currency_code)}
                               {r.billing_period ? (
                                 <span className="text-slate-400 font-normal"> /{r.billing_period}</span>
                               ) : null}
-                            </div>
+                            </button>
                           ))
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono outline outline-1 ${
-                            p.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-600 outline-emerald-500/30"
-                              : p.status === "REVIEW"
-                              ? "bg-amber-50 text-amber-600 outline-amber-500/30"
-                              : p.status === "RETIRED"
-                              ? "bg-rose-50 text-rose-600 outline-rose-500/30"
-                              : "bg-slate-50 text-slate-600 outline-slate-500/30"
-                          }`}
-                        >
-                          {p.status}
-                        </span>
+                        <StatusPill status={p.status} />
                       </td>
                       <td className="px-6 py-4 text-right flex gap-1.5 justify-end">
-                        {p.status === "DRAFT" && (
-                          <button
-                            onClick={() => transitionProduct.mutate({ id: p.id, action: "SUBMIT_FOR_REVIEW" })}
-                            disabled={transitionProduct.isPending}
-                            className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded text-[10px] font-bold transition cursor-pointer"
-                          >
-                            Submit
-                          </button>
-                        )}
-                        {p.status === "REVIEW" && (
-                          <button
-                            onClick={() => transitionProduct.mutate({ id: p.id, action: "ACTIVATE" })}
-                            disabled={transitionProduct.isPending}
-                            className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold transition cursor-pointer"
-                          >
-                            Activate
-                          </button>
-                        )}
-                        {p.status === "ACTIVE" && (
-                          <button
-                            onClick={() => transitionProduct.mutate({ id: p.id, action: "RETIRE" })}
-                            disabled={transitionProduct.isPending}
-                            className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[10px] font-bold transition cursor-pointer"
-                          >
-                            Retire
-                          </button>
-                        )}
-                        {["DRAFT", "REVIEW", "ACTIVE"].includes(p.status) && (
+                                                {["DRAFT", "REVIEW", "ACTIVE"].includes(p.status) && (
                           <button
                             onClick={() => {
                               setPriceForm((f) => ({ ...f, currency_code: p.currency_code || f.currency_code }));
@@ -404,9 +420,13 @@ export default function CatalogManagement() {
                             + Price
                           </button>
                         )}
-                        {!["DRAFT", "REVIEW", "ACTIVE"].includes(p.status) && (
-                          <span className="text-[10px] text-slate-400 font-medium">Terminal State</span>
-                        )}
+                        <TransitionButtons
+                          table={PRODUCT_TRANSITIONS}
+                          status={p.status}
+                          pending={transitionProduct.isPending}
+                          onAction={(action) => transitionProduct.mutate({ id: p.id, action })}
+                          className="justify-end"
+                        />
                       </td>
                     </tr>
                   ))
@@ -428,18 +448,19 @@ export default function CatalogManagement() {
                   <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">DESCRIPTION</th>
                   <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">VALIDITY PERIOD</th>
                   <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">STATUS</th>
+                  <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono'] text-right">LIFECYCLE ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-sans">
                 {offersQ.isLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-xs text-slate-400">
+                    <td colSpan={5} className="px-6 py-8 text-center text-xs text-slate-400">
                       Loading offers list...
                     </td>
                   </tr>
                 ) : offers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-xs text-slate-400">
+                    <td colSpan={5} className="px-6 py-12 text-center text-xs text-slate-400">
                       No commercial offers active. Create a bundle to group multiple products.
                     </td>
                   </tr>
@@ -449,21 +470,28 @@ export default function CatalogManagement() {
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-800 text-xs">{o.offer_name}</div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5">{o.id}</div>
+                        
+                        <DetailToggle
+                          open={expanded === `offers:${o.id}`}
+                          onToggle={() => setExpanded(expanded === `offers:${o.id}` ? null : `offers:${o.id}`)}
+                        />
+                        {expanded === `offers:${o.id}` && <RecordDetail service="catalogue" path={`/v1/offers/${o.id}`} queryKey={["catalog", "offer", o.id]} />}
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-600 max-w-sm truncate">{o.description}</td>
                       <td className="px-6 py-4 text-xs text-slate-500">
                         {new Date(o.start_date).toLocaleDateString()} — {new Date(o.end_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono outline outline-1 ${
-                            o.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-600 outline-emerald-500/30"
-                              : "bg-slate-50 text-slate-600 outline-slate-500/30"
-                          }`}
-                        >
-                          {o.status}
-                        </span>
+                        <StatusPill status={o.status} />
+                      </td>
+                      <td className="px-6 py-4 text-right flex gap-1.5 justify-end">
+                        <TransitionButtons
+                          table={OFFER_TRANSITIONS}
+                          status={o.status}
+                          pending={transitionOffer.isPending}
+                          onAction={(action) => transitionOffer.mutate({ id: o.id, action })}
+                          className="justify-end"
+                        />
                       </td>
                     </tr>
                   ))
@@ -761,7 +789,7 @@ export default function CatalogManagement() {
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
                 <span className="text-slate-600 font-semibold text-[11px]">Reads as</span>
                 <span className="font-mono font-bold text-slate-800">
-                  {formatMinorUnits(priceForm.amount_minor_units, priceForm.currency_code)}
+                  {formatMoney(priceForm.amount_minor_units, priceForm.currency_code)}
                 </span>
               </div>
 
@@ -833,6 +861,101 @@ export default function CatalogManagement() {
                 className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
               >
                 {createPriceRule.isPending ? "Creating…" : "Create Price Rule"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Correct a price. PATCH replaces the amount rather than adding a second rule
+          that would compete with the first. */}
+      {editRule && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[420px] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <div>
+                <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Edit Price</h2>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{editRule.id}</p>
+              </div>
+              <button
+                onClick={() => setEditRule(null)}
+                className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col gap-4 text-xs text-slate-700">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Orders already placed keep the amount they locked at order time. This changes
+                the price for orders placed from now on.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Amount (minor units)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceForm.amount_minor_units}
+                    onChange={(e) =>
+                      setPriceForm({ ...priceForm, amount_minor_units: Math.max(0, Number(e.target.value)) })
+                    }
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Currency</label>
+                  <input
+                    value={priceForm.currency_code}
+                    maxLength={3}
+                    onChange={(e) => setPriceForm({ ...priceForm, currency_code: e.target.value.toUpperCase() })}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
+                <span className="text-slate-600 font-semibold text-[11px]">
+                  {editRuleQ.isLoading
+                    ? "loading current price…"
+                    : `${formatMoney(
+                        authoritativeRule?.amount_minor_units,
+                        authoritativeRule?.currency_code
+                      )} →`}
+                </span>
+                <span className="font-mono font-bold text-slate-800">
+                  {formatMoney(priceForm.amount_minor_units, priceForm.currency_code)}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setEditRule(null)}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-xs cursor-pointer shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  updatePriceRule.mutate({
+                    id: editRule.id,
+                    amount: priceForm.amount_minor_units,
+                    currency: priceForm.currency_code,
+                  })
+                }
+                disabled={
+                  updatePriceRule.isPending ||
+                  priceForm.amount_minor_units <= 0 ||
+                  priceForm.currency_code.length !== 3
+                }
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+              >
+                {updatePriceRule.isPending ? "Saving…" : "Save Price"}
               </button>
             </div>
           </div>

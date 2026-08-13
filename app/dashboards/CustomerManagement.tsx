@@ -4,29 +4,51 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
+import { ACCOUNT_TRANSITIONS, CUSTOMER_TRANSITIONS } from "@/lib/admin/transitions";
+import { StatusPill, TransitionButtons } from "@/components/admin/primitives";
 
+/**
+ * Fields here match the API exactly. Three of them did not, and each silently
+ * produced wrong output rather than an error:
+ *
+ *  - Customer has lifecycle_status and kyc_status, never `status`, so every status
+ *    comparison was false and no filter or badge worked.
+ *  - Party carries a pii_token, never first_name/last_name. PII is vaulted
+ *    (ZN-ADR-013 / P0-7), so the console rendered "undefined undefined" for names
+ *    that cannot exist on the wire.
+ *  - KYCCase is keyed case_id, not id.
+ */
 interface Customer {
   id: string;
   party_id: string;
   customer_type: string;
-  segment: string;
-  status: string;
+  segment?: string;
+  risk_level?: string;
+  lifecycle_status: string;
+  kyc_status?: string;
   created_at: string;
-  first_name?: string;
-  last_name?: string;
 }
 
 interface Party {
-  id: string;
-  first_name: string;
-  last_name: string;
+  party_id: string;
   party_type: string;
-  country_code: string;
-  jurisdiction_code: string;
+  pii_token: string;
+  status: string;
+}
+
+interface Account {
+  id: string;
+  customer_id: string;
+  account_number: string;
+  account_type: string;
+  currency_code: string;
+  status: string;
+  credit_limit_minor_units?: number;
+  credit_limit_currency_code?: string;
 }
 
 interface KYCCase {
-  id: string;
+  case_id: string;
   customer_id: string;
   status: string;
   verification_level: string;
@@ -38,12 +60,14 @@ export default function CustomerManagement() {
   const qc = useQueryClient();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [createCustomerOpen, setCreateCustomerOpen] = useState(false);
+  const [newPiiToken, setNewPiiToken] = useState("");
+  const [eraseOpen, setEraseOpen] = useState(false);
+  const [erasureKeyID, setErasureKeyID] = useState("");
 
   // Form states
   const [customerForm, setCustomerForm] = useState({
-    first_name: "",
-    last_name: "",
-    country_code: "GB",
+    party_type: "INDIVIDUAL",
+    pii_token: "",
     jurisdiction_code: "GB",
     customer_type: "RETAIL",
     segment: "PREPAID_MOBILE",
@@ -57,25 +81,42 @@ export default function CustomerManagement() {
       // Reading the wrong key yields an empty array, which looks like "no
       // customers" rather than a bug.
       const res = await api.get<{ customers?: Customer[] }>("customer", "/v1/customers");
-      const list = res.customers ?? [];
+      return res.customers ?? [];
       
-      // Resolve party details for each customer to show names
-      const withParties = await Promise.all(
-        list.map(async (c) => {
-          try {
-            const p = await api.get<Party>("customer", `/v1/parties/${c.party_id}`);
-            return { ...c, first_name: p.first_name, last_name: p.last_name };
-          } catch {
-            return c;
-          }
-        })
-      );
-      return withParties;
     },
   });
   const customers = customersQ.data ?? [];
 
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+  // Authoritative record for the selected subscriber. The list row can lag behind a
+  // lifecycle change made elsewhere, and the lifecycle buttons must reflect the real
+  // current state or they will offer an illegal transition.
+  const customerDetailQ = useQuery({
+    queryKey: ["customers", "detail", selectedCustomerId],
+    queryFn: () => api.get<Customer>("customer", `/v1/customers/${selectedCustomerId}`),
+    enabled: !!selectedCustomerId,
+  });
+  const selectedCustomer =
+    customerDetailQ.data ?? customers.find((c) => c.id === selectedCustomerId);
+
+  const partyQ = useQuery({
+    queryKey: ["customers", "party", selectedCustomer?.party_id],
+    queryFn: () => api.get<Party>("customer", `/v1/parties/${selectedCustomer!.party_id}`),
+    enabled: !!selectedCustomer?.party_id,
+  });
+  const party = partyQ.data;
+
+  const accountsQ = useQuery({
+    queryKey: ["customers", "accounts", selectedCustomerId],
+    queryFn: async () => {
+      const res = await api.get<{ accounts?: Account[] }>(
+        "customer",
+        `/v1/customers/${selectedCustomerId}/accounts`
+      );
+      return res.accounts ?? [];
+    },
+    enabled: !!selectedCustomerId,
+  });
+  const accounts = accountsQ.data ?? [];
 
   // KYC Case query for selected customer
   const kycCaseQ = useQuery({
@@ -93,17 +134,18 @@ export default function CustomerManagement() {
   const onboardCustomer = useMutation({
     mutationFn: async () => {
       // 1. Create Party
+      // POST /v1/parties requires party_type and pii_token and accepts no names:
+      // "pii_token is required — store PII in the vault first (ZN-ADR-013)". Sending
+      // first_name/last_name here returned 400 every time, so onboarding never worked.
       const party = await api.post<Party>("customer", "/v1/parties", {
-        party_type: "INDIVIDUAL",
-        first_name: customerForm.first_name,
-        last_name: customerForm.last_name,
-        country_code: customerForm.country_code,
+        party_type: customerForm.party_type,
+        pii_token: customerForm.pii_token.trim(),
         jurisdiction_code: customerForm.jurisdiction_code,
       });
 
       // 2. Create Customer
       const customer = await api.post<Customer>("customer", "/v1/customers", {
-        party_id: party.id,
+        party_id: party.party_id,
         customer_type: customerForm.customer_type,
         segment: customerForm.segment,
       });
@@ -114,9 +156,8 @@ export default function CustomerManagement() {
       toast.success("Subscriber onboarding completed");
       setCreateCustomerOpen(false);
       setCustomerForm({
-        first_name: "",
-        last_name: "",
-        country_code: "GB",
+        party_type: "INDIVIDUAL",
+        pii_token: "",
         jurisdiction_code: "GB",
         customer_type: "RETAIL",
         segment: "PREPAID_MOBILE",
@@ -125,6 +166,76 @@ export default function CustomerManagement() {
       qc.invalidateQueries({ queryKey: ["customers", "list"] });
     },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Onboarding failed"),
+  });
+
+  // ── Lifecycle, party and erasure ────────────────────────────────────────────
+
+  const refreshCustomer = () => {
+    qc.invalidateQueries({ queryKey: ["customers", "list"] });
+    qc.invalidateQueries({ queryKey: ["customers", "detail", selectedCustomerId] });
+  };
+
+  const transitionCustomer = useMutation({
+    mutationFn: ({ action }: { action: string }) =>
+      api.patch("customer", `/v1/customers/${selectedCustomerId}`, {
+        action,
+        reason:
+          action === "SUSPEND" || action === "TERMINATE"
+            ? "Operator action from the subscriber console"
+            : undefined,
+      }),
+    onSuccess: (_r, v) => {
+      toast.success(`Subscriber ${v.action} accepted`);
+      refreshCustomer();
+    },
+    onError: (e) =>
+      toast.error(e instanceof ApiException ? e.message : "Lifecycle transition failed"),
+  });
+
+  const transitionAccount = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: string }) =>
+      api.patch("customer", `/v1/accounts/${id}`, {
+        action,
+        reason:
+          action === "SUSPEND" || action === "CLOSE"
+            ? "Operator action from the subscriber console"
+            : undefined,
+      }),
+    onSuccess: (_r, v) => {
+      toast.success(`Account ${v.action} accepted`);
+      qc.invalidateQueries({ queryKey: ["customers", "accounts", selectedCustomerId] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Account transition failed"),
+  });
+
+  // Re-pointing a party at a new vault token, e.g. after the subject's details are
+  // re-vaulted. The token is the only mutable field on a party.
+  const updateParty = useMutation({
+    mutationFn: (piiToken: string) =>
+      api.patch("customer", `/v1/parties/${selectedCustomer!.party_id}`, { pii_token: piiToken }),
+    onSuccess: () => {
+      toast.success("Party PII token updated");
+      setNewPiiToken("");
+      qc.invalidateQueries({ queryKey: ["customers", "party"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to update the party"),
+  });
+
+  // Right to erasure (P0-7). This crypto-shreds the subject's PII while leaving
+  // invoices, ledger continuity and the evidence hash chain verifiable, so it is not
+  // reversible and is gated behind an explicit confirmation.
+  const eraseCustomer = useMutation({
+    mutationFn: (erasureKeyID: string) =>
+      api.post("customer", `/v1/customers/${selectedCustomerId}/erase`, {
+        erasure_key_id: erasureKeyID,
+      }),
+    onSuccess: () => {
+      toast.success("Erasure executed — PII is now unrecoverable");
+      setEraseOpen(false);
+      setErasureKeyID("");
+      refreshCustomer();
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Erasure failed"),
   });
 
   // KYC Mutations
@@ -237,7 +348,7 @@ export default function CustomerManagement() {
                     >
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-800 text-xs">
-                          {c.first_name} {c.last_name}
+                          {c.id.slice(0, 8)}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5">{c.id}</div>
                       </td>
@@ -246,14 +357,14 @@ export default function CustomerManagement() {
                       <td className="px-6 py-4">
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono outline outline-1 ${
-                            c.status === "ACTIVE"
+                            c.lifecycle_status === "ACTIVE"
                               ? "bg-emerald-50 text-emerald-600 outline-emerald-500/30"
-                              : c.status === "PENDING_KYC"
+                              : c.lifecycle_status === "PENDING_KYC"
                               ? "bg-amber-50 text-amber-600 outline-amber-500/30"
                               : "bg-slate-50 text-slate-600 outline-slate-500/30"
                           }`}
                         >
-                          {c.status}
+                          {c.lifecycle_status}
                         </span>
                       </td>
                     </tr>
@@ -279,9 +390,120 @@ export default function CustomerManagement() {
               <div>
                 <span className="text-slate-400 font-medium">Selected Customer:</span>
                 <div className="text-slate-800 font-bold mt-0.5">
-                  {selectedCustomer?.first_name} {selectedCustomer?.last_name}
+                  {selectedCustomer?.id.slice(0, 8)}
                 </div>
                 <div className="text-[10px] text-slate-400 font-mono mt-0.5">{selectedCustomer?.id}</div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <StatusPill status={selectedCustomer?.lifecycle_status} />
+                  {selectedCustomer?.kyc_status && (
+                    <span className="text-[10px] text-slate-500">KYC {selectedCustomer.kyc_status}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-2.5">
+                <span className="font-bold text-slate-700 text-xs">Subscriber lifecycle</span>
+                <TransitionButtons
+                  table={CUSTOMER_TRANSITIONS}
+                  status={selectedCustomer?.lifecycle_status}
+                  pending={transitionCustomer.isPending}
+                  onAction={(action) => transitionCustomer.mutate({ action })}
+                />
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-2.5">
+                <span className="font-bold text-slate-700 text-xs">Billing accounts</span>
+                {accountsQ.isLoading ? (
+                  <div className="text-slate-400 italic text-[10px]">Loading accounts...</div>
+                ) : accounts.length === 0 ? (
+                  <p className="text-[10px] text-slate-500">
+                    No billing account. An order cannot be raised until one exists.
+                  </p>
+                ) : (
+                  accounts.map((a) => (
+                    <div key={a.id} className="bg-white rounded-lg border border-slate-200 p-2.5 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] font-bold text-slate-800">{a.account_number}</span>
+                        <StatusPill status={a.status} size="xs" />
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-mono">
+                        {a.account_type} - {a.currency_code}
+                      </div>
+                      <TransitionButtons
+                        table={ACCOUNT_TRANSITIONS}
+                        status={a.status}
+                        pending={transitionAccount.isPending}
+                        onAction={(action) => transitionAccount.mutate({ id: a.id, action })}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-2">
+                <span className="font-bold text-slate-700 text-xs">Party (PII boundary)</span>
+                {party ? (
+                  <>
+                    <div className="text-[10px] text-slate-500 font-mono break-all">
+                      {party.party_type} - token {party.pii_token}
+                    </div>
+                    <input
+                      value={newPiiToken}
+                      onChange={(e) => setNewPiiToken(e.target.value)}
+                      placeholder="New pii_token"
+                      className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 outline-none focus:border-sky-500 font-mono text-[10px]"
+                    />
+                    <button
+                      onClick={() => updateParty.mutate(newPiiToken.trim())}
+                      disabled={updateParty.isPending || !newPiiToken.trim()}
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white rounded font-bold text-[10px] cursor-pointer self-start"
+                    >
+                      Re-point PII token
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[10px] text-slate-500">No party record resolved.</p>
+                )}
+              </div>
+
+              <div className="bg-rose-50 rounded-xl p-4 border border-rose-200 flex flex-col gap-2">
+                <span className="font-bold text-rose-800 text-xs">Right to erasure</span>
+                <p className="text-[10px] text-rose-900 leading-relaxed">
+                  Crypto-shreds this subject&apos;s PII. Invoices, ledger continuity and the evidence
+                  chain stay verifiable, but the PII cannot be recovered. Not reversible.
+                </p>
+                {!eraseOpen ? (
+                  <button
+                    onClick={() => setEraseOpen(true)}
+                    className="px-2.5 py-1.5 bg-white text-rose-700 border border-rose-300 hover:bg-rose-100 rounded font-bold text-[10px] cursor-pointer self-start"
+                  >
+                    Erase subscriber PII...
+                  </button>
+                ) : (
+                  <>
+                    <input
+                      value={erasureKeyID}
+                      onChange={(e) => setErasureKeyID(e.target.value)}
+                      placeholder="erasure_key_id (required)"
+                      className="w-full bg-white border border-rose-300 rounded px-2 py-1.5 outline-none focus:border-rose-500 font-mono text-[10px]"
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => { setEraseOpen(false); setErasureKeyID(""); }}
+                        className="px-2.5 py-1.5 bg-white text-slate-600 border border-slate-300 rounded font-bold text-[10px] cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => eraseCustomer.mutate(erasureKeyID.trim())}
+                        disabled={eraseCustomer.isPending || !erasureKeyID.trim()}
+                        className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded font-bold text-[10px] cursor-pointer"
+                      >
+                        Confirm erasure
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* KYC CASE STATUS */}
@@ -305,7 +527,7 @@ export default function CustomerManagement() {
                   <div className="flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500">Case ID:</span>
-                      <span className="font-mono text-[10px] text-slate-800">{kycCase.id}</span>
+                      <span className="font-mono text-[10px] text-slate-800">{kycCase.case_id}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500">Verification:</span>
@@ -342,7 +564,7 @@ export default function CustomerManagement() {
                     {/* ACTIONS */}
                     {kycCase.status === "DRAFT" && (
                       <button
-                        onClick={() => uploadMockDoc.mutate(kycCase.id)}
+                        onClick={() => uploadMockDoc.mutate(kycCase.case_id)}
                         disabled={uploadMockDoc.isPending}
                         className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition text-[11px] shadow-sm cursor-pointer"
                       >
@@ -352,7 +574,7 @@ export default function CustomerManagement() {
 
                     {(kycCase.status === "DRAFT" || kycCase.status === "SUBMITTED" || kycCase.status === "IN_REVIEW") && (
                       <button
-                        onClick={() => approveKYC.mutate(kycCase.id)}
+                        onClick={() => approveKYC.mutate(kycCase.case_id)}
                         disabled={approveKYC.isPending}
                         className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition text-[11px] shadow-sm cursor-pointer"
                       >
@@ -385,37 +607,37 @@ export default function CustomerManagement() {
             </div>
 
             <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto text-xs text-slate-700">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-900 leading-relaxed">
+                Names and other PII are not stored here. A party carries a
+                <span className="font-mono font-semibold"> pii_token</span> issued by the PII
+                vault, and the API rejects a party without one (ZN-ADR-013 / P0-7). Vault the
+                subscriber&apos;s details first, then paste the token below.
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-700 font-semibold">First Name</label>
-                  <input
-                    value={customerForm.first_name}
-                    onChange={(e) => setCustomerForm({ ...customerForm, first_name: e.target.value })}
-                    placeholder="Jane"
+                  <label className="text-slate-700 font-semibold">Party Type</label>
+                  <select
+                    value={customerForm.party_type}
+                    onChange={(e) => setCustomerForm({ ...customerForm, party_type: e.target.value })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500"
-                  />
+                  >
+                    <option value="INDIVIDUAL">INDIVIDUAL</option>
+                    <option value="ORGANISATION">ORGANISATION</option>
+                  </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-700 font-semibold">Last Name</label>
+                  <label className="text-slate-700 font-semibold">PII Token</label>
                   <input
-                    value={customerForm.last_name}
-                    onChange={(e) => setCustomerForm({ ...customerForm, last_name: e.target.value })}
-                    placeholder="Doe"
-                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500"
+                    value={customerForm.pii_token}
+                    onChange={(e) => setCustomerForm({ ...customerForm, pii_token: e.target.value })}
+                    placeholder="tok_..."
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500 font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-700 font-semibold">Country Code</label>
-                  <input
-                    value={customerForm.country_code}
-                    onChange={(e) => setCustomerForm({ ...customerForm, country_code: e.target.value.toUpperCase() })}
-                    placeholder="GB"
-                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500 font-mono"
-                  />
-                </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Jurisdiction Code</label>
                   <input
@@ -463,7 +685,7 @@ export default function CustomerManagement() {
               </button>
               <button
                 onClick={() => onboardCustomer.mutate()}
-                disabled={onboardCustomer.isPending || !customerForm.first_name.trim() || !customerForm.last_name.trim()}
+                disabled={onboardCustomer.isPending || !customerForm.pii_token.trim()}
                 className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
               >
                 {onboardCustomer.isPending ? "Onboarding…" : "Complete Onboarding"}

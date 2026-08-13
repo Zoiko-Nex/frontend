@@ -3,7 +3,22 @@
 import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api, ApiException } from "@/lib/admin/client";
+import { api } from "@/lib/admin/client";
+import { formatMoney } from "@/lib/admin/money";
+import { ENVELOPE, errMessage, isNotFound, listOf, shortId } from "@/lib/admin/envelope";
+import {
+  ORDER_TRANSITIONS,
+  PROVISIONING_TRANSITIONS,
+  SIM_TRANSITIONS,
+} from "@/lib/admin/transitions";
+import {
+  DetailList,
+  DetailToggle,
+  RecordDetail,
+  StatusPill,
+  TableState,
+  TransitionButtons,
+} from "@/components/admin/primitives";
 
 /**
  * Orders, Provisioning & SIM lifecycle.
@@ -23,22 +38,6 @@ import { api, ApiException } from "@/lib/admin/client";
  * PII-tokenised (P0-7), so identity here is the customer id plus type/segment.
  * Rendering "undefined undefined" or inventing a name would both be worse.
  */
-
-// ─── Backend response envelopes ───────────────────────────────────────────────
-// Each service names its list key differently. These are verified against the
-// handlers, not assumed: reading the wrong key silently yields an empty list,
-// which looks like "no data" rather than a bug.
-const ORDER_ITEMS = "items"; // order-management: {"items": [...]}
-const CUSTOMER_LIST = "customers"; // customer-account: {"customers": [...]}
-const ACCOUNT_LIST = "accounts"; // customer-account: {"accounts": [...]}
-const PRODUCT_LIST = "products"; // catalogue: {"products": [...]}
-const PRICE_RULE_LIST = "price_rules"; // catalogue: {"price_rules": [...]}
-
-function listOf<T>(res: unknown, key: string): T[] {
-  if (!res || typeof res !== "object") return [];
-  const v = (res as Record<string, unknown>)[key];
-  return Array.isArray(v) ? (v as T[]) : [];
-}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,92 +126,6 @@ interface SIM {
   order_id?: string;
 }
 
-// ─── State machines (mirrored from the backend domain tables) ─────────────────
-
-type Transition = {
-  /** The `action` value the backend switch expects. */
-  action: string;
-  label: string;
-  /** Terminal or destructive transitions are styled and grouped apart. */
-  destructive?: boolean;
-};
-
-/** internal/domain/order/order.go — legalTransitions */
-const ORDER_TRANSITIONS: Record<string, Transition[]> = {
-  PENDING: [
-    { action: "VALIDATE", label: "Validate order structure" },
-    { action: "CANCEL", label: "Cancel", destructive: true },
-  ],
-  VALIDATING: [
-    { action: "CONFIRM", label: "Confirm commercials" },
-    { action: "FAIL", label: "Fail", destructive: true },
-  ],
-  CONFIRMED: [
-    { action: "START_PROVISIONING", label: "Start provisioning" },
-    { action: "CANCEL", label: "Cancel", destructive: true },
-  ],
-  // ACTIVE precedes COMPLETED. The reverse would be rejected as an illegal
-  // transition and leave the order stuck in PROVISIONING forever.
-  PROVISIONING: [
-    { action: "ACTIVATE", label: "Activate subscription" },
-    { action: "FAIL", label: "Fail", destructive: true },
-  ],
-  ACTIVE: [
-    { action: "COMPLETE", label: "Complete order" },
-    { action: "CANCEL", label: "Cancel", destructive: true },
-  ],
-  FAILED: [],
-  CANCELLED: [],
-  COMPLETED: [],
-};
-
-/** internal/domain/provisioning/provisioning.go — legalProvisioningTransitions */
-const PROVISIONING_TRANSITIONS: Record<string, Transition[]> = {
-  PENDING: [
-    { action: "START", label: "Start network provisioning" },
-    { action: "FAIL", label: "Fail", destructive: true },
-  ],
-  IN_PROGRESS: [
-    { action: "ACTIVATE", label: "Activate on network" },
-    { action: "FAIL", label: "Fail", destructive: true },
-  ],
-  ACTIVATED: [
-    { action: "SUSPEND", label: "Suspend", destructive: true },
-    { action: "DEACTIVATE", label: "Deactivate", destructive: true },
-  ],
-  SUSPENDED: [
-    { action: "REACTIVATE", label: "Reactivate" },
-    { action: "DEACTIVATE", label: "Deactivate", destructive: true },
-  ],
-  DEACTIVATED: [],
-  FAILED: [],
-};
-
-/** internal/domain/sim/sim.go — legalSIMTransitions */
-const SIM_TRANSITIONS: Record<string, Transition[]> = {
-  INVENTORY: [
-    { action: "ASSIGN", label: "Assign to this order" },
-    { action: "TERMINATE", label: "Terminate", destructive: true },
-  ],
-  ASSIGNED: [
-    { action: "ACTIVATE", label: "Activate" },
-    { action: "REPLACE", label: "Replace", destructive: true },
-    { action: "TERMINATE", label: "Terminate", destructive: true },
-  ],
-  ACTIVATED: [
-    { action: "SUSPEND", label: "Suspend", destructive: true },
-    { action: "REPLACE", label: "Replace", destructive: true },
-    { action: "TERMINATE", label: "Terminate", destructive: true },
-  ],
-  SUSPENDED: [
-    { action: "REACTIVATE", label: "Reactivate" },
-    { action: "REPLACE", label: "Replace", destructive: true },
-    { action: "TERMINATE", label: "Terminate", destructive: true },
-  ],
-  TERMINATED: [],
-  REPLACED: [],
-};
-
 /** Order types the backend accepts — validOrderTypes in the order domain. */
 const ORDER_TYPES = [
   "NEW_SERVICE",
@@ -234,51 +147,6 @@ const SIM_TYPES = ["PHYSICAL", "ESIM"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Format integer minor units. Never assume 2 decimal places — JPY has 0, KWD 3. */
-const MINOR_UNIT_EXPONENT: Record<string, number> = {
-  JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0,
-  BHD: 3, IQD: 3, JOD: 3, KWD: 3, OMR: 3, TND: 3,
-};
-
-function formatMoney(minorUnits: number | undefined, currency: string | undefined): string {
-  if (minorUnits === undefined || minorUnits === null || !currency) return "—";
-  const exp = MINOR_UNIT_EXPONENT[currency.toUpperCase()] ?? 2;
-  const divisor = 10 ** exp;
-  return `${currency.toUpperCase()} ${(minorUnits / divisor).toFixed(exp)}`;
-}
-
-const errMessage = (e: unknown, fallback: string) =>
-  e instanceof ApiException ? e.message : fallback;
-
-const short = (id: string | undefined) => (id ? id.slice(0, 8) : "—");
-
-function statusTone(status: string | undefined): string {
-  switch (status) {
-    case "ACTIVE":
-    case "ACTIVATED":
-    case "COMPLETED":
-      return "bg-emerald-50 text-emerald-600 outline-emerald-500/30";
-    case "FAILED":
-    case "CANCELLED":
-    case "TERMINATED":
-    case "DEACTIVATED":
-      return "bg-rose-50 text-rose-600 outline-rose-500/30";
-    case "SUSPENDED":
-    case "REPLACED":
-      return "bg-orange-50 text-orange-600 outline-orange-500/30";
-    default:
-      return "bg-amber-50 text-amber-600 outline-amber-500/30";
-  }
-}
-
-function StatusPill({ status }: { status: string | undefined }) {
-  return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono outline outline-1 ${statusTone(status)}`}>
-      {status ?? "—"}
-    </span>
-  );
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OrderManagement() {
@@ -290,7 +158,7 @@ export default function OrderManagement() {
   // ── Orders ────────────────────────────────────────────────────────────────
   const ordersQ = useQuery({
     queryKey: ["orders", "list"],
-    queryFn: async () => listOf<Order>(await api.get("order", "/v1/orders"), ORDER_ITEMS),
+    queryFn: async () => listOf<Order>(await api.get("order", "/v1/orders"), ENVELOPE.items),
   });
   const orders = ordersQ.data ?? [];
 
@@ -306,7 +174,7 @@ export default function OrderManagement() {
   const orderItemsQ = useQuery({
     queryKey: ["orders", "items", selectedOrderId],
     queryFn: async () =>
-      listOf<OrderItem>(await api.get("order", `/v1/orders/${selectedOrderId}/items`), ORDER_ITEMS),
+      listOf<OrderItem>(await api.get("order", `/v1/orders/${selectedOrderId}/items`), ENVELOPE.items),
     enabled: !!selectedOrderId,
   });
   const orderItems = orderItemsQ.data ?? [];
@@ -314,7 +182,7 @@ export default function OrderManagement() {
   // ── Customers ─────────────────────────────────────────────────────────────
   const customersQ = useQuery({
     queryKey: ["customers", "for-orders"],
-    queryFn: async () => listOf<Customer>(await api.get("customer", "/v1/customers"), CUSTOMER_LIST),
+    queryFn: async () => listOf<Customer>(await api.get("customer", "/v1/customers"), ENVELOPE.customers),
   });
   const customers = customersQ.data ?? [];
   // The customer lifecycle field is lifecycle_status; there is no `status`.
@@ -323,9 +191,9 @@ export default function OrderManagement() {
   const customerLabel = (id: string | undefined) => {
     if (!id) return "—";
     const c = customers.find((x) => x.id === id);
-    if (!c) return short(id);
+    if (!c) return shortId(id);
     const segment = c.segment ? ` · ${c.segment}` : "";
-    return `${short(id)} (${c.customer_type}${segment})`;
+    return `${shortId(id)} (${c.customer_type}${segment})`;
   };
 
   // ── Order history for the selected order's customer ────────────────────────
@@ -334,11 +202,25 @@ export default function OrderManagement() {
     queryFn: async () =>
       listOf<Order>(
         await api.get("order", `/v1/customers/${selectedOrder!.customer_id}/orders`),
-        ORDER_ITEMS
+        ENVELOPE.items
       ),
     enabled: !!selectedOrder?.customer_id,
   });
   const customerOrders = customerOrdersQ.data ?? [];
+
+  // Orders on the same billing ACCOUNT. Distinct from the per-customer list above:
+  // a customer can hold several accounts, and anything billing-related is scoped to
+  // the account rather than the person.
+  const accountOrdersQ = useQuery({
+    queryKey: ["orders", "by-account", selectedOrder?.account_id],
+    queryFn: async () =>
+      listOf<Order>(
+        await api.get("order", `/v1/accounts/${selectedOrder!.account_id}/orders`),
+        ENVELOPE.items
+      ),
+    enabled: !!selectedOrder?.account_id,
+  });
+  const accountOrders = accountOrdersQ.data ?? [];
 
   // ── Provisioning for the selected order ───────────────────────────────────
   // 404 means provisioning has not been started, which is a normal state.
@@ -348,7 +230,7 @@ export default function OrderManagement() {
       try {
         return await api.get<Provisioning>("order", `/v1/orders/${selectedOrderId}/provisioning`);
       } catch (e) {
-        if (e instanceof ApiException && e.status === 404) return null;
+        if (isNotFound(e)) return null;
         throw e;
       }
     },
@@ -356,11 +238,21 @@ export default function OrderManagement() {
   });
   const provisioning = provisioningQ.data ?? null;
 
+  // The PATCH response carries only {id, status, network_identity, provider_ref};
+  // this reads the whole record back so the panel does not display a half-populated
+  // one after a transition.
+  const provisioningDetailQ = useQuery({
+    queryKey: ["provisioning", "detail", provisioning?.id],
+    queryFn: () => api.get<Provisioning>("order", `/v1/provisioning/${provisioning!.id}`),
+    enabled: !!provisioning?.id,
+  });
+  const provisioningRecord = provisioningDetailQ.data ?? provisioning;
+
   // ── SIMs for the selected order's customer ────────────────────────────────
   const simsQ = useQuery({
     queryKey: ["sims", "by-customer", selectedOrder?.customer_id],
     queryFn: async () =>
-      listOf<SIM>(await api.get("order", `/v1/customers/${selectedOrder!.customer_id}/sims`), ORDER_ITEMS),
+      listOf<SIM>(await api.get("order", `/v1/customers/${selectedOrder!.customer_id}/sims`), ENVELOPE.items),
     enabled: !!selectedOrder?.customer_id,
   });
   const allCustomerSims = simsQ.data ?? [];
@@ -494,7 +386,6 @@ export default function OrderManagement() {
     onError: (e) => toast.error(errMessage(e, "SIM transition failed")),
   });
 
-  const orderTransitions = ORDER_TRANSITIONS[selectedOrder?.status ?? ""] ?? [];
 
   return (
     <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
@@ -532,24 +423,15 @@ export default function OrderManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-sans">
-                {ordersQ.isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-xs text-slate-400">
-                      Loading orders...
-                    </td>
-                  </tr>
-                ) : ordersQ.isError ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-xs text-rose-600">
-                      {errMessage(ordersQ.error, "Could not load orders.")}
-                    </td>
-                  </tr>
-                ) : orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-xs text-slate-400">
-                      No orders placed yet.
-                    </td>
-                  </tr>
+                {ordersQ.isLoading || ordersQ.isError || orders.length === 0 ? (
+                  <TableState
+                    colSpan={5}
+                    loading={ordersQ.isLoading}
+                    error={ordersQ.isError ? ordersQ.error : undefined}
+                    empty={orders.length === 0}
+                    loadingLabel="Loading orders…"
+                    emptyLabel="No orders placed yet."
+                  />
                 ) : (
                   orders.map((o) => (
                     <tr
@@ -560,7 +442,7 @@ export default function OrderManagement() {
                       }`}
                     >
                       <td className="px-6 py-4">
-                        <span className="font-mono text-xs text-slate-800 font-bold">{short(o.id)}</span>
+                        <span className="font-mono text-xs text-slate-800 font-bold">{shortId(o.id)}</span>
                         <div className="text-[9px] text-slate-400 font-mono mt-0.5">{o.id}</div>
                       </td>
                       <td className="px-6 py-4 text-xs font-semibold text-slate-700 font-mono">
@@ -596,14 +478,14 @@ export default function OrderManagement() {
             <>
               <div className="flex flex-col gap-1 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-slate-800 font-bold">{short(selectedOrder.id)}</span>
+                  <span className="font-mono text-xs text-slate-800 font-bold">{shortId(selectedOrder.id)}</span>
                   <StatusPill status={selectedOrder.status} />
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono">
                   {customerLabel(selectedOrder.customer_id)}
                 </div>
                 <div className="text-[10px] text-slate-400 font-mono">
-                  Account {short(selectedOrder.account_id)} · {selectedOrder.order_type}
+                  Account {shortId(selectedOrder.account_id)} · {selectedOrder.order_type}
                 </div>
               </div>
 
@@ -628,15 +510,15 @@ export default function OrderManagement() {
                   order={selectedOrder}
                   orderItems={orderItems}
                   itemsLoading={orderItemsQ.isLoading}
-                  transitions={orderTransitions}
                   pending={advanceOrder.isPending}
                   onAdvance={(action) => advanceOrder.mutate({ orderId: selectedOrder.id, action })}
                   customerOrders={customerOrders}
+                  accountOrders={accountOrders}
                   onSelectOrder={setSelectedOrderId}
                 />
               ) : (
                 <NetworkPanel
-                  provisioning={provisioning}
+                  provisioning={provisioningRecord}
                   provisioningLoading={provisioningQ.isLoading}
                   provisioningError={provisioningQ.isError ? provisioningQ.error : null}
                   onCreateProvisioning={(v) => createProvisioning.mutate(v)}
@@ -679,24 +561,21 @@ function SagaPanel({
   order,
   orderItems,
   itemsLoading,
-  transitions,
   pending,
   onAdvance,
   customerOrders,
+  accountOrders,
   onSelectOrder,
 }: {
   order: Order;
   orderItems: OrderItem[];
   itemsLoading: boolean;
-  transitions: Transition[];
   pending: boolean;
   onAdvance: (action: string) => void;
   customerOrders: Order[];
+  accountOrders: Order[];
   onSelectOrder: (id: string) => void;
 }) {
-  const forward = transitions.filter((t) => !t.destructive);
-  const compensating = transitions.filter((t) => t.destructive);
-
   const itemsTotal = orderItems.reduce(
     (sum, i) => sum + (i.amount_minor_units || 0) * (i.quantity || 1),
     0
@@ -717,7 +596,7 @@ function SagaPanel({
             {orderItems.map((item) => (
               <div key={item.id} className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
                 <div className="flex justify-between font-semibold text-slate-800 text-[11px]">
-                  <span className="font-mono">{short(item.product_id)}</span>
+                  <span className="font-mono">{shortId(item.product_id)}</span>
                   <span className="font-mono">x{item.quantity}</span>
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">
@@ -750,62 +629,64 @@ function SagaPanel({
           </span>
         </div>
 
-        {transitions.length === 0 ? (
-          <div className="text-slate-300 text-[11px] py-1 text-center">
-            {order.status} is a terminal state. No further transitions are permitted.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {forward.map((t) => (
-              <button
-                key={t.action}
-                onClick={() => onAdvance(t.action)}
-                disabled={pending}
-                className="w-full py-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-bold rounded-lg transition text-[11px] cursor-pointer"
-              >
-                {t.label}
-              </button>
-            ))}
-            {compensating.length > 0 && (
-              <div className="flex gap-2 pt-2 border-t border-white/10 mt-2">
-                {compensating.map((t) => (
-                  <button
-                    key={t.action}
-                    onClick={() => onAdvance(t.action)}
-                    disabled={pending}
-                    className="flex-1 py-1.5 bg-rose-950 text-rose-300 hover:bg-rose-900 disabled:opacity-50 border border-rose-800 rounded font-bold transition text-[10px] cursor-pointer"
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <TransitionButtons
+          table={ORDER_TRANSITIONS}
+          status={order.status}
+          onAction={onAdvance}
+          pending={pending}
+          variant="dark"
+        />
       </div>
 
-      {customerOrders.length > 1 && (
-        <div className="border-t border-slate-100 pt-3">
-          <span className="font-semibold text-slate-700 block mb-2">
-            Other orders for this subscriber
-          </span>
-          <div className="space-y-1.5">
-            {customerOrders
-              .filter((o) => o.id !== order.id)
-              .map((o) => (
-                <button
-                  key={o.id}
-                  onClick={() => onSelectOrder(o.id)}
-                  className="w-full flex items-center justify-between gap-2 bg-slate-50 hover:bg-slate-100 rounded-lg px-2.5 py-2 transition cursor-pointer text-left"
-                >
-                  <span className="font-mono text-[10px] text-slate-700">{short(o.id)}</span>
-                  <span className="text-[9px] text-slate-500">{o.order_type}</span>
-                  <StatusPill status={o.status} />
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
+      <RelatedOrders
+        title="Other orders for this subscriber"
+        orders={customerOrders}
+        currentOrderID={order.id}
+        onSelectOrder={onSelectOrder}
+      />
+      {/* Account-scoped, because billing and disputes attach to the account rather
+          than the person, and a customer may hold several. */}
+      <RelatedOrders
+        title="Other orders on this billing account"
+        orders={accountOrders}
+        currentOrderID={order.id}
+        onSelectOrder={onSelectOrder}
+      />
+    </div>
+  );
+}
+
+
+/** Related orders, deduped against the one already open. */
+function RelatedOrders({
+  title,
+  orders,
+  currentOrderID,
+  onSelectOrder,
+}: {
+  title: string;
+  orders: Order[];
+  currentOrderID: string;
+  onSelectOrder: (id: string) => void;
+}) {
+  const others = orders.filter((o) => o.id !== currentOrderID);
+  if (others.length === 0) return null;
+  return (
+    <div className="border-t border-slate-100 pt-3">
+      <span className="font-semibold text-slate-700 block mb-2">{title}</span>
+      <div className="space-y-1.5">
+        {others.map((o) => (
+          <button
+            key={o.id}
+            onClick={() => onSelectOrder(o.id)}
+            className="w-full flex items-center justify-between gap-2 bg-slate-50 hover:bg-slate-100 rounded-lg px-2.5 py-2 transition cursor-pointer text-left"
+          >
+            <span className="font-mono text-[10px] text-slate-700">{shortId(o.id)}</span>
+            <span className="text-[9px] text-slate-500">{o.order_type}</span>
+            <StatusPill status={o.status} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -852,8 +733,8 @@ function NetworkPanel({
   const [simForm, setSimForm] = useState({ iccid: "", simType: "ESIM", eid: "", imsi: "", msisdn: "" });
   const [activateMsisdn, setActivateMsisdn] = useState<Record<string, string>>({});
   const [addSimOpen, setAddSimOpen] = useState(false);
+  const [expandedSim, setExpandedSim] = useState<string | null>(null);
 
-  const provTransitions = PROVISIONING_TRANSITIONS[provisioning?.status ?? ""] ?? [];
 
   return (
     <div className="flex flex-col gap-4 text-xs text-slate-600">
@@ -905,18 +786,14 @@ function NetworkPanel({
           </>
         ) : (
           <>
-            <dl className="grid grid-cols-2 gap-y-1.5 text-[10px]">
-              <dt className="text-slate-400">Record</dt>
-              <dd className="font-mono text-slate-700">{short(provisioning.id)}</dd>
-              <dt className="text-slate-400">Service</dt>
-              <dd className="font-mono text-slate-700">{provisioning.service_type || "—"}</dd>
-              <dt className="text-slate-400">Network identity</dt>
-              <dd className="font-mono text-slate-700 break-all">
-                {provisioning.network_identity || "not yet assigned"}
-              </dd>
-              <dt className="text-slate-400">Provider ref</dt>
-              <dd className="font-mono text-slate-700 break-all">{provisioning.provider_ref || "—"}</dd>
-            </dl>
+            <DetailList
+              rows={[
+                ["Record", shortId(provisioning.id)],
+                ["Service", provisioning.service_type],
+                ["Network identity", provisioning.network_identity || "not yet assigned"],
+                ["Provider ref", provisioning.provider_ref],
+              ]}
+            />
 
             {provisioning.status === "IN_PROGRESS" && (
               <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-2">
@@ -938,34 +815,21 @@ function NetworkPanel({
               </div>
             )}
 
-            {provTransitions.length === 0 ? (
-              <div className="text-slate-400 text-[10px] text-center py-1">
-                {provisioning.status} is terminal for provisioning.
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {provTransitions.map((t) => (
-                  <button
-                    key={t.action}
-                    onClick={() =>
-                      onAdvanceProvisioning({
-                        action: t.action,
-                        providerRef: t.action === "ACTIVATE" ? providerRef : undefined,
-                        networkIdentity: t.action === "ACTIVATE" ? activationIdentity : undefined,
-                      })
-                    }
-                    disabled={advancingProvisioning}
-                    className={`flex-1 min-w-[46%] py-1.5 rounded-lg font-bold transition text-[10px] cursor-pointer disabled:opacity-50 ${
-                      t.destructive
-                        ? "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100"
-                        : "bg-indigo-600 text-white hover:bg-indigo-700"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            <TransitionButtons
+              table={PROVISIONING_TRANSITIONS}
+              status={provisioning.status}
+              pending={advancingProvisioning}
+              className="pt-1"
+              onAction={(action) =>
+                onAdvanceProvisioning({
+                  action,
+                  // Only carried on activation: the other transitions take no
+                  // network identity, and sending one would be misleading.
+                  providerRef: action === "ACTIVATE" ? providerRef : undefined,
+                  networkIdentity: action === "ACTIVATE" ? activationIdentity : undefined,
+                })
+              }
+            />
           </>
         )}
       </div>
@@ -1036,17 +900,24 @@ function NetworkPanel({
             )}
 
             {orderSims.map((s) => {
-              const transitions = SIM_TRANSITIONS[s.status] ?? [];
               return (
                 <div key={s.id} className="bg-slate-50 rounded-lg p-2.5 border border-slate-200 flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-mono text-[10px] text-slate-800 font-bold break-all">{s.iccid}</span>
                     <StatusPill status={s.status} />
                   </div>
-                  <div className="text-[9px] text-slate-500 font-mono">
-                    {s.sim_type}
-                    {s.msisdn ? ` · ${s.msisdn}` : ""}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[9px] text-slate-500 font-mono">
+                      {s.sim_type}
+                      {s.msisdn ? ` · ${s.msisdn}` : ""}
+                    </div>
+                    <DetailToggle
+                      open={expandedSim === s.id}
+                      onToggle={() => setExpandedSim(expandedSim === s.id ? null : s.id)}
+                      className="whitespace-nowrap"
+                    />
                   </div>
+                  {expandedSim === s.id && <RecordDetail service="order" path={`/v1/sims/${s.id}`} queryKey={["sims", "detail", s.id]} />}
 
                   {s.status === "ASSIGNED" && (
                     <input
@@ -1057,32 +928,18 @@ function NetworkPanel({
                     />
                   )}
 
-                  {transitions.length === 0 ? (
-                    <div className="text-slate-400 text-[9px]">{s.status} is terminal.</div>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {transitions.map((t) => (
-                        <button
-                          key={t.action}
-                          onClick={() =>
-                            onAdvanceSim({
-                              simId: s.id,
-                              action: t.action,
-                              msisdn: t.action === "ACTIVATE" ? activateMsisdn[s.id] : undefined,
-                            })
-                          }
-                          disabled={advancingSim}
-                          className={`px-2 py-1 rounded font-bold transition text-[9px] cursor-pointer disabled:opacity-50 ${
-                            t.destructive
-                              ? "bg-white text-rose-600 border border-rose-200 hover:bg-rose-50"
-                              : "bg-slate-800 text-white hover:bg-slate-900"
-                          }`}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <TransitionButtons
+                    table={SIM_TRANSITIONS}
+                    status={s.status}
+                    pending={advancingSim}
+                    onAction={(action) =>
+                      onAdvanceSim({
+                        simId: s.id,
+                        action,
+                        msisdn: action === "ACTIVATE" ? activateMsisdn[s.id] : undefined,
+                      })
+                    }
+                  />
                 </div>
               );
             })}
@@ -1140,14 +997,14 @@ function PlaceOrderModal({
   const accountsQ = useQuery({
     queryKey: ["accounts", "by-customer", customerId],
     queryFn: async () =>
-      listOf<Account>(await api.get("customer", `/v1/customers/${customerId}/accounts`), ACCOUNT_LIST),
+      listOf<Account>(await api.get("customer", `/v1/customers/${customerId}/accounts`), ENVELOPE.accounts),
     enabled: !!customerId,
   });
   const accounts = accountsQ.data ?? [];
 
   const productsQ = useQuery({
     queryKey: ["catalog", "products-for-orders"],
-    queryFn: async () => listOf<Product>(await api.get("catalogue", "/v1/products"), PRODUCT_LIST),
+    queryFn: async () => listOf<Product>(await api.get("catalogue", "/v1/products"), ENVELOPE.products),
   });
   const activeProducts = (productsQ.data ?? []).filter((p) => p.status === "ACTIVE");
 
@@ -1159,7 +1016,7 @@ function PlaceOrderModal({
     queryFn: async () =>
       listOf<PriceRule>(
         await api.get("catalogue", `/v1/products/${productId}/price-rules`),
-        PRICE_RULE_LIST
+        ENVELOPE.priceRules
       ),
     enabled: !!productId,
   });
