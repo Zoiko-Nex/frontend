@@ -22,25 +22,35 @@ const PORT_TO_LIVE_URL: Record<number, string> = {
   8099: "https://forms.api.zoikonex.com",
 };
 
+// Port → override env var. These MUST match lib/admin/services.ts, because the
+// browser client and this proxy resolve base URLs independently and would
+// otherwise disagree about which host serves a port.
+//
+// The previous map used a completely different service numbering: port 8083 (the
+// ordering service) read AUTH_URL, 8092 (billing) read CONFIG_URL, 8096 (payments)
+// read WEBHOOK_URL, and so on — only 8080 was correct. Because the env var takes
+// priority over PORT_TO_LIVE_URL below, setting any one of them would have silently
+// routed a whole service's traffic to the wrong host. None were set in any
+// deployment, so this was a latent landmine rather than a live outage.
 const PORT_TO_ENV_VAR: Record<number, string> = {
-  8080: "IDENTITY_URL",
-  8081: "TENANT_URL",
-  8082: "USER_URL",
-  8083: "AUTH_URL",
-  8084: "NOTIFICATION_URL",
-  8085: "PAYMENT_URL",
-  8086: "BILLING_URL",
-  8087: "REPORT_URL",
-  8089: "ANALYTICS_URL",
-  8090: "AUDIT_URL",
-  8091: "SEARCH_URL",
-  8092: "CONFIG_URL",
-  8093: "FILES_URL",
-  8094: "EMAIL_URL",
-  8095: "SMS_URL",
-  8096: "WEBHOOK_URL",
-  8097: "KYC_URL",
-  8098: "OCR_URL",
+  8080: "NEXT_PUBLIC_SVC_IDENTITY",
+  8081: "NEXT_PUBLIC_SVC_CUSTOMER",
+  8082: "NEXT_PUBLIC_SVC_CATALOGUE",
+  8083: "NEXT_PUBLIC_SVC_ORDER",
+  8084: "NEXT_PUBLIC_SVC_FINANCE",
+  8085: "NEXT_PUBLIC_SVC_RATING",
+  8086: "NEXT_PUBLIC_SVC_PARTNER",
+  8087: "NEXT_PUBLIC_SVC_REVENUE_ASSURANCE",
+  8089: "NEXT_PUBLIC_SVC_TAX",
+  8090: "NEXT_PUBLIC_SVC_FRAUD",
+  8091: "NEXT_PUBLIC_SVC_KYC",
+  8092: "NEXT_PUBLIC_SVC_BILLING",
+  8093: "NEXT_PUBLIC_SVC_EVIDENCE",
+  8094: "NEXT_PUBLIC_SVC_USAGE",
+  8095: "NEXT_PUBLIC_SVC_DUNNING",
+  8096: "NEXT_PUBLIC_SVC_PAYMENTS",
+  8097: "NEXT_PUBLIC_SVC_INTEGRATION",
+  8098: "NEXT_PUBLIC_SVC_REPORTING",
 };
 
 const BLOCKED_HEADERS = new Set(["connection", "content-length", "cookie", "host", "origin", "referer"]);
@@ -80,7 +90,12 @@ export async function POST(req: NextRequest) {
     const envVar = PORT_TO_ENV_VAR[port];
     baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
 
-    if (!baseUrl || !path.startsWith("/")) {
+    // A caller-supplied path is concatenated onto the resolved host below, so it is
+    // constrained here. `//host` would otherwise read as protocol-relative and `..`
+    // segments let a caller walk to endpoints the UI never intended to reach — the
+    // host itself stays inside the allow-list either way, but neither is a shape any
+    // legitimate caller sends.
+    if (!baseUrl || !path.startsWith("/") || path.startsWith("//") || path.includes("..")) {
       return NextResponse.json({ status: 400, ok: false, data: { message: "Unknown service port or invalid path." } });
     }
 

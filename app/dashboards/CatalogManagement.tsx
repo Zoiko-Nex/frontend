@@ -14,9 +14,35 @@ interface Product {
   currency_code: string;
   tax_category: string;
   status: string;
-  catalog_version_id: string;
   created_at: string;
-  amount_minor_units?: number;
+}
+
+/**
+ * Price lives on price rules, never on the product. The catalogue's
+ * ProductResponse carries no amount at all, so the product table used to render
+ * "GBP 0.00" for everything and POST /v1/products silently dropped the
+ * amount_minor_units it was sent — meaning no product created here could ever be
+ * ordered, because ordering requires a price rule.
+ */
+const MINOR_UNIT_EXPONENT: Record<string, number> = {
+  JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0,
+  BHD: 3, IQD: 3, JOD: 3, KWD: 3, OMR: 3, TND: 3,
+};
+
+/** Format integer minor units by ISO 4217 exponent — JPY has 0, KWD has 3. */
+function formatMinorUnits(minorUnits: number | undefined, currency: string | undefined): string {
+  if (minorUnits === undefined || minorUnits === null || !currency) return "—";
+  const exp = MINOR_UNIT_EXPONENT[currency.toUpperCase()] ?? 2;
+  return `${currency.toUpperCase()} ${(minorUnits / 10 ** exp).toFixed(exp)}`;
+}
+
+interface PriceRule {
+  id: string;
+  product_id: string;
+  amount_minor_units: number;
+  currency_code: string;
+  charge_structure?: string;
+  billing_period?: string;
 }
 
 interface Offer {
@@ -44,8 +70,23 @@ export default function CatalogManagement() {
     tax_category: "STANDARD",
     country_code: "GB",
     jurisdiction_code: "GB",
-    catalog_version_id: "v2026-06-01",
-    amount_minor_units: 999, // default £9.99
+    // No default: a made-up version string claims which catalog priced a product
+    // without any basis, and it is what orders pin as provenance. The operator
+    // must state it.
+    catalog_version_id: "",
+  });
+
+  // Price-rule creation. Without a price rule a product cannot be ordered at all,
+  // which is why this belongs here rather than being left to a DB insert.
+  const [priceProduct, setPriceProduct] = useState<Product | null>(null);
+  const [priceForm, setPriceForm] = useState({
+    amount_minor_units: 0,
+    currency_code: "GBP",
+    charge_structure: "RECURRING",
+    billing_period: "MONTHLY",
+    rounding_policy_id: "rp_half_up_2",
+    country_code: "GB",
+    jurisdiction_code: "GB",
   });
 
   const [offerForm, setOfferForm] = useState(() => {
@@ -70,6 +111,31 @@ export default function CatalogManagement() {
     queryFn: () => api.get<{ products?: Product[] }>("catalogue", "/v1/products"),
   });
   const products = productsQ.data?.products ?? [];
+
+  // Price rules, gathered per product for the same reason as offers: there is no
+  // top-level list endpoint. This is where the product table's price comes from.
+  const priceRulesQ = useQuery({
+    queryKey: ["catalog", "price-rules", products.map((p) => p.id).join(",")],
+    enabled: products.length > 0,
+    queryFn: async () => {
+      const perProduct = await Promise.all(
+        products.map(async (p) => {
+          try {
+            const res = await api.get<{ price_rules?: PriceRule[] }>(
+              "catalogue",
+              `/v1/products/${p.id}/price-rules`
+            );
+            return res.price_rules ?? [];
+          } catch {
+            return [] as PriceRule[];
+          }
+        })
+      );
+      return perProduct.flat();
+    },
+  });
+  const priceRules = priceRulesQ.data ?? [];
+  const rulesFor = (productID: string) => priceRules.filter((r) => r.product_id === productID);
 
   // There is no GET /v1/offers — offers are only reachable per product
   // (GET /v1/products/{id}/offers), so they are gathered across products here.
@@ -111,12 +177,37 @@ export default function CatalogManagement() {
         tax_category: "STANDARD",
         country_code: "GB",
         jurisdiction_code: "GB",
-        catalog_version_id: "v2026-06-01",
-        amount_minor_units: 999,
+        catalog_version_id: "",
       });
       qc.invalidateQueries({ queryKey: ["catalog", "products"] });
     },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create product"),
+  });
+
+  // A price rule is what makes a product orderable: an order line locks onto the
+  // amount from here.
+  //
+  // catalog_version_id is deliberately not sent. The order line pins its catalog
+  // version from the product, via GET /v1/products/{id}/commercial-version, so
+  // there is one source for that provenance rather than two that could disagree.
+  const createPriceRule = useMutation({
+    mutationFn: () =>
+      api.post("catalogue", "/v1/price-rules", {
+        product_id: priceProduct!.id,
+        amount_minor_units: priceForm.amount_minor_units,
+        currency_code: priceForm.currency_code,
+        charge_structure: priceForm.charge_structure,
+        billing_period: priceForm.billing_period,
+        rounding_policy_id: priceForm.rounding_policy_id,
+        country_code: priceForm.country_code,
+        jurisdiction_code: priceForm.jurisdiction_code,
+      }),
+    onSuccess: () => {
+      toast.success("Price rule created — the product can now be ordered");
+      setPriceProduct(null);
+      qc.invalidateQueries({ queryKey: ["catalog", "price-rules"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create price rule"),
   });
 
   const transitionProduct = useMutation({
@@ -239,7 +330,25 @@ export default function CatalogManagement() {
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-500">{p.charge_structure}</td>
                       <td className="px-6 py-4 text-xs font-mono font-bold text-slate-800">
-                        {p.currency_code} {((p.amount_minor_units || 0) / 100).toFixed(2)}
+                        {priceRulesQ.isLoading ? (
+                          <span className="text-slate-400 font-normal">…</span>
+                        ) : rulesFor(p.id).length === 0 ? (
+                          <span
+                            className="text-amber-600 font-semibold"
+                            title="Without a price rule this product cannot be ordered"
+                          >
+                            no price
+                          </span>
+                        ) : (
+                          rulesFor(p.id).map((r) => (
+                            <div key={r.id}>
+                              {formatMinorUnits(r.amount_minor_units, r.currency_code)}
+                              {r.billing_period ? (
+                                <span className="text-slate-400 font-normal"> /{r.billing_period}</span>
+                              ) : null}
+                            </div>
+                          ))
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span
@@ -282,6 +391,17 @@ export default function CatalogManagement() {
                             className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[10px] font-bold transition cursor-pointer"
                           >
                             Retire
+                          </button>
+                        )}
+                        {["DRAFT", "REVIEW", "ACTIVE"].includes(p.status) && (
+                          <button
+                            onClick={() => {
+                              setPriceForm((f) => ({ ...f, currency_code: p.currency_code || f.currency_code }));
+                              setPriceProduct(p);
+                            }}
+                            className="px-2 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded text-[10px] font-bold transition cursor-pointer"
+                          >
+                            + Price
                           </button>
                         )}
                         {!["DRAFT", "REVIEW", "ACTIVE"].includes(p.status) && (
@@ -424,15 +544,12 @@ export default function CatalogManagement() {
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-700 font-semibold">Price (Minor Units)</label>
-                  <input
-                    type="number"
-                    value={productForm.amount_minor_units}
-                    onChange={(e) => setProductForm({ ...productForm, amount_minor_units: Number(e.target.value) })}
-                    placeholder="999 (for £9.99)"
-                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500 transition font-mono"
-                  />
+                <div className="flex flex-col gap-1.5 justify-end">
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    Price is not set here. POST /v1/products accepts no amount — a price
+                    belongs to a price rule. Create the product, then use
+                    <span className="font-semibold"> + Price</span> on its row.
+                  </p>
                 </div>
               </div>
 
@@ -539,7 +656,7 @@ export default function CatalogManagement() {
                           }}
                         />
                         <span className="text-slate-700 font-medium">
-                          {p.product_name} ({p.currency_code} {((p.amount_minor_units || 0) / 100).toFixed(2)})
+                          {p.product_name} ({p.currency_code})
                         </span>
                       </label>
                     ))}
@@ -583,6 +700,139 @@ export default function CatalogManagement() {
                 className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
               >
                 {createOffer.isPending ? "Creating…" : "Create Offer Bundle"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price rule — what makes a product orderable */}
+      {priceProduct && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[460px] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <div>
+                <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Add Price Rule</h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">{priceProduct.product_name}</p>
+              </div>
+              <button
+                onClick={() => setPriceProduct(null)}
+                className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col gap-4 text-xs text-slate-700">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Until a product has a price rule it cannot be ordered: an order line locks
+                onto the amount from this rule.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Amount (minor units)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceForm.amount_minor_units}
+                    onChange={(e) =>
+                      setPriceForm({ ...priceForm, amount_minor_units: Math.max(0, Number(e.target.value)) })
+                    }
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Currency</label>
+                  <input
+                    value={priceForm.currency_code}
+                    maxLength={3}
+                    onChange={(e) =>
+                      setPriceForm({ ...priceForm, currency_code: e.target.value.toUpperCase() })
+                    }
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
+                <span className="text-slate-600 font-semibold text-[11px]">Reads as</span>
+                <span className="font-mono font-bold text-slate-800">
+                  {formatMinorUnits(priceForm.amount_minor_units, priceForm.currency_code)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Charge structure</label>
+                  <select
+                    value={priceForm.charge_structure}
+                    onChange={(e) => setPriceForm({ ...priceForm, charge_structure: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
+                  >
+                    <option value="RECURRING">RECURRING</option>
+                    <option value="ONCE">ONCE</option>
+                    <option value="USAGE">USAGE</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Billing period</label>
+                  <select
+                    value={priceForm.billing_period}
+                    onChange={(e) => setPriceForm({ ...priceForm, billing_period: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
+                  >
+                    <option value="MONTHLY">MONTHLY</option>
+                    <option value="ANNUAL">ANNUAL</option>
+                    <option value="ONE_OFF">ONE_OFF</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Country</label>
+                  <input
+                    value={priceForm.country_code}
+                    maxLength={2}
+                    onChange={(e) => setPriceForm({ ...priceForm, country_code: e.target.value.toUpperCase() })}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 font-semibold">Jurisdiction</label>
+                  <input
+                    value={priceForm.jurisdiction_code}
+                    maxLength={5}
+                    onChange={(e) =>
+                      setPriceForm({ ...priceForm, jurisdiction_code: e.target.value.toUpperCase() })
+                    }
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setPriceProduct(null)}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-xs cursor-pointer shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => createPriceRule.mutate()}
+                disabled={
+                  createPriceRule.isPending ||
+                  priceForm.amount_minor_units <= 0 ||
+                  priceForm.currency_code.length !== 3
+                }
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+              >
+                {createPriceRule.isPending ? "Creating…" : "Create Price Rule"}
               </button>
             </div>
           </div>
