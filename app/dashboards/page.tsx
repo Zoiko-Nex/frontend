@@ -1988,7 +1988,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Plans, bundles, add-ons, eligibility rules, and offer lifecycle.",
                         icon: "/image/dashboard/services.svg",
-                        tabKey: "Services",
+                        tabKey: "CatalogManagement",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -1998,7 +1998,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Online charging, real-time balance reservations & policies.",
                         icon: "/image/dashboard/charging-lightning.svg",
-                        tabKey: "Services",
+                        tabKey: "Billing",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2008,7 +2008,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Usage rating matrix, tiering, discounts & price calculation.",
                         icon: "/image/dashboard/bar-chart.svg",
-                        tabKey: "Services",
+                        tabKey: "Billing",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2038,7 +2038,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Wholesale, interconnect, revenue share, and partner billing.",
                         icon: "/image/dashboard/user-profile.svg",
-                        tabKey: "Services",
+                        tabKey: "Billing",
                         badge: "Provisioning",
                         badgeStyle: "bg-indigo-50 text-indigo-700 border-indigo-200"
                       },
@@ -2048,7 +2048,7 @@ export default function DashboardsPage() {
                         category: "Customer & Engagement",
                         desc: "Subscriber accounts, lifecycle states, self-care & multi-brand CRM.",
                         icon: "/image/dashboard/user-profile.svg",
-                        tabKey: "Services",
+                        tabKey: "CustomerManagement",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2058,7 +2058,7 @@ export default function DashboardsPage() {
                         category: "Customer & Engagement",
                         desc: "Transactional and promotional SMS, email, & push messaging.",
                         icon: "/image/dashboard/notifications-bell.svg",
-                        tabKey: "Services",
+                        tabKey: "CustomerManagement",
                         badge: "Available",
                         badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
                       },
@@ -2068,7 +2068,7 @@ export default function DashboardsPage() {
                         category: "Connectivity & Provisioning",
                         desc: "GSMA eSIM RSP profile sync, activation & SIM inventory.",
                         icon: "/image/dashboard/mobile-sim.svg",
-                        tabKey: "Services",
+                        tabKey: "OrderManagement",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2078,7 +2078,7 @@ export default function DashboardsPage() {
                         category: "Connectivity & Provisioning",
                         desc: "Device fleet orchestration, usage aggregation, and remote actions.",
                         icon: "/image/dashboard/settings-compass.svg",
-                        tabKey: "Services",
+                        tabKey: "OrderManagement",
                         badge: "Available",
                         badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
                       },
@@ -2088,7 +2088,7 @@ export default function DashboardsPage() {
                         category: "Connectivity & Provisioning",
                         desc: "MSISDN number ranges, MNP porting, reservation & inventory.",
                         icon: "/image/dashboard/services.svg",
-                        tabKey: "Services",
+                        tabKey: "OrderManagement",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2098,7 +2098,7 @@ export default function DashboardsPage() {
                         category: "Compliance & Trust",
                         desc: "Jurisdiction tax engine, regulatory fees, exemptions & rules.",
                         icon: "/image/dashboard/shield.svg",
-                        tabKey: "Services",
+                        tabKey: "Billing",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2108,7 +2108,7 @@ export default function DashboardsPage() {
                         category: "Compliance & Trust",
                         desc: "Identity verification, sanction screening & onboarding checks.",
                         icon: "/image/dashboard/shield-check.svg",
-                        tabKey: "Services",
+                        tabKey: "Trust",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2128,7 +2128,7 @@ export default function DashboardsPage() {
                         category: "Intelligence",
                         desc: "Tiered AI controls with human approval for material actions.",
                         icon: "/image/dashboard/code-tags.svg",
-                        tabKey: "Services",
+                        tabKey: "Trust",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2138,7 +2138,7 @@ export default function DashboardsPage() {
                         category: "Intelligence",
                         desc: "Operational dashboards, revenue assurance, and reports.",
                         icon: "/image/dashboard/bar-chart.svg",
-                        tabKey: "Services",
+                        tabKey: "Dashboard",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2148,7 +2148,7 @@ export default function DashboardsPage() {
                         category: "Platform & Integration",
                         desc: "CDR ingestion, normalization, deduplication & enrichment.",
                         icon: "/image/dashboard/activity-pulse.svg",
-                        tabKey: "Services",
+                        tabKey: "Integration",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },

@@ -13,24 +13,82 @@ interface TemplateRegistryItem {
 }
 
 const TEMPLATE_REGISTRY: TemplateRegistryItem[] = [
+  // ── COM: Commercial Lifecycle ────────────────────────────────────────────
   { id: 'ZNX-EM-COM-001', name: 'Demo request received', family: 'COM', classification: 'Commercial transactional', recipient: 'Prospect' },
   { id: 'ZNX-EM-COM-002', name: 'Demo booked', family: 'COM', classification: 'Commercial transactional', recipient: 'Prospect' },
+  { id: 'ZNX-EM-COM-003', name: 'Onboarding welcome', family: 'COM', classification: 'Commercial transactional', recipient: 'New customer' },
+  { id: 'ZNX-EM-COM-004', name: 'Plan upgrade', family: 'COM', classification: 'Commercial transactional', recipient: 'Account owner' },
+  { id: 'ZNX-EM-COM-005', name: 'Renewal reminder', family: 'COM', classification: 'Commercial transactional', recipient: 'Account owner' },
+  { id: 'ZNX-EM-COM-006', name: 'Churn prevention', family: 'COM', classification: 'Retention notice', recipient: 'Account owner' },
+  { id: 'ZNX-EM-COM-007', name: 'Promotional offer', family: 'COM', classification: 'Commercial marketing', recipient: 'Account owner' },
+  // ── IAM: Identity & Authentication ──────────────────────────────────────
   { id: 'ZNX-EM-IAM-001', name: 'User invitation', family: 'IAM', classification: 'Security transactional', recipient: 'Invited platform user' },
+  { id: 'ZNX-EM-IAM-002', name: 'Password reset', family: 'IAM', classification: 'Security critical', recipient: 'Account holder' },
+  { id: 'ZNX-EM-IAM-003', name: 'Suspicious login alert', family: 'IAM', classification: 'Security alert', recipient: 'Account holder' },
+  { id: 'ZNX-EM-IAM-004', name: 'MFA challenge', family: 'IAM', classification: 'Security transactional', recipient: 'Account holder' },
+  { id: 'ZNX-EM-IAM-005', name: 'Account recovery', family: 'IAM', classification: 'Security critical', recipient: 'Account holder' },
+  // ── TNT: Tenant Onboarding ───────────────────────────────────────────────
+  { id: 'ZNX-EM-TNT-001', name: 'Tenant welcome', family: 'TNT', classification: 'Onboarding transactional', recipient: 'Tenant admin' },
+  { id: 'ZNX-EM-TNT-002', name: 'Tenant setup confirmed', family: 'TNT', classification: 'Onboarding transactional', recipient: 'Tenant admin' },
+  { id: 'ZNX-EM-TNT-003', name: 'Admin assigned', family: 'TNT', classification: 'Security transactional', recipient: 'Assigned admin' },
+  // ── CRM: Subscriber / CRM ───────────────────────────────────────────────
   { id: 'ZNX-EM-CRM-001', name: 'Subscriber welcome', family: 'CRM', classification: 'Customer transactional', recipient: 'Subscriber / Account contact' },
-  { id: 'ZNX-EM-ORD-001', name: 'Order received', family: 'ORD', classification: 'Order transactional', recipient: 'Subscriber / Business contact' },
-  { id: 'ZNX-EM-ORD-014', name: 'eSIM ready', family: 'ORD', classification: 'Provisioning transactional', recipient: 'Authorized line user' },
-  { id: 'ZNX-EM-USG-001', name: 'Usage threshold 50%', family: 'USG', classification: 'Usage notice', recipient: 'Subscriber / Account contact' },
+  { id: 'ZNX-EM-CRM-002', name: 'Ticket resolved', family: 'CRM', classification: 'Support transactional', recipient: 'Requester' },
+  { id: 'ZNX-EM-CRM-003', name: 'Feedback request', family: 'CRM', classification: 'Customer engagement', recipient: 'Requester' },
+  { id: 'ZNX-EM-CRM-004', name: 'Escalation notice', family: 'CRM', classification: 'Support alert', recipient: 'Requester' },
+  // ── BIL: Billing ────────────────────────────────────────────────────────
   { id: 'ZNX-EM-BIL-002', name: 'Invoice issued', family: 'BIL', classification: 'Billing transactional', recipient: 'Billing contact' },
+  { id: 'ZNX-EM-BIL-003', name: 'Invoice reminder', family: 'BIL', classification: 'Billing transactional', recipient: 'Billing contact' },
+  { id: 'ZNX-EM-BIL-004', name: 'Invoice paid', family: 'BIL', classification: 'Billing transactional', recipient: 'Billing contact' },
+  { id: 'ZNX-EM-BIL-005', name: 'Invoice overdue', family: 'BIL', classification: 'Billing alert', recipient: 'Billing contact' },
+  // ── PAY: Payments ───────────────────────────────────────────────────────
   { id: 'ZNX-EM-PAY-003', name: 'Payment received', family: 'PAY', classification: 'Payment transactional', recipient: 'Payer & billing contact' },
   { id: 'ZNX-EM-PAY-005', name: 'Payment failed', family: 'PAY', classification: 'Payment alert', recipient: 'Payer & billing contact' },
+  { id: 'ZNX-EM-PAY-006', name: 'Refund processed', family: 'PAY', classification: 'Payment transactional', recipient: 'Payer' },
+  { id: 'ZNX-EM-PAY-007', name: 'Auto-debit notice', family: 'PAY', classification: 'Payment notice', recipient: 'Billing contact' },
+  // ── CMP: Compliance & Regulatory ────────────────────────────────────────
   { id: 'ZNX-EM-CMP-001', name: 'Terms updated', family: 'CMP', classification: 'Legal notice', recipient: 'Platform user' },
+  { id: 'ZNX-EM-CMP-002', name: 'Privacy notice', family: 'CMP', classification: 'Legal notice', recipient: 'Platform user' },
+  { id: 'ZNX-EM-CMP-003', name: 'Consent changed', family: 'CMP', classification: 'Compliance transactional', recipient: 'Account holder' },
+  { id: 'ZNX-EM-CMP-004', name: 'Audit alert', family: 'CMP', classification: 'Compliance alert', recipient: 'Compliance officer' },
+  // ── PAR: Partner Communications ─────────────────────────────────────────
   { id: 'ZNX-EM-PAR-001', name: 'Partner invitation', family: 'PAR', classification: 'Partner transactional', recipient: 'Partner user' },
+  { id: 'ZNX-EM-PAR-002', name: 'Partner onboarding', family: 'PAR', classification: 'Partner transactional', recipient: 'Partner admin' },
+  { id: 'ZNX-EM-PAR-003', name: 'Integration update', family: 'PAR', classification: 'Partner notice', recipient: 'Integration engineer' },
+  { id: 'ZNX-EM-PAR-004', name: 'SLA breach', family: 'PAR', classification: 'Partner alert', recipient: 'Partner account manager' },
+  // ── CAT: Catalog & Product ───────────────────────────────────────────────
+  { id: 'ZNX-EM-CAT-001', name: 'New product launch', family: 'CAT', classification: 'Commercial notice', recipient: 'Account owner' },
+  { id: 'ZNX-EM-CAT-002', name: 'Catalog update', family: 'CAT', classification: 'Product notice', recipient: 'Account owner' },
+  { id: 'ZNX-EM-CAT-003', name: 'Service availability', family: 'CAT', classification: 'Operational notice', recipient: 'Account owner' },
+  // ── API: API & Developer ────────────────────────────────────────────────
   { id: 'ZNX-EM-API-003', name: 'API secret generated', family: 'API', classification: 'Security critical', recipient: 'Integration engineer' },
+  { id: 'ZNX-EM-API-004', name: 'API usage alert', family: 'API', classification: 'Usage notice', recipient: 'Integration engineer' },
+  { id: 'ZNX-EM-API-005', name: 'API quota exceeded', family: 'API', classification: 'Usage alert', recipient: 'Integration engineer' },
+  { id: 'ZNX-EM-API-006', name: 'API deprecation notice', family: 'API', classification: 'Developer notice', recipient: 'Integration engineer' },
+  // ── RISK: Risk & Security ───────────────────────────────────────────────
   { id: 'ZNX-EM-RISK-001', name: 'Fraud alert opened', family: 'RISK', classification: 'Risk alert', recipient: 'Fraud operations' },
+  { id: 'ZNX-EM-RISK-002', name: 'Account suspension', family: 'RISK', classification: 'Risk critical', recipient: 'Account holder' },
+  { id: 'ZNX-EM-RISK-003', name: 'Service restriction', family: 'RISK', classification: 'Risk alert', recipient: 'Account holder' },
+  { id: 'ZNX-EM-RISK-004', name: 'Breach notification', family: 'RISK', classification: 'Security critical', recipient: 'Account holder' },
+  // ── SUP: Support ────────────────────────────────────────────────────────
   { id: 'ZNX-EM-SUP-001', name: 'Support case created', family: 'SUP', classification: 'Support transactional', recipient: 'Requester' },
+  { id: 'ZNX-EM-SUP-002', name: 'Ticket opened', family: 'SUP', classification: 'Support transactional', recipient: 'Requester' },
   { id: 'ZNX-EM-SUP-013', name: 'Incident detected', family: 'SUP', classification: 'Incident critical', recipient: 'Affected tenant contacts' },
-  { id: 'ZNX-EM-OPS-001', name: 'Scheduled report ready', family: 'OPS', classification: 'Reporting transactional', recipient: 'Report recipient' },
+  // ── SUB: Subscription ───────────────────────────────────────────────────
   { id: 'ZNX-EM-SUB-001', name: 'Subscription activated', family: 'SUB', classification: 'Commercial transactional', recipient: 'Tenant finance owner' },
+  { id: 'ZNX-EM-SUB-002', name: 'Subscription cancelled', family: 'SUB', classification: 'Commercial transactional', recipient: 'Tenant finance owner' },
+  { id: 'ZNX-EM-SUB-003', name: 'Subscription renewed', family: 'SUB', classification: 'Commercial transactional', recipient: 'Tenant finance owner' },
+  // ── OPS: Operations ─────────────────────────────────────────────────────
+  { id: 'ZNX-EM-OPS-001', name: 'Scheduled report ready', family: 'OPS', classification: 'Reporting transactional', recipient: 'Report recipient' },
+  // ── ORD: Orders ─────────────────────────────────────────────────────────
+  { id: 'ZNX-EM-ORD-001', name: 'Order received', family: 'ORD', classification: 'Order transactional', recipient: 'Subscriber / Business contact' },
+  { id: 'ZNX-EM-ORD-014', name: 'eSIM ready', family: 'ORD', classification: 'Provisioning transactional', recipient: 'Authorized line user' },
+  // ── USG: Usage ──────────────────────────────────────────────────────────
+  { id: 'ZNX-EM-USG-001', name: 'Usage threshold 50%', family: 'USG', classification: 'Usage notice', recipient: 'Subscriber / Account contact' },
+  // ── NEXA: Nexa AI ───────────────────────────────────────────────────────
+  { id: 'ZNX-EM-NEXA-001', name: 'Nexa AI summary', family: 'NEXA', classification: 'AI advisory', recipient: 'Account owner' },
+  { id: 'ZNX-EM-NEXA-002', name: 'Nexa recommendation', family: 'NEXA', classification: 'AI advisory', recipient: 'Account owner' },
+  { id: 'ZNX-EM-NEXA-003', name: 'Nexa advisory', family: 'NEXA', classification: 'AI advisory', recipient: 'Account owner' },
   { id: 'ZNX-EM-NEXA-004', name: 'Nexa action approval required', family: 'NEXA', classification: 'AI human-in-command', recipient: 'Authorized human approver' },
 ];
 
