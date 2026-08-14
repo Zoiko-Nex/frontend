@@ -1168,8 +1168,8 @@ export default function DashboardsPage() {
       name: "Partner & Settlement",
       version: "MONETIZATION · V4.3",
       description: "Wholesale, interconnect, revenue share, and partner settlement.",
-      badges: ["PROVISIONING"],
-      active: false,
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
       iconPath: "/image/dashboard/user-profile.svg"
     },
 
@@ -1188,8 +1188,8 @@ export default function DashboardsPage() {
       name: "Notifications & Campaigns",
       version: "ENGAGEMENT · V4.1",
       description: "Transactional and campaign messaging across SMS, email, and push.",
-      badges: ["AVAILABLE"],
-      active: false,
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
       iconPath: "/image/dashboard/notifications-bell.svg"
     },
 
@@ -1208,8 +1208,8 @@ export default function DashboardsPage() {
       name: "IoT Connectivity",
       version: "CONNECTIVITY · V4.2",
       description: "Device fleet orchestration, usage aggregation, and remote actions.",
-      badges: ["AVAILABLE"],
-      active: false,
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
       iconPath: "/image/dashboard/settings-compass.svg"
     },
     {
