@@ -163,20 +163,20 @@ function StatusBadge({ status }: { status?: string | null }) {
 /* ───────── Main Integration Component ───────── */
 
 export default function IntegrationTab() {
-  const [tab, setTab] = useState<"providers" | "webhooks">("providers");
+  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds">("providers");
 
   return (
-    <div className="w-full flex flex-col gap-6 font-['Plus_Jakarta_Sans'] text-slate-800">
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
       {/* Page Header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Integration Ecosystem</h1>
         <p className="text-sm text-slate-600 font-normal">
-          Connect third-party services (Stripe, tax engines, KYC vendors) and configure outbound webhooks to your website or platform.
+          Connect third-party services (Stripe, tax engines, KYC vendors), manage telecom gateways (SMPP, eSIM RSP, roaming), configure AS2/B2B, enforce mTLS profiles, and track 3-way financial reconciliation — all in compliance with ZN-INT-EXT-001 v2.1.
         </p>
       </div>
 
       {/* Tabs Switcher */}
-      <div className="flex gap-2 border-b border-slate-200 pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         <button
           onClick={() => setTab("providers")}
           className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
@@ -197,9 +197,98 @@ export default function IntegrationTab() {
         >
           Outbound Webhooks
         </button>
+        <button
+          onClick={() => setTab("mft")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "mft"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Managed File Transfer (MFT)
+        </button>
+        <button
+          onClick={() => setTab("quarantine")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "quarantine"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Quarantine Records
+        </button>
+        <button
+          onClick={() => setTab("reconciliation")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "reconciliation"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          3-Way Reconciliation
+        </button>
+        <button
+          onClick={() => setTab("connections")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "connections"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Connections
+        </button>
+        <button
+          onClick={() => setTab("telecom")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "telecom"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Telecom Gateways
+        </button>
+        <button
+          onClick={() => setTab("b2b")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "b2b"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          B2B / AS2
+        </button>
+        <button
+          onClick={() => setTab("mtls")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "mtls"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          mTLS Security
+        </button>
+        <button
+          onClick={() => setTab("idds")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "idds"
+              ? "bg-indigo-600 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          IDD Registry
+        </button>
       </div>
 
-      {tab === "providers" ? <ProvidersTab /> : <WebhooksTab />}
+      {tab === "providers" && <ProvidersTab />}
+      {tab === "webhooks" && <WebhooksTab />}
+      {tab === "mft" && <MFTTab />}
+      {tab === "quarantine" && <QuarantineTab />}
+      {tab === "reconciliation" && <ReconciliationTab />}
+      {tab === "connections" && <ConnectionsTab />}
+      {tab === "telecom" && <TelecomTab />}
+      {tab === "b2b" && <B2BTab />}
+      {tab === "mtls" && <MTLSTab />}
+      {tab === "idds" && <IDDRegistryTab />}
     </div>
   );
 }
@@ -1400,6 +1489,683 @@ function RegisterWebhookModal({
             {register.isPending ? "Registering..." : "Register Webhook"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── MFT (Managed File Transfer) Sub-Tab ───────── */
+
+function MFTTab() {
+  const qProfiles = useQuery({
+    queryKey: ["integration", "mft", "profiles"],
+    queryFn: () => api.get<{ profiles?: any[] }>("integration", "/v1/mft/profiles"),
+  });
+  const qTransfers = useQuery({
+    queryKey: ["integration", "mft", "transfers"],
+    queryFn: () => api.get<{ transfers?: any[] }>("integration", "/v1/mft/transfers"),
+  });
+
+  const profiles = qProfiles.data?.profiles ?? [];
+  const transfers = qTransfers.data?.transfers ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Managed File Transfer (MFT) Profiles (§19)</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Automated batch file profiles with OpenPGP encryption & SHA-256 integrity verification.</p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Dataset</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Pattern</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Format</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Encryption</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Max Size</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {profiles.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No MFT profiles registered.</td></tr>
+              ) : (
+                profiles.map((p: any) => (
+                  <tr key={p.profile_id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-slate-900">{p.dataset_name}</td>
+                    <td className="px-4 py-3 text-slate-600 font-mono text-[11px]">{p.file_pattern}</td>
+                    <td className="px-4 py-3 text-slate-700">{p.format}</td>
+                    <td className="px-4 py-3 font-semibold text-emerald-700">{p.is_encrypted ? `Protected (${p.encryption_algorithm})` : 'Plain'}</td>
+                    <td className="px-4 py-3 text-slate-500">{(p.max_size_bytes / 1024 / 1024).toFixed(0)} MB</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">File Transfer Audit Execution Log</h2>
+          <p className="text-xs text-slate-500 mt-0.5">8-Stage atomic lifecycle tracking (DETECTED → INTEGRITY_VERIFIED → ACKNOWLEDGED).</p>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">File Name</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">SHA-256 Checksum</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Records</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {transfers.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No transfer executions recorded yet.</td></tr>
+              ) : (
+                transfers.map((t: any) => (
+                  <tr key={t.transfer_id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-slate-900">{t.file_name}</td>
+                    <td className="px-4 py-3 font-mono text-[10px] text-slate-500 shrink">{t.sha256_checksum.substring(0, 16)}...</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600">{t.status}</td>
+                    <td className="px-4 py-3 text-slate-700">{t.processed_count} / {t.record_count}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Quarantine Records Sub-Tab ───────── */
+
+function QuarantineTab() {
+  const qQuarantine = useQuery({
+    queryKey: ["integration", "quarantine"],
+    queryFn: () => api.get<{ records?: any[] }>("integration", "/v1/quarantine"),
+  });
+  const records = qQuarantine.data?.records ?? [];
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">Quarantine Payload Inspection (§27.2)</h2>
+        <p className="text-xs text-slate-500 mt-0.5">Isolated records failed due to security signatures, ambiguous tenancy, or payload integrity issues.</p>
+      </div>
+
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Quarantine ID</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Source</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Reason Code</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Description</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {records.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No quarantine records. System healthy.</td></tr>
+            ) : (
+              records.map((r: any) => (
+                <tr key={r.quarantine_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono font-bold text-rose-700">{r.quarantine_id}</td>
+                  <td className="px-4 py-3 font-bold text-slate-800">{r.source_type}</td>
+                  <td className="px-4 py-3 text-slate-700 font-semibold">{r.reason_code}</td>
+                  <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{r.description}</td>
+                  <td className="px-4 py-3 font-bold text-amber-600">{r.status}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── 3-Way Reconciliation Sub-Tab ───────── */
+
+function ReconciliationTab() {
+  const qProfiles = useQuery({
+    queryKey: ["integration", "reconciliation", "profiles"],
+    queryFn: () => api.get<{ profiles?: any[] }>("integration", "/v1/reconciliation/profiles"),
+  });
+  const qRuns = useQuery({
+    queryKey: ["integration", "reconciliation", "runs"],
+    queryFn: () => api.get<{ runs?: any[] }>("integration", "/v1/reconciliation/runs"),
+  });
+
+  const profiles = qProfiles.data?.profiles ?? [];
+  const runs = qRuns.data?.runs ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">3-Way Reconciliation Profiles (§28)</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Automated 3-way matching: ZoikoNex Domain State vs Provider Statement vs Authoritative Ledger.</p>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Domain</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Partner</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Type</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Tolerance</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {profiles.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No reconciliation profiles configured.</td></tr>
+              ) : (
+                profiles.map((p: any) => (
+                  <tr key={p.profile_id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-bold text-slate-900">{p.domain_name}</td>
+                    <td className="px-4 py-3 text-slate-700">{p.partner_name}</td>
+                    <td className="px-4 py-3 text-slate-600 font-medium">{p.reconciliation_type}</td>
+                    <td className="px-4 py-3 text-slate-600 font-mono">${p.tolerance_amount.toFixed(2)} {p.currency}</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600">{p.is_active ? 'Active' : 'Disabled'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Reconciliation Run Audit History</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Execution logs and discrepancy detection summaries.</p>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Run ID</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Matched Records</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Discrepancies</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Total Variance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {runs.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No reconciliation runs recorded.</td></tr>
+              ) : (
+                runs.map((r: any) => (
+                  <tr key={r.run_id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono font-bold text-slate-800">{r.run_id}</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600">{r.status}</td>
+                    <td className="px-4 py-3 text-slate-700">{r.matched_records} / {r.total_records}</td>
+                    <td className="px-4 py-3 text-slate-700 font-semibold">{r.discrepancy_records}</td>
+                    <td className="px-4 py-3 font-mono text-slate-700">${r.total_variance.toFixed(2)} {r.currency}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── §36 Connections Registry Tab ───────── */
+
+function ConnectionsTab() {
+  const q = useQuery({
+    queryKey: ["integration", "connections"],
+    queryFn: () => api.get<{ connections?: any[]; count?: number }>("integration", "/v1/connections"),
+  });
+  const connections = q.data?.connections ?? [];
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">Connection Registry</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          §36 — Each connection is independently disableable (INT-ARC-003). Emergency kill switch ≤15 min (NFR-INT-05).
+        </p>
+      </div>
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Name</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Environment</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Mode</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Region</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Endpoint</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {q.isLoading ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+            ) : connections.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No connections registered.</td></tr>
+            ) : connections.map((c: any) => (
+              <tr key={c.connection_id} className="hover:bg-slate-50">
+                <td className="px-4 py-3">
+                  <div className="font-bold text-slate-900">{c.connection_name}</div>
+                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">{c.connection_id}</div>
+                </td>
+                <td className="px-4 py-3"><StatusBadge status={c.environment} /></td>
+                <td className="px-4 py-3 text-slate-600 text-[11px] font-medium">{c.connection_mode?.replace(/_/g, ' ')}</td>
+                <td className="px-4 py-3 font-mono text-slate-600">{c.region}</td>
+                <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
+                <td className="px-4 py-3 font-mono text-slate-600 text-[11px] truncate max-w-[180px]">{c.endpoint_url}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── §22 Telecom Gateways Tab ───────── */
+
+function TelecomTab() {
+  const gatewaysQ = useQuery({
+    queryKey: ["integration", "telecom", "gateways"],
+    queryFn: () => api.get<{ gateways?: any[] }>("integration", "/v1/telecom/gateways"),
+  });
+  const roamingQ = useQuery({
+    queryKey: ["integration", "telecom", "roaming"],
+    queryFn: () => api.get<{ batches?: any[] }>("integration", "/v1/telecom/roaming/batches"),
+  });
+  const esimQ = useQuery({
+    queryKey: ["integration", "telecom", "esim"],
+    queryFn: () => api.get<{ esim_profiles?: any[] }>("integration", "/v1/telecom/esim/profiles"),
+  });
+  const portQ = useQuery({
+    queryKey: ["integration", "telecom", "portability"],
+    queryFn: () => api.get<{ portability_requests?: any[] }>("integration", "/v1/telecom/portability/requests"),
+  });
+  const gateways = gatewaysQ.data?.gateways ?? [];
+  const batches = roamingQ.data?.batches ?? [];
+  const esimProfiles = esimQ.data?.esim_profiles ?? [];
+  const portRequests = portQ.data?.portability_requests ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Telecom Gateways</h2>
+          <p className="text-xs text-slate-500 mt-0.5">§22 — SMPP, SIP/SBC, eSIM RSP (SGP.22/SGP.32), TAP3/NRTRDE, Number Portability.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {gatewaysQ.isLoading ? <div className="text-slate-400 text-xs p-4">Loading...</div>
+            : gateways.map((gw: any) => (
+            <div key={gw.gateway_id} className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-sm">{gw.gateway_name}</span>
+                <StatusBadge status={gw.status} />
+              </div>
+              <div className="text-[11px] text-slate-500">{gw.provider_name} · {gw.gateway_type}</div>
+              <div className="font-mono text-[11px] text-slate-600">{gw.host}:{gw.port}</div>
+              {gw.rsp_spec_version && <div className="text-[10px] text-indigo-700 font-bold bg-indigo-50 rounded px-2 py-0.5 inline-block w-fit">{gw.rsp_spec_version}</div>}
+              {gw.smpp_throughput_tps && <div className="text-[11px] text-slate-500">{gw.smpp_throughput_tps} TPS · window {gw.smpp_window_size}</div>}
+              {gw.nrtrde_enabled && <div className="text-[11px] text-emerald-700 font-semibold">NRTRDE enabled</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <h2 className="text-base font-bold text-slate-900">TAP3 / NRTRDE Roaming Batches <span className="text-xs font-normal text-slate-500 ml-1">INT-TEL-005/006</span></h2>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">File</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Type</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Seq #</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Records</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">State</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Timeliness</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {batches.length === 0 ? <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No batches.</td></tr>
+                : batches.map((b: any) => (
+                <tr key={b.batch_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-[11px] font-bold text-slate-900">{b.file_name}</td>
+                  <td className="px-4 py-3"><span className="bg-indigo-50 text-indigo-700 font-bold text-[10px] px-2 py-0.5 rounded">{b.file_type}</span></td>
+                  <td className="px-4 py-3 font-mono text-slate-700">{b.sequence_number}</td>
+                  <td className="px-4 py-3 text-slate-700">{b.actual_records} / {b.expected_records}</td>
+                  <td className="px-4 py-3"><StatusBadge status={b.state} /></td>
+                  <td className="px-4 py-3">{b.timeliness_breach ? <span className="text-rose-600 font-bold text-[11px]">BREACH</span> : <span className="text-emerald-600 font-semibold text-[11px]">On Time</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <h2 className="text-base font-bold text-slate-900">eSIM Profiles <span className="text-xs font-normal text-slate-500 ml-1">INT-TEL-009 — vault refs only</span></h2>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">ICCID</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Type</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">RSP Spec</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">State</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Activation Code (Vault Ref)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {esimProfiles.length === 0 ? <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No eSIM profiles.</td></tr>
+                : esimProfiles.map((p: any) => (
+                <tr key={p.profile_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-900 text-[11px]">{p.iccid}</td>
+                  <td className="px-4 py-3 text-slate-600 font-medium text-[11px]">{p.profile_type}</td>
+                  <td className="px-4 py-3"><span className="text-indigo-700 font-bold bg-indigo-50 rounded px-2 py-0.5 text-[10px]">{p.rsp_spec_version}</span></td>
+                  <td className="px-4 py-3"><StatusBadge status={p.state} /></td>
+                  <td className="px-4 py-3 font-mono text-[10px] text-slate-500 truncate max-w-[220px]">{p.activation_code_ref}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <h2 className="text-base font-bold text-slate-900">Number Portability Requests <span className="text-xs font-normal text-slate-500 ml-1">INT-TEL-011</span></h2>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">MSISDN</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Jurisdiction</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Donor</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Recipient</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {portRequests.length === 0 ? <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No portability requests.</td></tr>
+                : portRequests.map((r: any) => (
+                <tr key={r.request_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-900">{r.msisdn}</td>
+                  <td className="px-4 py-3"><span className="bg-slate-100 font-bold text-[11px] px-2 py-0.5 rounded">{r.jurisdiction_code}</span></td>
+                  <td className="px-4 py-3 text-slate-600">{r.donor_operator}</td>
+                  <td className="px-4 py-3 text-slate-600">{r.recipient_operator}</td>
+                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── §20 B2B / AS2 Tab ───────── */
+
+function B2BTab() {
+  const partnersQ = useQuery({
+    queryKey: ["integration", "b2b", "partners"],
+    queryFn: () => api.get<{ as2_partners?: any[] }>("integration", "/v1/b2b/as2/partners"),
+  });
+  const exchangesQ = useQuery({
+    queryKey: ["integration", "b2b", "exchanges"],
+    queryFn: () => api.get<{ exchanges?: any[] }>("integration", "/v1/b2b/as2/exchanges"),
+  });
+  const certsQ = useQuery({
+    queryKey: ["integration", "b2b", "certificates"],
+    queryFn: () => api.get<{ certificates?: any[] }>("integration", "/v1/b2b/as2/certificates"),
+  });
+  const partners = partnersQ.data?.as2_partners ?? [];
+  const exchanges = exchangesQ.data?.exchanges ?? [];
+  const certs = certsQ.data?.certificates ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">AS2 B2B Partners</h2>
+          <p className="text-xs text-slate-500 mt-0.5">INT-B2B-001 — RFC 4130 signed/encrypted exchanges. Signed MDN required for financially significant payloads.</p>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Partner</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Local AS2 ID</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Remote AS2 ID</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">MDN</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Cert Expires</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {partners.length === 0 ? <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No AS2 partners configured.</td></tr>
+                : partners.map((p: any) => (
+                <tr key={p.as2_partner_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-slate-900">{p.partner_name}</div>
+                    <div className="text-[11px] text-slate-400 truncate max-w-[160px]">{p.partner_url}</div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{p.as2_id_local}</td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{p.as2_id_remote}</td>
+                  <td className="px-4 py-3">
+                    <div className="text-[11px] font-bold text-slate-700">{p.mdn_mode}</div>
+                    <div className="text-[10px] text-slate-400">{p.mdn_signing_required ? 'Signed' : 'Unsigned'}</div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{p.cert_expires_at ? new Date(p.cert_expires_at).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">AS2 Exchange Log</h2>
+          <p className="text-xs text-slate-500 mt-0.5">INT-B2B-002 — MDN receipt status reconciled to IntegrationExecution evidence.</p>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Message ID</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Direction</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Financial</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">MDN</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Signed</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Evidence</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {exchanges.length === 0 ? <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No exchanges logged.</td></tr>
+                : exchanges.map((ex: any) => (
+                <tr key={ex.exchange_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-[10px] text-slate-700 truncate max-w-[160px]">{ex.message_id}</td>
+                  <td className="px-4 py-3"><span className={`font-bold text-[11px] ${ex.direction === 'OUTBOUND' ? 'text-blue-600' : 'text-purple-600'}`}>{ex.direction}</span></td>
+                  <td className="px-4 py-3">{ex.is_financial ? <span className="text-amber-700 font-bold text-[11px]">Yes</span> : <span className="text-slate-400">No</span>}</td>
+                  <td className="px-4 py-3"><StatusBadge status={ex.mdn_status} /></td>
+                  <td className="px-4 py-3">{ex.is_signed ? <span className="text-emerald-600 font-bold">Y</span> : <span className="text-rose-500 font-bold">N</span>}</td>
+                  <td className="px-4 py-3 font-mono text-[10px] text-slate-500 truncate max-w-[140px]">{ex.evidence_ref}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">B2B Certificate Inventory</h2>
+          <p className="text-xs text-slate-500 mt-0.5">INT-B2B-003 / INT-SEC-009 — Alerts begin 30 days before expiry; escalated at 7 days.</p>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Serial</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Subject</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Valid From</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Expires</th>
+                <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {certs.length === 0 ? <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No certificates.</td></tr>
+                : certs.map((cert: any) => {
+                const daysLeft = Math.ceil((new Date(cert.not_after).getTime() - Date.now()) / 86400000);
+                const c = daysLeft <= 7 ? 'text-rose-600' : daysLeft <= 30 ? 'text-amber-600' : 'text-emerald-600';
+                return (
+                  <tr key={cert.cert_id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono font-bold text-slate-900 text-[11px]">{cert.serial_number}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-600 truncate max-w-[200px]">{cert.subject}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{new Date(cert.not_before).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      <div className={`font-bold text-[11px] ${c}`}>{new Date(cert.not_after).toLocaleDateString()}</div>
+                      <div className={`text-[10px] ${c}`}>{daysLeft}d left</div>
+                    </td>
+                    <td className="px-4 py-3">{cert.is_revoked ? <StatusBadge status="REVOKED" /> : <StatusBadge status="ACTIVE" />}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── §23 mTLS Security Profiles Tab ───────── */
+
+function MTLSTab() {
+  const q = useQuery({
+    queryKey: ["integration", "mtls", "profiles"],
+    queryFn: () => api.get<{ mtls_profiles?: any[] }>("integration", "/v1/security/mtls-profiles"),
+  });
+  const profiles = q.data?.mtls_profiles ?? [];
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">mTLS Security Profiles</h2>
+        <p className="text-xs text-slate-500 mt-0.5">ADR-013 / INT-SEC-005/006 — Mutual TLS for HIGH-risk connections. Zero-downtime rotation. TLS 1.0/1.1 PROHIBITED (BCP 195).</p>
+      </div>
+      <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-900 text-xs">
+        TLS 1.3 preferred · TLS 1.2 permitted · <strong className="text-rose-600">TLS 1.0/1.1 PROHIBITED</strong> (INT-SEC-004 / BCP 195). Certs in Vault (INT-SEC-007). Alerts 30d before expiry (INT-SEC-009).
+      </div>
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Connection</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Risk</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">TLS Min</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Cert Serial</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Expires</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Vault Path</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {q.isLoading ? <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              : profiles.length === 0 ? <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No mTLS profiles configured.</td></tr>
+              : profiles.map((p: any) => {
+              const daysLeft = Math.ceil((new Date(p.cert_expires_at).getTime() - Date.now()) / 86400000);
+              const ec = daysLeft <= 7 ? 'text-rose-600' : daysLeft <= 30 ? 'text-amber-600' : 'text-emerald-600';
+              const rc = p.risk_tier === 'HIGH' ? 'bg-rose-50 text-rose-700 border border-rose-200' : p.risk_tier === 'MEDIUM' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600';
+              return (
+                <tr key={p.mtls_profile_id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-700">{p.connection_id}</td>
+                  <td className="px-4 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${rc}`}>{p.risk_tier}</span></td>
+                  <td className="px-4 py-3 font-mono font-bold text-[11px]">{p.tls_min_version}</td>
+                  <td className="px-4 py-3 font-mono text-[11px] text-slate-600">{p.cert_serial}</td>
+                  <td className="px-4 py-3">
+                    <div className={`font-bold text-[11px] ${ec}`}>{new Date(p.cert_expires_at).toLocaleDateString()}</div>
+                    <div className={`text-[10px] ${ec}`}>{daysLeft}d left</div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[10px] text-slate-500 truncate max-w-[160px]">{p.client_cert_vault_path}</td>
+                  <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── §11 IDD Registry Tab ───────── */
+
+function IDDRegistryTab() {
+  const q = useQuery({
+    queryKey: ["integration", "idds"],
+    queryFn: () => api.get<{ idds?: any[] }>("integration", "/v1/idds"),
+  });
+  const idds = q.data?.idds ?? [];
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">Integration Design Document (IDD) Registry</h2>
+        <p className="text-xs text-slate-500 mt-0.5">§11 / INT-SEC-001 — Every production integration requires a registered, versioned, certified IDD. DRAFT IDDs block production activation.</p>
+      </div>
+      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
+        <strong>Certification Requirement:</strong> IDD must identify provider, pin contracted API version, declare auth scheme, document data classification, specify monitoring thresholds, and be approved before production activation.
+      </div>
+      <div className="grid grid-cols-1 gap-4">
+        {q.isLoading ? <div className="text-slate-400 text-xs p-4">Loading IDD registry...</div>
+          : idds.length === 0 ? <div className="text-slate-400 text-xs p-4">No IDDs registered.</div>
+          : idds.map((idd: any) => (
+          <div key={idd.idd_id} className={`border rounded-2xl p-5 flex flex-col gap-3 ${idd.status === 'ACTIVE' ? 'border-emerald-200 bg-emerald-50/30' : idd.status === 'DRAFT' ? 'border-amber-200 bg-amber-50/30' : 'border-slate-200 bg-slate-50'}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="font-extrabold text-slate-900">{idd.idd_reference} — {idd.title}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Provider: <strong>{idd.provider_name}</strong> · Type: <strong>{idd.connector_type}</strong> · v{idd.idd_version}</div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={idd.status} />
+                {idd.is_certified && <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">CERTIFIED</span>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Standard", value: idd.standard_ref },
+                { label: "Schema Ver.", value: idd.schema_version || "—" },
+                { label: "Certified At", value: idd.certified_at ? new Date(idd.certified_at).toLocaleDateString() : "Pending" },
+                { label: "Production Gate", value: idd.is_certified ? "Ready" : "BLOCKED — DRAFT" },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white border border-slate-200 rounded-xl p-3">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">{label}</div>
+                  <div className={`font-bold text-xs mt-0.5 ${label === "Production Gate" && !idd.is_certified ? "text-rose-600" : label === "Production Gate" ? "text-emerald-700" : "text-slate-800"}`}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
