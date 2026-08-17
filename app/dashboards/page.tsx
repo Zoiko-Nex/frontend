@@ -18,6 +18,7 @@ import BillingManagement from "./BillingManagement";
 import PaymentsManagement from "./PaymentsManagement";
 import FinanceLedger from "./FinanceLedger";
 import TaxJurisdiction from "./TaxJurisdiction";
+import UsageCharging from "./UsageCharging";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -69,6 +70,8 @@ const TAB_DOMAIN: Record<string, string> = {
   PaymentsManagement: "payments",
   FinanceLedger: "finance",
   TaxJurisdiction: "tax",
+  // Two services on one screen; gated on usage, the one that owns the records.
+  UsageCharging: "usage",
 };
 
 function LockedPanel({ label }: { label: string }) {
@@ -1490,6 +1493,7 @@ export default function DashboardsPage() {
         { label: "Payments", tabKey: "PaymentsManagement", iconPath: "/image/dashboard/credit-card.svg" },
         { label: "Tax & Jurisdiction", tabKey: "TaxJurisdiction", iconPath: "/image/dashboard/document.svg" },
         { label: "Finance Ledger", tabKey: "FinanceLedger", iconPath: "/image/dashboard/bar-chart.svg" },
+        { label: "Usage & Charging", tabKey: "UsageCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
       ]
     },
     {
@@ -2018,7 +2022,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Online charging, real-time balance reservations & policies.",
                         icon: "/image/dashboard/charging-lightning.svg",
-                        tabKey: "Billing",
+                        tabKey: "UsageCharging",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2028,7 +2032,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Usage rating matrix, tiering, discounts & price calculation.",
                         icon: "/image/dashboard/bar-chart.svg",
-                        tabKey: "Billing",
+                        tabKey: "UsageCharging",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2168,7 +2172,7 @@ export default function DashboardsPage() {
                         category: "Platform & Integration",
                         desc: "CDR ingestion, normalization, deduplication & enrichment.",
                         icon: "/image/dashboard/activity-pulse.svg",
-                        tabKey: "Integration",
+                        tabKey: "UsageCharging",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -3589,6 +3593,13 @@ export default function DashboardsPage() {
               <FinanceLedger />
             ) : (
               <LockedPanel label="Finance Fabric & Ledger" />
+            ))}
+
+            {/* Usage & Charging Tab — usage-ingestion-mediation + rating-charging */}
+            {currentTab === "UsageCharging" && (canAccess(TAB_DOMAIN.UsageCharging) ? (
+              <UsageCharging />
+            ) : (
+              <LockedPanel label="Usage & Charging" />
             ))}
 
 

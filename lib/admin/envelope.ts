@@ -43,6 +43,12 @@ export const ENVELOPE = {
   journalEntries: "journal_entries",
   /** finance-fabric-ledger: GET /v1/ledger-lines → LedgerSummaryResponse.lines */
   ledgerLines: "lines",
+  /**
+   * usage-ingestion-mediation: normalised, rated and suspense lists all use the
+   * same {data, pagination, meta} envelope — the only service here that returns
+   * pagination metadata alongside the rows.
+   */
+  usage: "data",
 } as const;
 
 /** Read a list out of a response envelope, tolerating a missing or non-array key. */
