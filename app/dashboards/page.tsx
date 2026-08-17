@@ -14,6 +14,10 @@ import IntegrationTab from "./IntegrationTab";
 import CatalogManagement from "./CatalogManagement";
 import CustomerManagement from "./CustomerManagement";
 import OrderManagement from "./OrderManagement";
+import BillingManagement from "./BillingManagement";
+import PaymentsManagement from "./PaymentsManagement";
+import FinanceLedger from "./FinanceLedger";
+import TaxJurisdiction from "./TaxJurisdiction";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -51,12 +55,20 @@ const SERVICE_DOMAIN: Record<string, string> = {
 // to everyone (Services is gated per-card instead, via SERVICE_DOMAIN).
 const TAB_DOMAIN: Record<string, string> = {
   Trust: "evidence",
+  // The "Billing" tab is the tenant's own commercial contract with Zoiko
+  // (pathway, usage band, renewal) -- NOT the billing-invoice service. That
+  // lives on BillingManagement below. The two are gated on the same domain
+  // because both are billing-facing.
   Billing: "billing",
   Integration: "integration",
   Settings: "identity",
   CatalogManagement: "catalogue",
   CustomerManagement: "customer",
   OrderManagement: "order",
+  BillingManagement: "billing",
+  PaymentsManagement: "payments",
+  FinanceLedger: "finance",
+  TaxJurisdiction: "tax",
 };
 
 function LockedPanel({ label }: { label: string }) {
@@ -1473,6 +1485,14 @@ export default function DashboardsPage() {
       ]
     },
     {
+      section: "REVENUE", items: [
+        { label: "Billing & Invoice", tabKey: "BillingManagement", iconPath: "/image/dashboard/billing-document.svg" },
+        { label: "Payments", tabKey: "PaymentsManagement", iconPath: "/image/dashboard/credit-card.svg" },
+        { label: "Tax & Jurisdiction", tabKey: "TaxJurisdiction", iconPath: "/image/dashboard/document.svg" },
+        { label: "Finance Ledger", tabKey: "FinanceLedger", iconPath: "/image/dashboard/bar-chart.svg" },
+      ]
+    },
+    {
       section: "OPERATE", items: [
         { label: "Support & Success", tabKey: "Support", iconPath: "/image/dashboard/sidebar-notification.svg" },
         { label: "Billing & Commercials", tabKey: "Billing", iconPath: "/image/dashboard/credit-card.svg" },
@@ -2018,7 +2038,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Bill cycles, automated invoicing, statement PDF generation.",
                         icon: "/image/dashboard/billing-document.svg",
-                        tabKey: "Billing",
+                        tabKey: "BillingManagement",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2028,7 +2048,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Payment methods, gateways, retries, refunds, and dunning.",
                         icon: "/image/dashboard/credit-card.svg",
-                        tabKey: "Billing",
+                        tabKey: "PaymentsManagement",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2098,7 +2118,7 @@ export default function DashboardsPage() {
                         category: "Compliance & Trust",
                         desc: "Jurisdiction tax engine, regulatory fees, exemptions & rules.",
                         icon: "/image/dashboard/shield.svg",
-                        tabKey: "Billing",
+                        tabKey: "TaxJurisdiction",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -3541,6 +3561,34 @@ export default function DashboardsPage() {
               <OrderManagement />
             ) : (
               <LockedPanel label="Order Management" />
+            ))}
+
+            {/* Billing & Invoice Tab — billing-invoice service */}
+            {currentTab === "BillingManagement" && (canAccess(TAB_DOMAIN.BillingManagement) ? (
+              <BillingManagement />
+            ) : (
+              <LockedPanel label="Billing & Invoice" />
+            ))}
+
+            {/* Payments Tab */}
+            {currentTab === "PaymentsManagement" && (canAccess(TAB_DOMAIN.PaymentsManagement) ? (
+              <PaymentsManagement />
+            ) : (
+              <LockedPanel label="Payments & Collections" />
+            ))}
+
+            {/* Tax & Jurisdiction Tab */}
+            {currentTab === "TaxJurisdiction" && (canAccess(TAB_DOMAIN.TaxJurisdiction) ? (
+              <TaxJurisdiction />
+            ) : (
+              <LockedPanel label="Tax & Jurisdiction" />
+            ))}
+
+            {/* Finance Fabric & Ledger Tab */}
+            {currentTab === "FinanceLedger" && (canAccess(TAB_DOMAIN.FinanceLedger) ? (
+              <FinanceLedger />
+            ) : (
+              <LockedPanel label="Finance Fabric & Ledger" />
             ))}
 
 

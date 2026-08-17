@@ -19,6 +19,9 @@
  *   PRODUCT      services/product-catalogue-commercial (UpdateProduct switch)
  *   OFFER        services/product-catalogue-commercial (UpdateOffer switch)
  *   KYC_DOCUMENT services/custmr-lfc-kyc (UpdateDocument switch)
+ *   INVOICE      services/billing-invoice/internal/domain/billing/invoice.go
+ *   BILL_CYCLE   services/billing-invoice/internal/domain/billing/billcycle.go
+ *   PAYMENT      services/payments/internal/domain/payment/payment.go
  */
 
 export type Transition = {
@@ -171,6 +174,70 @@ export const KYC_DOCUMENT_TRANSITIONS: TransitionTable = {
   ],
   VERIFIED: [],
   REJECTED: [],
+};
+
+/**
+ * Invoice lifecycle. The domain table is
+ * DRAFT → {PENDING_APPROVAL, CANCELLED}, PENDING_APPROVAL → {ISSUED, CANCELLED},
+ * ISSUED → {CANCELLED} — but there is no HTTP route for the DRAFT →
+ * PENDING_APPROVAL hop. `POST /v1/invoices/{id}/issue` auto-submits a DRAFT and
+ * then issues it in one transaction (usecase.go IssueInvoice), so the console
+ * offers ISSUE directly from DRAFT. Offering a separate "submit" would call a
+ * route that does not exist.
+ *
+ * There is no edit path out of ISSUED by design (ZN-ADR-012): a wrong amount is
+ * corrected with a credit or debit note, never by mutating the invoice.
+ */
+export const INVOICE_TRANSITIONS: TransitionTable = {
+  DRAFT: [
+    { action: "ISSUE", label: "Issue invoice" },
+    { action: "CANCEL", label: "Cancel", destructive: true },
+  ],
+  PENDING_APPROVAL: [
+    { action: "ISSUE", label: "Issue invoice" },
+    { action: "CANCEL", label: "Cancel", destructive: true },
+  ],
+  ISSUED: [{ action: "CANCEL", label: "Cancel & reissue", destructive: true }],
+  CANCELLED: [],
+};
+
+/**
+ * Bill cycle lifecycle. CLOSED → OPEN (reopen) is legal in the domain table but
+ * has no HTTP route — only `POST /v1/bill-cycles/{id}/close` exists — so only
+ * CLOSE is offered. INVOICED is reached by the billing run, not by an operator.
+ */
+export const BILL_CYCLE_TRANSITIONS: TransitionTable = {
+  OPEN: [{ action: "CLOSE", label: "Close cycle" }],
+  CLOSED: [],
+  INVOICED: [],
+};
+
+/**
+ * Payment intent lifecycle (payments/API.INTEGRATION.md §4).
+ *
+ * REFUNDED is not reached by a transition button: it is the result of
+ * `POST /v1/payment-intents/{id}/refunds`, which is its own form because it
+ * carries an amount and a reason code. Likewise SETTLED comes from recording a
+ * settlement. Both are handled outside this table.
+ *
+ * Async rails (ACH, DIRECT_DEBIT, MOBILE_MONEY, WIRE) stay CREATED after
+ * `authorise` until the provider's webhook confirms — the button is still
+ * correct, the state just moves later.
+ */
+export const PAYMENT_TRANSITIONS: TransitionTable = {
+  CREATED: [
+    { action: "AUTHORISE", label: "Authorise" },
+    { action: "VOID", label: "Void", destructive: true },
+  ],
+  AUTHORISED: [
+    { action: "CAPTURE", label: "Capture" },
+    { action: "VOID", label: "Void", destructive: true },
+  ],
+  CAPTURED: [],
+  SETTLED: [],
+  REFUNDED: [],
+  VOIDED: [],
+  FAILED: [],
 };
 
 /** Transitions legal from a status, or an empty list for a terminal/unknown one. */

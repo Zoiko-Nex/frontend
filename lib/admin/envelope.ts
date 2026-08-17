@@ -26,6 +26,23 @@ export const ENVELOPE = {
   offers: "offers",
   /** custmr-lfc-kyc: cases, documents, lifecycle events */
   kyc: "items",
+  /**
+   * billing-invoice: invoices, bill cycles, credit notes, debit notes. All four
+   * list handlers wrap in {"items": [...]} (handlers.go ListInvoices,
+   * ListBillCycles, ListCreditNotes, ListDebitNotes).
+   */
+  billing: "items",
+  /**
+   * payments: intents, events, refunds, settlements — every list is {"data": [...]}.
+   * Intent lists additionally carry "next_cursor".
+   */
+  payments: "data",
+  /** tax-jurisdiction: policies, decisions, exemptions — all {"data": [...]}. */
+  tax: "data",
+  /** finance-fabric-ledger: GET /v1/journal-entries → {"journal_entries": [...], "count": n} */
+  journalEntries: "journal_entries",
+  /** finance-fabric-ledger: GET /v1/ledger-lines → LedgerSummaryResponse.lines */
+  ledgerLines: "lines",
 } as const;
 
 /** Read a list out of a response envelope, tolerating a missing or non-array key. */
