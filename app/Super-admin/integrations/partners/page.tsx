@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { platformApi } from '@/lib/admin/platform/client';
+import { errMessage } from '@/lib/admin/envelope';
 import Link from 'next/link';
 import { 
   ShieldCheck, 
@@ -36,94 +39,116 @@ interface Partner {
   iddReference: string;
   pipStatus: 'APPROVED' | 'IN_REVIEW' | 'PENDING';
   lastSync: string;
-  gates: {
-    g1_contract: boolean;
-    g2_security: boolean;
-    g3_tenancy: boolean;
-    g4_canonical: boolean;
-    g5_reliability: boolean;
-    g6_reconciliation: boolean;
-    g7_operations: boolean;
-    g8_resilience: boolean;
+  /**
+   * Tri-state on purpose. integration-ecosystem records no per-gate
+   * certification result, so a gate is true/false only where a connector field
+   * evidences it, and null ("not evidenced") otherwise. Rendering an
+   * unevidenced gate as a green tick was the original sin of this screen.
+   */
+  gates: Record<string, boolean | null>;
+}
+
+// ─── Backend record shapes (integration-ecosystem) ────────────────────────────
+
+interface Connector {
+  connector_id: string;
+  connector_name: string;
+  connector_type: string;
+  provider_name: string;
+  status: string;
+  auth_type: string;
+  base_url?: string;
+  rate_limit_per_minute?: number;
+  timeout_ms?: number;
+  tenancy_mode?: string;
+  contracting_entity?: string;
+  credential_scope?: string;
+  arrangement_version?: string;
+  created_at?: string;
+}
+
+interface IDD {
+  idd_id?: string;
+  idd_reference?: string;
+  connector_id?: string;
+  version?: string;
+  status?: string;
+}
+
+/** connector_type is free-form upstream; map the ones the UI has a label for. */
+function protocolOf(type: string | undefined): Partner['protocol'] {
+  const t = (type ?? '').toUpperCase();
+  if (t.includes('AS2') || t.includes('B2B')) return 'AS2/B2B';
+  if (t.includes('SFTP') || t.includes('MFT')) return 'SFTP/MFT';
+  if (t.includes('SMPP')) return 'SMPP';
+  if (t.includes('ESIM') || t.includes('RSP') || t.includes('SGP')) return 'eSIM RSP (SGP.22)';
+  if (t.includes('WEBHOOK')) return 'Webhooks';
+  return 'REST/HTTPS';
+}
+
+function lifecycleOf(status: string | undefined): Partner['lifecycle'] {
+  const s = (status ?? '').toUpperCase();
+  if (s === 'ACTIVE') return 'ACTIVE';
+  if (s === 'SUSPENDED') return 'SUSPENDED';
+  if (s === 'RETIRED' || s === 'DECOMMISSIONING') return 'DECOMMISSIONING';
+  if (s === 'CERTIFIED') return 'CERTIFIED';
+  if (s === 'SANDBOX') return 'SANDBOX';
+  if (s === 'CONTRACTED') return 'CONTRACTED';
+  return 'DRAFT';
+}
+
+/**
+ * Health is a runtime property. The connector record is configuration, so the
+ * honest mapping is from its lifecycle status only — an ACTIVE connector is
+ * reachable-as-configured, a SUSPENDED one is deliberately held. Per-connection
+ * liveness lives on GET /v1/connections/{id}/health and is not fetched here.
+ */
+function healthOf(status: string | undefined): Partner['health'] {
+  const s = (status ?? '').toUpperCase();
+  if (s === 'ACTIVE') return 'HEALTHY';
+  if (s === 'SUSPENDED') return 'SECURITY_HOLD';
+  if (s === 'RETIRED') return 'UNAVAILABLE';
+  return 'MAINTENANCE';
+}
+
+function mapConnector(c: Connector, idds: IDD[]): Partner {
+  const idd = idds.find((i) => i.connector_id === c.connector_id);
+  const status = (c.status ?? '').toUpperCase();
+  const authed = !!c.auth_type && c.auth_type.toUpperCase() !== 'NONE';
+
+  return {
+    id: c.connector_id,
+    name: c.connector_name,
+    category: c.connector_type || 'Uncategorised',
+    lifecycle: lifecycleOf(c.status),
+    health: healthOf(c.status),
+    controlState: status === 'ACTIVE' ? 'ACTIVE' : status === 'SUSPENDED' ? 'DISABLED' : 'READ_ONLY',
+    tenancyMode: (c.tenancy_mode ?? '').toUpperCase().includes('SHARED')
+      ? 'SHARED_PARTNER_MULTI_TENANT'
+      : 'DEDICATED_TENANT',
+    protocol: protocolOf(c.connector_type),
+    iddReference: idd?.idd_reference ?? idd?.idd_id ?? 'none registered',
+    pipStatus: status === 'ACTIVE' ? 'APPROVED' : status === 'DRAFT' ? 'PENDING' : 'IN_REVIEW',
+    lastSync: c.created_at ? new Date(c.created_at).toLocaleString() : '—',
+    // Only gates a connector field actually evidences get a verdict. The rest
+    // are null and render as "not evidenced" — the service records no per-gate
+    // certification result, so claiming a pass would be fabrication.
+    gates: {
+      g1_contract: !!c.contracting_entity,
+      g2_security: authed,
+      g3_tenancy: !!c.tenancy_mode,
+      g4_canonical: null,
+      g5_reliability: !!(c.rate_limit_per_minute || c.timeout_ms),
+      g6_reconciliation: null,
+      g7_operations: null,
+      g8_resilience: null,
+    },
   };
 }
 
-const MOCK_PARTNERS: Partner[] = [
-  {
-    id: 'prt_stripe_01',
-    name: 'Stripe Payments Gateway',
-    category: 'Payment Processor',
-    lifecycle: 'ACTIVE',
-    health: 'HEALTHY',
-    controlState: 'ACTIVE',
-    tenancyMode: 'SHARED_PARTNER_MULTI_TENANT',
-    protocol: 'REST/HTTPS',
-    iddReference: 'ZN-INT-IDD-001',
-    pipStatus: 'APPROVED',
-    lastSync: '2 mins ago',
-    gates: { g1_contract: true, g2_security: true, g3_tenancy: true, g4_canonical: true, g5_reliability: true, g6_reconciliation: true, g7_operations: true, g8_resilience: true }
-  },
-  {
-    id: 'prt_netip_02',
-    name: 'NetworkIP Voice Systems',
-    category: 'International Calling Provider',
-    lifecycle: 'ACTIVE',
-    health: 'HEALTHY',
-    controlState: 'ACTIVE',
-    tenancyMode: 'DEDICATED_TENANT',
-    protocol: 'REST/HTTPS',
-    iddReference: 'ZN-INT-IDD-002',
-    pipStatus: 'APPROVED',
-    lastSync: '12 mins ago',
-    gates: { g1_contract: true, g2_security: true, g3_tenancy: true, g4_canonical: true, g5_reliability: true, g6_reconciliation: true, g7_operations: true, g8_resilience: true }
-  },
-  {
-    id: 'prt_smdp_03',
-    name: 'GSMA SM-DP+ Profile Manager',
-    category: 'eSIM / RSP Provider',
-    lifecycle: 'ACTIVE',
-    health: 'DEGRADED',
-    controlState: 'ACTIVE',
-    tenancyMode: 'SHARED_PARTNER_MULTI_TENANT',
-    protocol: 'eSIM RSP (SGP.22)',
-    iddReference: 'ZN-INT-IDD-008',
-    pipStatus: 'APPROVED',
-    lastSync: '1 min ago',
-    gates: { g1_contract: true, g2_security: true, g3_tenancy: true, g4_canonical: true, g5_reliability: true, g6_reconciliation: false, g7_operations: true, g8_resilience: true }
-  },
-  {
-    id: 'prt_suretax_04',
-    name: 'SureTax Regulatory Engine',
-    category: 'Tax & Jurisdiction',
-    lifecycle: 'ACTIVE',
-    health: 'RECONCILIATION_HOLD',
-    controlState: 'READ_ONLY',
-    tenancyMode: 'SHARED_PARTNER_MULTI_TENANT',
-    protocol: 'REST/HTTPS',
-    iddReference: 'ZN-INT-IDD-014',
-    pipStatus: 'APPROVED',
-    lastSync: '45 mins ago',
-    gates: { g1_contract: true, g2_security: true, g3_tenancy: true, g4_canonical: true, g5_reliability: true, g6_reconciliation: false, g7_operations: true, g8_resilience: false }
-  },
-  {
-    id: 'prt_gamma_05',
-    name: 'Gamma Telecom MVNA',
-    category: 'Core Carrier / MVNE',
-    lifecycle: 'SANDBOX',
-    health: 'HEALTHY',
-    controlState: 'ACTIVE',
-    tenancyMode: 'DEDICATED_TENANT',
-    protocol: 'SMPP',
-    iddReference: 'ZN-INT-IDD-021',
-    pipStatus: 'IN_REVIEW',
-    lastSync: 'Just now',
-    gates: { g1_contract: true, g2_security: true, g3_tenancy: true, g4_canonical: false, g5_reliability: false, g6_reconciliation: false, g7_operations: false, g8_resilience: false }
-  }
-];
-
 export default function IntegrationPartnersPage() {
-  const [partners, setPartners] = useState<Partner[]>(MOCK_PARTNERS);
-  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(MOCK_PARTNERS[0]);
+  const qc = useQueryClient();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [isUpdatingState, setIsUpdatingState] = useState(false);
@@ -134,24 +159,72 @@ export default function IntegrationPartnersPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleUpdateControlState = (partnerId: string, newState: Partner['controlState']) => {
+  // The partner registry IS the connector registry — integration-ecosystem has
+  // no separate "partner" resource. IDDs are fetched alongside so a connector
+  // can be matched to its interface-definition document, which is the one field
+  // on this screen that lives outside the connector record.
+  const partnersQ = useQuery({
+    queryKey: ['superadmin', 'connectors'],
+    queryFn: async () => {
+      const [connectors, idds] = await Promise.all([
+        platformApi.get<{ connectors?: Connector[] }>('integration', '/v1/connectors').then((r) => r.connectors ?? []),
+        platformApi
+          .get<{ idds?: IDD[] }>('integration', '/v1/idds')
+          .then((r) => r.idds ?? [])
+          .catch(() => [] as IDD[]),
+      ]);
+      return connectors.map((c) => mapConnector(c, idds));
+    },
+  });
+  const partners = useMemo(() => partnersQ.data ?? [], [partnersQ.data]);
+
+  const selectedPartner = partners.find((p) => p.id === selectedId) ?? partners[0] ?? null;
+
+  /**
+   * The control plane exposes suspend and activate on a connector, and a
+   * kill-switch on a connection. QUARANTINE / READ_ONLY / *_DISABLED are states
+   * this screen can display but the service cannot be put into, so those
+   * requests are refused here rather than silently doing nothing.
+   */
+  const handleUpdateControlState = async (partnerId: string, newState: Partner['controlState']) => {
+    const route =
+      newState === 'ACTIVE' ? 'activate' : newState === 'DISABLED' || newState === 'QUARANTINE' ? 'suspend' : null;
+    if (!route) {
+      showNotification(`No control-plane route for state [${newState}] — connectors support activate and suspend only.`);
+      return;
+    }
     setIsUpdatingState(true);
-    setTimeout(() => {
-      setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, controlState: newState } : p));
-      if (selectedPartner && selectedPartner.id === partnerId) {
-        setSelectedPartner(prev => prev ? { ...prev, controlState: newState } : null);
-      }
+    try {
+      await platformApi.post('integration', `/v1/connectors/${partnerId}/${route}`, {});
+      showNotification(`Control plane updated: ${partnerId} → ${route.toUpperCase()}`);
+      await qc.invalidateQueries({ queryKey: ['superadmin', 'connectors'] });
+    } catch (e) {
+      showNotification(errMessage(e, 'Control-plane update failed.'));
+    } finally {
       setIsUpdatingState(false);
-      showNotification(`Control plane updated: ${partnerId} set to state [${newState}]`);
-    }, 400);
+    }
   };
 
-  const handleUpdateLifecycle = (partnerId: string, newLifecycle: Partner['lifecycle']) => {
-    setPartners(prev => prev.map(p => p.id === partnerId ? { ...p, lifecycle: newLifecycle } : p));
-    if (selectedPartner && selectedPartner.id === partnerId) {
-      setSelectedPartner(prev => prev ? { ...prev, lifecycle: newLifecycle } : null);
+  /**
+   * Lifecycle is governed by the activation workflow (request → approvals →
+   * activate) and by retire. It is not a field an operator sets directly, so
+   * only the two transitions with real routes are wired.
+   */
+  const handleUpdateLifecycle = async (partnerId: string, newLifecycle: Partner['lifecycle']) => {
+    const route = newLifecycle === 'ACTIVE' ? 'activate' : newLifecycle === 'DECOMMISSIONING' ? 'retire' : null;
+    if (!route) {
+      showNotification(
+        `[${newLifecycle}] is set by the activation workflow, not directly — use the activation request and approvals.`,
+      );
+      return;
     }
-    showNotification(`Lifecycle updated: ${partnerId} set to [${newLifecycle}]`);
+    try {
+      await platformApi.post('integration', `/v1/connectors/${partnerId}/${route}`, {});
+      showNotification(`Lifecycle updated: ${partnerId} → ${newLifecycle}`);
+      await qc.invalidateQueries({ queryKey: ['superadmin', 'connectors'] });
+    } catch (e) {
+      showNotification(errMessage(e, 'Lifecycle update failed.'));
+    }
   };
 
   const filteredPartners = partners.filter(p => {
@@ -353,7 +426,7 @@ export default function IntegrationPartnersPage() {
                 {filteredPartners.map(partner => (
                   <tr 
                     key={partner.id} 
-                    onClick={() => setSelectedPartner(partner)}
+                    onClick={() => setSelectedId(partner.id)}
                     className={`hover:bg-slate-850 cursor-pointer transition ${
                       selectedPartner?.id === partner.id ? 'bg-cyan-950/30 border-l-2 border-cyan-500' : ''
                     }`}
@@ -381,7 +454,7 @@ export default function IntegrationPartnersPage() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedPartner(partner);
+                          setSelectedId(partner.id);
                         }}
                         className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium text-xs transition"
                       >
@@ -523,25 +596,37 @@ export default function IntegrationPartnersPage() {
                   Certification Gates Audit (INT-LCM-003)
                 </h4>
                 <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-                  8 / 8 REQUIRED
+                  {Object.values(selectedPartner.gates).filter((g) => g === true).length}
+                  {' / '}
+                  {Object.values(selectedPartner.gates).filter((g) => g !== null).length} EVIDENCED
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 {Object.entries(selectedPartner.gates).map(([gateKey, passed]) => (
-                  <div 
+                  <div
                     key={gateKey}
                     className={`p-2.5 rounded-xl border flex items-center justify-between font-mono text-[11px] ${
-                      passed 
-                        ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-300' 
+                      passed === null
+                        ? 'bg-slate-900/40 border-slate-800 text-slate-500'
+                        : passed
+                        ? 'bg-emerald-950/20 border-emerald-900/40 text-emerald-300'
                         : 'bg-rose-950/20 border-rose-900/40 text-rose-400'
                     }`}
+                    title={passed === null ? 'The connector API records no result for this gate.' : undefined}
                   >
                     <span>{gateKey.replace('_', ' ').toUpperCase()}</span>
-                    {passed ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <XCircle className="w-4 h-4 text-rose-400" />}
+                    {passed === null
+                      ? <Clock className="w-4 h-4 text-slate-600" />
+                      : passed
+                      ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      : <XCircle className="w-4 h-4 text-rose-400" />}
                   </div>
                 ))}
               </div>
+              <p className="mt-3 text-[10px] font-mono text-slate-500">
+                Greyed gates are not evidenced by the connector API — no per-gate certification result is recorded.
+              </p>
             </div>
 
           </div>

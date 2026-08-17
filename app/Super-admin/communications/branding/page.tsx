@@ -1,18 +1,59 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { platformApi } from '@/lib/admin/platform/client';
 import { renderPreviewEmail } from '../../../actions/renderPreviewEmail';
 
+interface TenantRef { tenant_id: string; name: string }
+interface BrandRef { id: string; name: string; code_name: string }
+
+/**
+ * White-label email preview.
+ *
+ * The brand list is real: identity-tenancy owns brands, and it is one of the
+ * two services that honour a platform-admin `X-Tenant-ID` override, so a super
+ * admin can load any tenant's brands and preview against a genuine one instead
+ * of the hardcoded "Acme Telecom" this page used to open with.
+ *
+ * What is NOT persisted: logo, colour, sender and reply-to. No service stores
+ * per-brand email presentation — there is no notification/template domain among
+ * the 19 — so this remains a preview tool. The page says so rather than
+ * implying a Save that would go nowhere.
+ */
 export default function TenantBrandingPage() {
-  const [brandName, setBrandName] = useState('Acme Telecom');
+  const [brandName, setBrandName] = useState('');
   const [logoUrl, setLogoUrl] = useState('https://react.email/static/logo-v.png');
   const [primaryColor, setPrimaryColor] = useState('#6366f1'); // Default Indigo
-  const [senderName, setSenderName] = useState('Acme Notifications');
-  const [replyTo, setReplyTo] = useState('support@acmetelecom.com');
-  const [supportUrl, setSupportUrl] = useState('https://support.acmetelecom.com');
+  const [senderName, setSenderName] = useState('');
+  const [replyTo, setReplyTo] = useState('');
+  const [supportUrl, setSupportUrl] = useState('');
 
+  const [tenantId, setTenantId] = useState('');
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const tenantsQ = useQuery({
+    queryKey: ['superadmin', 'branding', 'tenants'],
+    queryFn: async () => (await platformApi.get<{ tenants?: TenantRef[] }>('identity', '/v1/tenants')).tenants ?? [],
+  });
+
+  const brandsQ = useQuery({
+    queryKey: ['superadmin', 'branding', 'brands', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () =>
+      (await platformApi.get<{ brands?: BrandRef[] }>('identity', '/v1/brands', { asTenant: tenantId })).brands ?? [],
+  });
+
+  // Seed the preview from the first real brand once a tenant is chosen. Only
+  // fields the brand record actually carries are filled; the rest stay blank
+  // rather than being invented from the brand name.
+  useEffect(() => {
+    const brand = brandsQ.data?.[0];
+    if (!brand) return;
+    setBrandName(brand.name);
+    setSenderName(`${brand.name} Notifications`);
+  }, [brandsQ.data]);
 
   // Debounce the preview rendering so we don't spam the server action while typing
   useEffect(() => {
@@ -38,15 +79,51 @@ export default function TenantBrandingPage() {
       {/* Sidebar: Form Controls */}
       <div className="w-96 bg-white border-r border-gray-200 p-6 flex flex-col h-full overflow-y-auto shadow-sm z-10">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">White-Label Governance</h1>
-        <p className="text-sm text-gray-500 mb-8">
-          Configure tenant-specific branding that will be strictly applied to all 290 canonical email templates.
+        <p className="text-sm text-gray-500 mb-4">
+          Preview how a tenant&apos;s brand renders across the canonical email templates.
+        </p>
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-6">
+          Preview only — no service stores per-brand email presentation, so nothing on this page is persisted.
         </p>
 
         <div className="space-y-6">
           {/* Brand Identity */}
           <div className="space-y-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-2">Brand Identity</h2>
-            
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Tenant</label>
+              <select
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              >
+                <option value="">
+                  {tenantsQ.isLoading ? 'Loading tenants…' : tenantsQ.isError ? 'Tenant list unavailable' : '— select a tenant —'}
+                </option>
+                {(tenantsQ.data ?? []).map((t) => (
+                  <option key={t.tenant_id} value={t.tenant_id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {tenantId && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Brand</label>
+                <select
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                >
+                  {brandsQ.isLoading && <option>Loading brands…</option>}
+                  {!brandsQ.isLoading && (brandsQ.data ?? []).length === 0 && <option>No brands in this tenant</option>}
+                  {(brandsQ.data ?? []).map((b) => (
+                    <option key={b.id} value={b.name}>{b.name} · {b.code_name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Display Name</label>
               <input 
