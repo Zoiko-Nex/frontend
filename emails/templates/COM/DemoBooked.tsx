@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface DemoBookedData {
   recipient_first_name?: string;
-  prospect_organization_name: string;
-  prospect_contact_name: string;
+  prospect_organization_name?: string;
+  prospect_contact_name?: string;
 }
 
 export interface DemoBookedEmailProps {
@@ -19,8 +19,8 @@ export const DemoBookedEmail: React.FC<DemoBookedEmailProps> = ({ payload }) => 
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Organization', value: data?.prospect_organization_name || 'Unknown' },
-    { label: 'Account contact', value: data?.prospect_contact_name || 'Unknown' },
+    { label: 'Organization', value: payload.eventData?.prospect_organization_name || 'Unknown' },
+    { label: 'Account contact', value: payload.eventData?.prospect_contact_name || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,12 +32,12 @@ export const DemoBookedEmail: React.FC<DemoBookedEmailProps> = ({ payload }) => 
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This email relates to demo booked.`}
       primaryCtaText="View meeting"
-      primaryCtaLink={`https://zoikonex.com/meeting?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>View meeting</strong> to review the authoritative record and available next steps.
+        You can select View meeting to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

@@ -1,7 +1,7 @@
 'use server';
 
 import { render } from '@react-email/render';
-import { DemoRequestEmail } from '../../emails/templates/COM/DemoRequestReceived';
+import DemoRequestReceivedEmail from '../../emails/templates/COM/DemoRequestReceived';
 import { CanonicalEmailPayload } from '../../emails/types/CanonicalEmail';
 import React from 'react'; // ensure React is in scope for JSX
 
@@ -96,7 +96,7 @@ export async function submitDemoRequest(data: DemoRequestFormInput) {
 
     // 3. Render HTML
     // We await render since it processes React components to string
-    const htmlOutput = await render(React.createElement(DemoRequestEmail, { payload }));
+    const htmlOutput = await render(React.createElement(DemoRequestReceivedEmail, { payload }));
 
     // 4. Simulate Dispatch (or integrate Resend here)
     console.log('--- DISPATCHING CANONICAL EMAIL ZNX-EM-COM-001 ---');

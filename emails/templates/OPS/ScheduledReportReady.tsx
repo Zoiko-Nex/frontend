@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface ScheduledReportReadyData {
   recipient_first_name?: string;
-  operation_display_name: string;
-  operation_status_display: string;
+  operation_display_name?: string;
+  operation_status_display?: string;
 }
 
 export interface ScheduledReportReadyEmailProps {
@@ -19,8 +19,8 @@ export const ScheduledReportReadyEmail: React.FC<ScheduledReportReadyEmailProps>
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Job, report or workflow', value: data?.operation_display_name || 'Monthly Billing Reconciliation' },
-    { label: 'Status', value: data?.operation_status_display || 'COMPLETED' },
+    { label: 'Job, report or workflow', value: payload.eventData?.operation_display_name || 'Unknown' },
+    { label: 'Status', value: payload.eventData?.operation_status_display || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,12 +32,12 @@ export const ScheduledReportReadyEmail: React.FC<ScheduledReportReadyEmailProps>
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This is ready: scheduled report.`}
       primaryCtaText="View report"
-      primaryCtaLink={`https://zoikonex.com/reports/download?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>View report</strong> to review the authoritative record and available next steps.
+        You can select View report to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

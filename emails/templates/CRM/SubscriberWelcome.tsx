@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface SubscriberWelcomeData {
   recipient_first_name?: string;
-  customer_masked_account_reference: string;
-  brand_display_name: string;
+  customer_masked_account_reference?: string;
+  brand_display_name?: string;
 }
 
 export interface SubscriberWelcomeEmailProps {
@@ -19,8 +19,8 @@ export const SubscriberWelcomeEmail: React.FC<SubscriberWelcomeEmailProps> = ({ 
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Account', value: data?.customer_masked_account_reference || 'Unknown' },
-    { label: 'Brand', value: data?.brand_display_name || payload.rendering.brand.display_name },
+    { label: 'Account', value: payload.eventData?.customer_masked_account_reference || 'Unknown' },
+    { label: 'Brand', value: payload.eventData?.brand_display_name || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,16 +32,16 @@ export const SubscriberWelcomeEmail: React.FC<SubscriberWelcomeEmailProps> = ({ 
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This email relates to subscriber welcome.`}
       primaryCtaText="Open account"
-      primaryCtaLink={`https://zoikonex.com/account?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>Open account</strong> to review the authoritative record and available next steps.
+        You can select Open account to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
-        For your security, this email does not display full payment credentials, identity documents, SIM credentials or complete account identifiers.
+        For your security, this email does not display full payment credentials, identity documents, SIM credentials or  complete account identifiers.
       </Text>
     </CanonicalLayout>
   );
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

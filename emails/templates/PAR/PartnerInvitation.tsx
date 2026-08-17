@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface PartnerInvitationData {
   recipient_first_name?: string;
-  partner_display_name: string;
-  partner_reference_period: string;
+  partner_display_name?: string;
+  partner_reference_period?: string;
 }
 
 export interface PartnerInvitationEmailProps {
@@ -19,8 +19,8 @@ export const PartnerInvitationEmail: React.FC<PartnerInvitationEmailProps> = ({ 
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Partner', value: data?.partner_display_name || 'Unknown' },
-    { label: 'Agreement or settlement period', value: data?.partner_reference_period || '2026-Q3' },
+    { label: 'Partner', value: payload.eventData?.partner_display_name || 'Unknown' },
+    { label: 'Agreement or settlement period', value: payload.eventData?.partner_reference_period || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,12 +32,12 @@ export const PartnerInvitationEmail: React.FC<PartnerInvitationEmailProps> = ({ 
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This email relates to partner invitation.`}
       primaryCtaText="Accept invitation"
-      primaryCtaLink={`https://zoikonex.com/partner/accept?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>Accept invitation</strong> to review the authoritative record and available next steps.
+        You can select Accept invitation to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

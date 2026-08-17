@@ -4,23 +4,23 @@ import { KeyFactsBlock } from '../../components/KeyFactsBlock';
 import { CanonicalEmailPayload } from '../../types/CanonicalEmail';
 import { Text } from '@react-email/components';
 
-export interface DemoRequestData {
+export interface DemoRequestReceivedData {
   recipient_first_name?: string;
-  prospect_organization_name: string;
-  prospect_contact_name: string;
+  prospect_organization_name?: string;
+  prospect_contact_name?: string;
 }
 
-export interface DemoRequestEmailProps {
+export interface DemoRequestReceivedEmailProps {
   payload: CanonicalEmailPayload;
 }
 
-export const DemoRequestEmail: React.FC<DemoRequestEmailProps> = ({ payload }) => {
-  const data = payload.eventData as DemoRequestData;
+export const DemoRequestReceivedEmail: React.FC<DemoRequestReceivedEmailProps> = ({ payload }) => {
+  const data = payload.eventData as DemoRequestReceivedData;
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Organization', value: data?.prospect_organization_name || 'Unknown' },
-    { label: 'Account contact', value: data?.prospect_contact_name || 'Unknown' },
+    { label: 'Organization', value: payload.eventData?.prospect_organization_name || 'Unknown' },
+    { label: 'Account contact', value: payload.eventData?.prospect_contact_name || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,12 +32,12 @@ export const DemoRequestEmail: React.FC<DemoRequestEmailProps> = ({ payload }) =
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, We have received demo request.`}
       primaryCtaText="Review next steps"
-      primaryCtaLink={`https://zoikonex.com/track-request?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>Review next steps</strong> to review the authoritative record and available next steps.
+        You can select Review next steps to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
@@ -47,7 +47,7 @@ export const DemoRequestEmail: React.FC<DemoRequestEmailProps> = ({ payload }) =
   );
 };
 
-export default DemoRequestEmail;
+export default DemoRequestReceivedEmail;
 
 const actionCopy = {
   fontSize: '14px',
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6', // Light gray as it's not a severe security warning
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

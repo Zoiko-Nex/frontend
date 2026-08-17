@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface SubscriptionActivatedData {
   recipient_first_name?: string;
-  subscription_reference: string;
-  subscription_effective_date: string;
+  subscription_reference?: string;
+  subscription_effective_date?: string;
 }
 
 export interface SubscriptionActivatedEmailProps {
@@ -19,8 +19,8 @@ export const SubscriptionActivatedEmail: React.FC<SubscriptionActivatedEmailProp
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Agreement or subscription', value: data?.subscription_reference || 'SUB-2026-001' },
-    { label: 'Effective or renewal date', value: data?.subscription_effective_date || payload.localizedValues.date_local },
+    { label: 'Agreement or subscription', value: payload.eventData?.subscription_reference || 'Unknown' },
+    { label: 'Effective or renewal date', value: payload.eventData?.subscription_effective_date || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,12 +32,12 @@ export const SubscriptionActivatedEmail: React.FC<SubscriptionActivatedEmailProp
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This is now active: subscription.`}
       primaryCtaText="Review subscription"
-      primaryCtaLink={`https://zoikonex.com/subscription?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>Review subscription</strong> to review the authoritative record and available next steps.
+        You can select Review subscription to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };
