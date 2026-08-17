@@ -480,20 +480,23 @@ export async function renderPreviewEmail(
   supportOverride?: Partial<CanonicalEmailPayload['rendering']['support']>
 ) {
   // Safe defaults mimicking CanonicalLayout defaults
-  const brand = brandOverride || {
+  const brand: CanonicalEmailPayload['rendering']['brand'] = {
     display_name: 'ZoikoNex',
     logo_url: 'https://cdn.zoikonex.com/logo-light.png',
-    primary_color: '#0052FF'
+    primary_color: '#0052FF',
+    ...brandOverride
   };
   
-  const sender = senderOverride || {
+  const sender: CanonicalEmailPayload['rendering']['sender'] = {
     from_address: 'notifications@zoikonex.com',
     from_name: 'ZoikoNex',
-    reply_to: 'no-reply@zoikonex.com'
+    reply_to: 'no-reply@zoikonex.com',
+    ...senderOverride
   };
   
-  const support = supportOverride || {
-    url: 'https://support.zoikonex.com'
+  const support: CanonicalEmailPayload['rendering']['support'] = {
+    url: 'https://support.zoikonex.com',
+    ...supportOverride
   };
 
   const payload: CanonicalEmailPayload = {
