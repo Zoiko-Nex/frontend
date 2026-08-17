@@ -488,7 +488,6 @@ export async function renderPreviewEmail(
   };
   
   const sender: CanonicalEmailPayload['rendering']['sender'] = {
-    from_address: 'notifications@zoikonex.com',
     from_name: 'ZoikoNex',
     reply_to: 'no-reply@zoikonex.com',
     ...senderOverride
