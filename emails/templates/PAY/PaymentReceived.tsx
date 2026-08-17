@@ -6,9 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface PaymentReceivedData {
   recipient_first_name?: string;
-  payment_reference: string;
-  payment_amount_formatted: string;
-  payment_status_display: string;
+  payment_reference?: string;
+  payment_amount_formatted?: string;
 }
 
 export interface PaymentReceivedEmailProps {
@@ -20,8 +19,8 @@ export const PaymentReceivedEmail: React.FC<PaymentReceivedEmailProps> = ({ payl
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Payment or invoice', value: data?.payment_reference || 'Unknown' },
-    { label: 'Amount and status', value: `${data?.payment_amount_formatted || '$0.00'} — ${data?.payment_status_display || 'COMPLETED'}` },
+    { label: 'Payment or invoice', value: payload.eventData?.payment_reference || 'Unknown' },
+    { label: 'Amount and status', value: payload.eventData?.payment_amount_formatted || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -33,16 +32,16 @@ export const PaymentReceivedEmail: React.FC<PaymentReceivedEmailProps> = ({ payl
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, We have received payment.`}
       primaryCtaText="View receipt"
-      primaryCtaLink={`https://zoikonex.com/payments/receipt?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>View receipt</strong> to review the authoritative record and available next steps.
+        You can select View receipt to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
-        For your security, this email does not display full payment credentials, identity documents, SIM credentials or complete account identifiers.
+        For your security, this email does not display full payment credentials, identity documents, SIM credentials or  complete account identifiers.
       </Text>
     </CanonicalLayout>
   );
@@ -63,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

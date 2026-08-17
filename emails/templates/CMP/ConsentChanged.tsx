@@ -6,9 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface ConsentChangedData {
   recipient_first_name?: string;
-  consent_type_display: string;
-  consent_action_display: string;
-  effective_date_display: string;
+  compliance_jurisdiction?: string;
+  compliance_effective_date?: string;
 }
 
 export interface ConsentChangedEmailProps {
@@ -20,9 +19,8 @@ export const ConsentChangedEmail: React.FC<ConsentChangedEmailProps> = ({ payloa
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Consent type', value: data?.consent_type_display || 'Unknown' },
-    { label: 'Action taken', value: data?.consent_action_display || 'Updated' },
-    { label: 'Effective date', value: data?.effective_date_display || 'Immediate' },
+    { label: 'Jurisdiction', value: payload.eventData?.compliance_jurisdiction || 'Unknown' },
+    { label: 'Effective or response date', value: payload.eventData?.compliance_effective_date || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -30,20 +28,20 @@ export const ConsentChangedEmail: React.FC<ConsentChangedEmailProps> = ({ payloa
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Your consent preferences have been updated"
-      preheader="A change to your consent settings has been recorded."
-      openingText={`Hello ${firstName}, Your consent preferences on your ZoikoNex account have been updated.`}
-      primaryCtaText="Review consent settings"
-      primaryCtaLink={`https://zoikonex.com/account/consent?ref=${payload.traceability.message_reference}`}
+      subject="Your consent preferences were changed"
+      preheader="Confirmation, key details and the next available action."
+      openingText={`Hello ${firstName}, This has changed: consent.`}
+      primaryCtaText="Review preferences"
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
-
+      
       <Text style={actionCopy}>
-        Select <strong>Review consent settings</strong> to view or modify your current preferences at any time.
+        You can select Review preferences to review the authoritative record and available next steps.
       </Text>
-
+      
       <Text style={protectionCopy}>
-        If you did not make this change, contact your administrator immediately. For your security, this email does not display full payment credentials or complete account identifiers.
+        Use the ZoikoNex record as the source of truth. Do not rely on forwarded or altered copies of this message.
       </Text>
     </CanonicalLayout>
   );

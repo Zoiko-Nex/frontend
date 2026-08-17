@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface TermsUpdatedData {
   recipient_first_name?: string;
-  compliance_jurisdiction: string;
-  compliance_effective_date: string;
+  compliance_jurisdiction?: string;
+  compliance_effective_date?: string;
 }
 
 export interface TermsUpdatedEmailProps {
@@ -19,8 +19,8 @@ export const TermsUpdatedEmail: React.FC<TermsUpdatedEmailProps> = ({ payload })
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Jurisdiction', value: data?.compliance_jurisdiction || payload.localizedValues.jurisdiction_code },
-    { label: 'Effective or response date', value: data?.compliance_effective_date || payload.localizedValues.date_local },
+    { label: 'Jurisdiction', value: payload.eventData?.compliance_jurisdiction || 'Unknown' },
+    { label: 'Effective or response date', value: payload.eventData?.compliance_effective_date || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,12 +32,12 @@ export const TermsUpdatedEmail: React.FC<TermsUpdatedEmailProps> = ({ payload })
       preheader="Important information about your account, service or configuration."
       openingText={`Hello ${firstName}, This has been updated: terms.`}
       primaryCtaText="Review terms"
-      primaryCtaLink={`https://zoikonex.com/terms?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>Review terms</strong> to review the authoritative record and available next steps.
+        You can select Review terms to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
@@ -62,6 +62,6 @@ const protectionCopy = {
   lineHeight: '1.5',
   marginTop: '16px',
   padding: '12px',
-  backgroundColor: '#f3f4f6',
-  borderLeft: '4px solid #9ca3af',
+  backgroundColor: '#fff3cd',
+  borderLeft: '4px solid #ffc107',
 };

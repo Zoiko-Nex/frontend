@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface ApiSecretGeneratedData {
   recipient_first_name?: string;
-  integration_display_name: string;
-  environment_name: string;
+  integration_display_name?: string;
+  environment_name?: string;
 }
 
 export interface ApiSecretGeneratedEmailProps {
@@ -19,8 +19,8 @@ export const ApiSecretGeneratedEmail: React.FC<ApiSecretGeneratedEmailProps> = (
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Integration', value: data?.integration_display_name || 'Default Integration' },
-    { label: 'Environment', value: data?.environment_name || payload.identity.environment_name },
+    { label: 'Integration', value: payload.eventData?.integration_display_name || 'Unknown' },
+    { label: 'Environment', value: payload.eventData?.environment_name || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,16 +32,16 @@ export const ApiSecretGeneratedEmail: React.FC<ApiSecretGeneratedEmailProps> = (
       preheader="Review the details, impact and required next step without delay."
       openingText={`Hello ${firstName}, This email relates to api secret generated.`}
       primaryCtaText="Store secret securely"
-      primaryCtaLink={`https://zoikonex.com/developer/api-keys?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        Please select <strong>Store secret securely</strong> to review the authoritative record and complete any required next step.
+        Please select Store secret securely to review the authoritative record and complete any required next step.
       </Text>
       
       <Text style={protectionCopy}>
-        If you did not expect this activity, do not forward this email or share credentials. Use the verified ZoikoNex sign-in page or contact your authorized administrator immediately.
+        If you did not expect this activity, do not forward this email or share credentials. Use the verified ZoikoNex sign-in  page or contact your authorized administrator immediately.
       </Text>
     </CanonicalLayout>
   );

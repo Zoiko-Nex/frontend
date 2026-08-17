@@ -6,8 +6,8 @@ import { Text } from '@react-email/components';
 
 export interface UserInvitationData {
   recipient_first_name?: string;
-  user_masked_email: string;
-  tenant_display_name: string;
+  user_masked_email?: string;
+  tenant_display_name?: string;
 }
 
 export interface UserInvitationEmailProps {
@@ -19,8 +19,8 @@ export const UserInvitationEmail: React.FC<UserInvitationEmailProps> = ({ payloa
   const firstName = data?.recipient_first_name || 'there';
 
   const facts = [
-    { label: 'Account', value: data?.user_masked_email || 'Unknown' },
-    { label: 'Tenant', value: data?.tenant_display_name || 'Unknown' },
+    { label: 'Account', value: payload.eventData?.user_masked_email || 'Unknown' },
+    { label: 'Tenant', value: payload.eventData?.tenant_display_name || 'Unknown' },
     { label: 'Reference', value: payload.traceability.message_reference },
     { label: 'Date and time', value: `${payload.localizedValues.date_local} (${payload.localizedValues.date_utc} UTC)` },
   ];
@@ -32,16 +32,16 @@ export const UserInvitationEmail: React.FC<UserInvitationEmailProps> = ({ payloa
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This email relates to user invitation.`}
       primaryCtaText="Accept invitation"
-      primaryCtaLink={`https://zoikonex.com/accept-invitation?ref=${payload.traceability.message_reference}`}
+      primaryCtaLink={`https://zoikonex.com/action?ref=${payload.traceability.message_reference}`}
     >
       <KeyFactsBlock facts={facts} />
       
       <Text style={actionCopy}>
-        You can select <strong>Accept invitation</strong> to review the authoritative record and available next steps.
+        You can select Accept invitation to review the authoritative record and available next steps.
       </Text>
       
       <Text style={protectionCopy}>
-        If you did not expect this activity, do not forward this email or share credentials. Use the verified ZoikoNex sign-in page or contact your authorized administrator immediately.
+        If you did not expect this activity, do not forward this email or share credentials. Use the verified ZoikoNex sign-in  page or contact your authorized administrator immediately.
       </Text>
     </CanonicalLayout>
   );

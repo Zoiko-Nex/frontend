@@ -1,380 +1,546 @@
-'use server';
-
-import { render } from '@react-email/render';
+"use server";
 import React from 'react';
-import { CanonicalEmailPayload, BrandRendering, SenderRendering, SupportRendering } from '../../emails/types/CanonicalEmail';
-
-// ── COM: Commercial Lifecycle ─────────────────────────────────────────────────
+import { render } from '@react-email/render';
+import { CanonicalEmailPayload } from '../../emails/types/CanonicalEmail';
+// ── COM ──
 import DemoRequestReceivedEmail from '../../emails/templates/COM/DemoRequestReceived';
 import DemoBookedEmail from '../../emails/templates/COM/DemoBooked';
-import OnboardingWelcomeEmail from '../../emails/templates/COM/OnboardingWelcome';
-import PlanUpgradeEmail from '../../emails/templates/COM/PlanUpgrade';
-import RenewalReminderEmail from '../../emails/templates/COM/RenewalReminder';
-import ChurnPreventionEmail from '../../emails/templates/COM/ChurnPrevention';
-import PromotionalOfferEmail from '../../emails/templates/COM/PromotionalOffer';
+import DemoReminderEmail from '../../emails/templates/COM/DemoReminder';
+import DemoRescheduledEmail from '../../emails/templates/COM/DemoRescheduled';
+import DemoCanceledEmail from '../../emails/templates/COM/DemoCanceled';
+import SandboxRequestReceivedEmail from '../../emails/templates/COM/SandboxRequestReceived';
+import SandboxApprovedEmail from '../../emails/templates/COM/SandboxApproved';
+import SandboxExpiringEmail from '../../emails/templates/COM/SandboxExpiring';
+import TrialStartedEmail from '../../emails/templates/COM/TrialStarted';
+import TrialEndingEmail from '../../emails/templates/COM/TrialEnding';
+import TrialExpiredEmail from '../../emails/templates/COM/TrialExpired';
+import ProposalSharedEmail from '../../emails/templates/COM/ProposalShared';
+import ProposalExpiringEmail from '../../emails/templates/COM/ProposalExpiring';
 
-// ── IAM: Identity & Authentication ───────────────────────────────────────────
+// ── IAM ──
 import UserInvitationEmail from '../../emails/templates/IAM/UserInvitation';
-import PasswordResetEmail from '../../emails/templates/IAM/PasswordReset';
-import SuspiciousLoginEmail from '../../emails/templates/IAM/SuspiciousLogin';
-import MfaChallengeEmail from '../../emails/templates/IAM/MfaChallenge';
-import AccountRecoveryEmail from '../../emails/templates/IAM/AccountRecovery';
+import InvitationReminderEmail from '../../emails/templates/IAM/InvitationReminder';
+import InvitationExpiredEmail from '../../emails/templates/IAM/InvitationExpired';
+import AccountCreatedEmail from '../../emails/templates/IAM/AccountCreated';
+import EmailVerificationEmail from '../../emails/templates/IAM/EmailVerification';
+import EmailVerificationReminderEmail from '../../emails/templates/IAM/EmailVerificationReminder';
+import PasswordCreatedEmail from '../../emails/templates/IAM/PasswordCreated';
+import PasswordResetRequestedEmail from '../../emails/templates/IAM/PasswordResetRequested';
+import PasswordChangedEmail from '../../emails/templates/IAM/PasswordChanged';
+import MfaEnrollmentRequiredEmail from '../../emails/templates/IAM/MfaEnrollmentRequired';
+import MfaEnabledEmail from '../../emails/templates/IAM/MfaEnabled';
+import MfaDisabledEmail from '../../emails/templates/IAM/MfaDisabled';
+import MfaRecoveryCodesRegeneratedEmail from '../../emails/templates/IAM/MfaRecoveryCodesRegenerated';
+import NewDeviceSignInEmail from '../../emails/templates/IAM/NewDeviceSignIn';
+import SuspiciousSignInBlockedEmail from '../../emails/templates/IAM/SuspiciousSignInBlocked';
+import AccountLockedEmail from '../../emails/templates/IAM/AccountLocked';
+import AccountUnlockedEmail from '../../emails/templates/IAM/AccountUnlocked';
+import SessionsOrAccessRevokedEmail from '../../emails/templates/IAM/SessionsOrAccessRevoked';
 
-// ── TNT: Tenant Onboarding ────────────────────────────────────────────────────
-import TenantWelcomeEmail from '../../emails/templates/TNT/TenantWelcome';
-import TenantSetupConfirmedEmail from '../../emails/templates/TNT/TenantSetupConfirmed';
-import AdminAssignedEmail from '../../emails/templates/TNT/AdminAssigned';
+// ── RBAC ──
+import RoleAssignedEmail from '../../emails/templates/RBAC/RoleAssigned';
+import RoleChangedEmail from '../../emails/templates/RBAC/RoleChanged';
+import ElevatedAccessRequestedEmail from '../../emails/templates/RBAC/ElevatedAccessRequested';
+import ElevatedAccessApprovedEmail from '../../emails/templates/RBAC/ElevatedAccessApproved';
+import ElevatedAccessDeniedEmail from '../../emails/templates/RBAC/ElevatedAccessDenied';
+import ElevatedAccessExpiringEmail from '../../emails/templates/RBAC/ElevatedAccessExpiring';
+import PrivilegedAccessUsedEmail from '../../emails/templates/RBAC/PrivilegedAccessUsed';
+import UserChangeApprovalRequiredEmail from '../../emails/templates/RBAC/UserChangeApprovalRequired';
+import InactiveUserReviewEmail from '../../emails/templates/RBAC/InactiveUserReview';
+import UserDeactivatedEmail from '../../emails/templates/RBAC/UserDeactivated';
 
-// ── CRM: Subscriber / CRM ────────────────────────────────────────────────────
+// ── CRM ──
 import SubscriberWelcomeEmail from '../../emails/templates/CRM/SubscriberWelcome';
-import TicketResolvedEmail from '../../emails/templates/CRM/TicketResolved';
-import FeedbackRequestEmail from '../../emails/templates/CRM/FeedbackRequest';
-import EscalationNoticeEmail from '../../emails/templates/CRM/EscalationNotice';
+import SubscriberEmailVerificationEmail from '../../emails/templates/CRM/SubscriberEmailVerification';
+import CustomerProfileUpdatedEmail from '../../emails/templates/CRM/CustomerProfileUpdated';
+import AccountOwnershipTransferCompletedEmail from '../../emails/templates/CRM/AccountOwnershipTransferCompleted';
+import AccountMergeRequestedEmail from '../../emails/templates/CRM/AccountMergeRequested';
+import AccountMergeCompletedEmail from '../../emails/templates/CRM/AccountMergeCompleted';
+import IdentityInformationRequiredEmail from '../../emails/templates/CRM/IdentityInformationRequired';
+import IdentityVerificationApprovedEmail from '../../emails/templates/CRM/IdentityVerificationApproved';
+import IdentityVerificationRejectedEmail from '../../emails/templates/CRM/IdentityVerificationRejected';
+import CustomerStatusChangedEmail from '../../emails/templates/CRM/CustomerStatusChanged';
+import AccountReactivatedEmail from '../../emails/templates/CRM/AccountReactivated';
+import AccountClosureRequestedEmail from '../../emails/templates/CRM/AccountClosureRequested';
+import AccountClosureScheduledEmail from '../../emails/templates/CRM/AccountClosureScheduled';
+import AccountClosedEmail from '../../emails/templates/CRM/AccountClosed';
+import PersonalDataExportReadyEmail from '../../emails/templates/CRM/PersonalDataExportReady';
+import DataCorrectionCompletedEmail from '../../emails/templates/CRM/DataCorrectionCompleted';
+import ComplaintAcknowledgedEmail from '../../emails/templates/CRM/ComplaintAcknowledged';
+import ComplaintResolvedEmail from '../../emails/templates/CRM/ComplaintResolved';
 
-// ── BIL: Billing ──────────────────────────────────────────────────────────────
+// ── BIL ──
+import BillGenerationStartedEmail from '../../emails/templates/BIL/BillGenerationStarted';
 import InvoiceIssuedEmail from '../../emails/templates/BIL/InvoiceIssued';
-import InvoiceReminderEmail from '../../emails/templates/BIL/InvoiceReminder';
-import InvoicePaidEmail from '../../emails/templates/BIL/InvoicePaid';
-import InvoiceOverdueEmail from '../../emails/templates/BIL/InvoiceOverdue';
+import InvoiceAvailableEmail from '../../emails/templates/BIL/InvoiceAvailable';
+import ZeroBalanceStatementEmail from '../../emails/templates/BIL/ZeroBalanceStatement';
+import InvoiceCorrectedEmail from '../../emails/templates/BIL/InvoiceCorrected';
+import InvoiceCanceledEmail from '../../emails/templates/BIL/InvoiceCanceled';
+import CreditNoteIssuedEmail from '../../emails/templates/BIL/CreditNoteIssued';
+import DebitNoteIssuedEmail from '../../emails/templates/BIL/DebitNoteIssued';
+import AdjustmentRequestedEmail from '../../emails/templates/BIL/AdjustmentRequested';
+import AdjustmentApprovedEmail from '../../emails/templates/BIL/AdjustmentApproved';
+import AdjustmentRejectedEmail from '../../emails/templates/BIL/AdjustmentRejected';
+import ProratedChargeAppliedEmail from '../../emails/templates/BIL/ProratedChargeApplied';
+import OneTimeChargeAppliedEmail from '../../emails/templates/BIL/OneTimeChargeApplied';
+import RecurringChargeChangedEmail from '../../emails/templates/BIL/RecurringChargeChanged';
+import TaxRecalculationCompletedEmail from '../../emails/templates/BIL/TaxRecalculationCompleted';
+import BillingCycleChangedEmail from '../../emails/templates/BIL/BillingCycleChanged';
+import ConsolidatedInvoiceAvailableEmail from '../../emails/templates/BIL/ConsolidatedInvoiceAvailable';
+import MultiEntityInvoiceAvailableEmail from '../../emails/templates/BIL/MultiEntityInvoiceAvailable';
+import InvoiceDeliveryFailedEmail from '../../emails/templates/BIL/InvoiceDeliveryFailed';
+import InvoiceDownloadReadyEmail from '../../emails/templates/BIL/InvoiceDownloadReady';
+import StatementReadyEmail from '../../emails/templates/BIL/StatementReady';
+import BillShockReviewTriggeredEmail from '../../emails/templates/BIL/BillShockReviewTriggered';
+import BillDisputeAcknowledgedEmail from '../../emails/templates/BIL/BillDisputeAcknowledged';
+import BillDisputeResolvedEmail from '../../emails/templates/BIL/BillDisputeResolved';
 
-// ── PAY: Payments ─────────────────────────────────────────────────────────────
+// ── PAY ──
+import PaymentDueSoonEmail from '../../emails/templates/PAY/PaymentDueSoon';
+import PaymentDueTodayEmail from '../../emails/templates/PAY/PaymentDueToday';
 import PaymentReceivedEmail from '../../emails/templates/PAY/PaymentReceived';
+import PaymentPendingEmail from '../../emails/templates/PAY/PaymentPending';
 import PaymentFailedEmail from '../../emails/templates/PAY/PaymentFailed';
-import RefundProcessedEmail from '../../emails/templates/PAY/RefundProcessed';
-import AutoDebitNoticeEmail from '../../emails/templates/PAY/AutoDebitNotice';
+import PaymentRetryScheduledEmail from '../../emails/templates/PAY/PaymentRetryScheduled';
+import PaymentRetrySuccessfulEmail from '../../emails/templates/PAY/PaymentRetrySuccessful';
+import PaymentRetryFailedEmail from '../../emails/templates/PAY/PaymentRetryFailed';
+import PaymentMethodExpiringEmail from '../../emails/templates/PAY/PaymentMethodExpiring';
+import PaymentMethodUpdatedEmail from '../../emails/templates/PAY/PaymentMethodUpdated';
+import AutopayEnabledEmail from '../../emails/templates/PAY/AutopayEnabled';
+import AutopayDisabledEmail from '../../emails/templates/PAY/AutopayDisabled';
+import AutopayUpcomingEmail from '../../emails/templates/PAY/AutopayUpcoming';
+import AutopaySuccessfulEmail from '../../emails/templates/PAY/AutopaySuccessful';
+import AutopayFailedEmail from '../../emails/templates/PAY/AutopayFailed';
+import PartialPaymentReceivedEmail from '../../emails/templates/PAY/PartialPaymentReceived';
+import OverdueNoticeOneEmail from '../../emails/templates/PAY/OverdueNoticeOne';
+import OverdueNoticeTwoEmail from '../../emails/templates/PAY/OverdueNoticeTwo';
+import FinalDemandEmail from '../../emails/templates/PAY/FinalDemand';
+import ServiceRestrictionWarningEmail from '../../emails/templates/PAY/ServiceRestrictionWarning';
+import ServiceRestrictedEmail from '../../emails/templates/PAY/ServiceRestricted';
+import PromiseToPayConfirmedEmail from '../../emails/templates/PAY/PromiseToPayConfirmed';
+import PromiseToPayReminderEmail from '../../emails/templates/PAY/PromiseToPayReminder';
+import RefundInitiatedEmail from '../../emails/templates/PAY/RefundInitiated';
+import RefundCompletedEmail from '../../emails/templates/PAY/RefundCompleted';
 
-// ── CMP: Compliance & Regulatory ─────────────────────────────────────────────
+// ── CMP ──
 import TermsUpdatedEmail from '../../emails/templates/CMP/TermsUpdated';
-import PrivacyNoticeEmail from '../../emails/templates/CMP/PrivacyNotice';
+import PrivacyNoticeUpdatedEmail from '../../emails/templates/CMP/PrivacyNoticeUpdated';
+import ConsentRecordedEmail from '../../emails/templates/CMP/ConsentRecorded';
 import ConsentChangedEmail from '../../emails/templates/CMP/ConsentChanged';
-import AuditAlertEmail from '../../emails/templates/CMP/AuditAlert';
+import ConsentWithdrawnEmail from '../../emails/templates/CMP/ConsentWithdrawn';
+import DataProcessingAgreementReadyEmail from '../../emails/templates/CMP/DataProcessingAgreementReady';
+import DataProcessingAgreementSignedEmail from '../../emails/templates/CMP/DataProcessingAgreementSigned';
+import SubprocessorChangeNoticeEmail from '../../emails/templates/CMP/SubprocessorChangeNotice';
+import DataResidencyChangeNoticeEmail from '../../emails/templates/CMP/DataResidencyChangeNotice';
+import RetentionPeriodApproachingEmail from '../../emails/templates/CMP/RetentionPeriodApproaching';
+import LegalHoldAppliedEmail from '../../emails/templates/CMP/LegalHoldApplied';
+import RegulatoryInformationRequiredEmail from '../../emails/templates/CMP/RegulatoryInformationRequired';
+import RegulatorySubmissionAcceptedEmail from '../../emails/templates/CMP/RegulatorySubmissionAccepted';
+import RegulatorySubmissionRejectedEmail from '../../emails/templates/CMP/RegulatorySubmissionRejected';
 
-// ── PAR: Partner Communications ───────────────────────────────────────────────
+// ── PAR ──
 import PartnerInvitationEmail from '../../emails/templates/PAR/PartnerInvitation';
-import PartnerOnboardingEmail from '../../emails/templates/PAR/PartnerOnboarding';
-import IntegrationUpdateEmail from '../../emails/templates/PAR/IntegrationUpdate';
-import SlaBreachEmail from '../../emails/templates/PAR/SlaBreach';
+import PartnerOnboardingStartedEmail from '../../emails/templates/PAR/PartnerOnboardingStarted';
+import PartnerDueDiligenceRequiredEmail from '../../emails/templates/PAR/PartnerDueDiligenceRequired';
+import PartnerApprovedEmail from '../../emails/templates/PAR/PartnerApproved';
+import PartnerRejectedEmail from '../../emails/templates/PAR/PartnerRejected';
+import CommercialAgreementReadyEmail from '../../emails/templates/PAR/CommercialAgreementReady';
+import CommercialAgreementSignedEmail from '../../emails/templates/PAR/CommercialAgreementSigned';
+import PartnerCredentialsReadyEmail from '../../emails/templates/PAR/PartnerCredentialsReady';
+import DealerOrResellerAccountActivatedEmail from '../../emails/templates/PAR/DealerOrResellerAccountActivated';
+import CommissionStatementReadyEmail from '../../emails/templates/PAR/CommissionStatementReady';
+import CommissionAdjustmentEmail from '../../emails/templates/PAR/CommissionAdjustment';
+import CommissionPaymentSentEmail from '../../emails/templates/PAR/CommissionPaymentSent';
+import SettlementStatementReadyEmail from '../../emails/templates/PAR/SettlementStatementReady';
+import SettlementVarianceDetectedEmail from '../../emails/templates/PAR/SettlementVarianceDetected';
+import SettlementApprovedEmail from '../../emails/templates/PAR/SettlementApproved';
+import WholesaleUsageFileReadyEmail from '../../emails/templates/PAR/WholesaleUsageFileReady';
+import PartnerSlaBreachEmail from '../../emails/templates/PAR/PartnerSlaBreach';
+import PartnerOffboardingCompletedEmail from '../../emails/templates/PAR/PartnerOffboardingCompleted';
 
-// ── CAT: Catalog & Product ────────────────────────────────────────────────────
-import NewProductLaunchEmail from '../../emails/templates/CAT/NewProductLaunch';
-import CatalogUpdateEmail from '../../emails/templates/CAT/CatalogUpdate';
-import ServiceAvailabilityEmail from '../../emails/templates/CAT/ServiceAvailability';
+// ── CAT ──
+import ProductCreatedEmail from '../../emails/templates/CAT/ProductCreated';
+import ProductApprovalRequestedEmail from '../../emails/templates/CAT/ProductApprovalRequested';
+import ProductApprovedEmail from '../../emails/templates/CAT/ProductApproved';
+import ProductRejectedEmail from '../../emails/templates/CAT/ProductRejected';
+import PricePlanScheduledEmail from '../../emails/templates/CAT/PricePlanScheduled';
+import PricePlanLiveEmail from '../../emails/templates/CAT/PricePlanLive';
+import PromotionLaunchedEmail from '../../emails/templates/CAT/PromotionLaunched';
+import PromotionEndingEmail from '../../emails/templates/CAT/PromotionEnding';
+import ProductRetiredEmail from '../../emails/templates/CAT/ProductRetired';
 
-// ── API: API & Developer ──────────────────────────────────────────────────────
+// ── API ──
+import DeveloperAccountInvitationEmail from '../../emails/templates/API/DeveloperAccountInvitation';
+import ApiClientCreatedEmail from '../../emails/templates/API/ApiClientCreated';
 import ApiSecretGeneratedEmail from '../../emails/templates/API/ApiSecretGenerated';
-import ApiUsageAlertEmail from '../../emails/templates/API/ApiUsageAlert';
-import ApiQuotaExceededEmail from '../../emails/templates/API/ApiQuotaExceeded';
-import ApiDeprecationNoticeEmail from '../../emails/templates/API/ApiDeprecationNotice';
+import ApiSecretRotatedEmail from '../../emails/templates/API/ApiSecretRotated';
+import ApiSecretExpiringEmail from '../../emails/templates/API/ApiSecretExpiring';
+import WebhookConfiguredEmail from '../../emails/templates/API/WebhookConfigured';
+import WebhookVerificationFailedEmail from '../../emails/templates/API/WebhookVerificationFailed';
+import WebhookDeliveryFailureEmail from '../../emails/templates/API/WebhookDeliveryFailure';
+import WebhookDeliveryRecoveredEmail from '../../emails/templates/API/WebhookDeliveryRecovered';
+import SftpCredentialsIssuedEmail from '../../emails/templates/API/SftpCredentialsIssued';
+import BatchReceivedEmail from '../../emails/templates/API/BatchReceived';
+import BatchValidationFailedEmail from '../../emails/templates/API/BatchValidationFailed';
+import BatchProcessedEmail from '../../emails/templates/API/BatchProcessed';
+import SchemaVersionDeprecationEmail from '../../emails/templates/API/SchemaVersionDeprecation';
+import IntegrationCertificationStartedEmail from '../../emails/templates/API/IntegrationCertificationStarted';
+import IntegrationCertificationPassedEmail from '../../emails/templates/API/IntegrationCertificationPassed';
+import ProductionApiAccessApprovedEmail from '../../emails/templates/API/ProductionApiAccessApproved';
+import IntegrationSuspendedEmail from '../../emails/templates/API/IntegrationSuspended';
 
-// ── RISK: Risk & Security ─────────────────────────────────────────────────────
+// ── RISK ──
 import FraudAlertOpenedEmail from '../../emails/templates/RISK/FraudAlertOpened';
-import AccountSuspensionEmail from '../../emails/templates/RISK/AccountSuspension';
-import ServiceRestrictionEmail from '../../emails/templates/RISK/ServiceRestriction';
-import BreachNotificationEmail from '../../emails/templates/RISK/BreachNotification';
+import SuspectedAccountTakeoverEmail from '../../emails/templates/RISK/SuspectedAccountTakeover';
+import SimSwapRiskHoldEmail from '../../emails/templates/RISK/SimSwapRiskHold';
+import PaymentFraudHoldEmail from '../../emails/templates/RISK/PaymentFraudHold';
+import IdentityMismatchEmail from '../../emails/templates/RISK/IdentityMismatch';
+import UnusualUsagePatternEmail from '../../emails/templates/RISK/UnusualUsagePattern';
+import RevenueLeakageAlertEmail from '../../emails/templates/RISK/RevenueLeakageAlert';
+import RatingVarianceAlertEmail from '../../emails/templates/RISK/RatingVarianceAlert';
+import MediationGapDetectedEmail from '../../emails/templates/RISK/MediationGapDetected';
+import DuplicateChargeRiskEmail from '../../emails/templates/RISK/DuplicateChargeRisk';
+import CreditLimitApproachingEmail from '../../emails/templates/RISK/CreditLimitApproaching';
+import CreditLimitExceededEmail from '../../emails/templates/RISK/CreditLimitExceeded';
+import RiskCaseResolvedEmail from '../../emails/templates/RISK/RiskCaseResolved';
+import HighRiskActionApprovalRequiredEmail from '../../emails/templates/RISK/HighRiskActionApprovalRequired';
 
-// ── SUP: Support ──────────────────────────────────────────────────────────────
-import SupportCaseCreatedEmail from '../../emails/templates/SUP/SupportCaseCreated';
-import TicketOpenedEmail from '../../emails/templates/SUP/TicketOpened';
-import IncidentDetectedEmail from '../../emails/templates/SUP/IncidentDetected';
-
-// ── SUB: Subscription ─────────────────────────────────────────────────────────
-import SubscriptionActivatedEmail from '../../emails/templates/SUB/SubscriptionActivated';
-import SubscriptionCancelledEmail from '../../emails/templates/SUB/SubscriptionCancelled';
-import SubscriptionRenewedEmail from '../../emails/templates/SUB/SubscriptionRenewed';
-
-// ── OPS: Operations ───────────────────────────────────────────────────────────
+// ── OPS ──
 import ScheduledReportReadyEmail from '../../emails/templates/OPS/ScheduledReportReady';
+import DataExportReadyEmail from '../../emails/templates/OPS/DataExportReady';
+import DataExportFailedEmail from '../../emails/templates/OPS/DataExportFailed';
+import ReconciliationCompletedEmail from '../../emails/templates/OPS/ReconciliationCompleted';
+import ReconciliationVarianceEmail from '../../emails/templates/OPS/ReconciliationVariance';
+import ApprovalRequestEmail from '../../emails/templates/OPS/ApprovalRequest';
+import ApprovalReminderEmail from '../../emails/templates/OPS/ApprovalReminder';
+import ApprovalCompletedEmail from '../../emails/templates/OPS/ApprovalCompleted';
+import ApprovalRejectedEmail from '../../emails/templates/OPS/ApprovalRejected';
+import ScheduledJobFailedEmail from '../../emails/templates/OPS/ScheduledJobFailed';
 
-// ── ORD: Orders ───────────────────────────────────────────────────────────────
-import OrderReceivedEmail from '../../emails/templates/ORD/OrderReceived';
-import EsimReadyEmail from '../../emails/templates/ORD/EsimReady';
+// ── SUB ──
+import SubscriptionActivatedEmail from '../../emails/templates/SUB/SubscriptionActivated';
+import SubscriptionPlanChangedEmail from '../../emails/templates/SUB/SubscriptionPlanChanged';
+import UsageOverageForecastEmail from '../../emails/templates/SUB/UsageOverageForecast';
+import RenewalDueIn90DaysEmail from '../../emails/templates/SUB/RenewalDueIn90Days';
+import RenewalDueIn30DaysEmail from '../../emails/templates/SUB/RenewalDueIn30Days';
+import RenewalCompletedEmail from '../../emails/templates/SUB/RenewalCompleted';
+import PlatformServiceSuspensionForNonpaymentEmail from '../../emails/templates/SUB/PlatformServiceSuspensionForNonpayment';
+import ContractTerminationConfirmedEmail from '../../emails/templates/SUB/ContractTerminationConfirmed';
 
-// ── USG: Usage ────────────────────────────────────────────────────────────────
-import UsageThresholdNoticeEmail from '../../emails/templates/USG/UsageThresholdNotice';
-
-// ── NEXA: Nexa AI ─────────────────────────────────────────────────────────────
+// ── NEXA ──
+import NexaEnabledEmail from '../../emails/templates/NEXA/NexaEnabled';
+import NexaAccessGrantedEmail from '../../emails/templates/NEXA/NexaAccessGranted';
+import NexaRecommendationReadyEmail from '../../emails/templates/NEXA/NexaRecommendationReady';
 import NexaActionApprovalRequiredEmail from '../../emails/templates/NEXA/NexaActionApprovalRequired';
-import NexaSummaryEmail from '../../emails/templates/NEXA/NexaSummary';
-import NexaRecommendationEmail from '../../emails/templates/NEXA/NexaRecommendation';
-import NexaAdvisoryEmail from '../../emails/templates/NEXA/NexaAdvisory';
+import NexaApprovedActionCompletedEmail from '../../emails/templates/NEXA/NexaApprovedActionCompleted';
+import NexaActionFailedEmail from '../../emails/templates/NEXA/NexaActionFailed';
+import NexaPolicyViolationBlockedEmail from '../../emails/templates/NEXA/NexaPolicyViolationBlocked';
 
-export async function renderPreviewEmail(
-  templateId: string,
-  brand: BrandRendering,
-  sender: SenderRendering,
-  support: SupportRendering
-) {
-  const payload: CanonicalEmailPayload = {
-    identity: {
-      tenant_id: 'ten_mock123',
-      operator_id: 'op_mock456',
-      brand_id: 'brnd_custom',
-      environment_name: 'production',
-      recipient_role: 'Platform user',
-      recipient_locale: 'en-US',
-      recipient_time_zone: 'UTC',
-    },
-    traceability: {
-      event_type: `${templateId}.EVENT`,
-      event_version: '1.0',
-      event_id: 'evt_mock_999',
-      correlation_id: 'corr_mock_888',
-      message_reference: `MSG-${templateId}-REF`,
-      template_id: templateId,
-      template_version: '1.0',
-    },
-    rendering: {
-      brand,
-      sender,
-      support,
-    },
-    governance: {
-      message_classification: 'Transactional',
-      message_legal_basis: 'Legitimate interest',
-      message_preference_category: 'Mandatory',
-      message_sensitivity: 'Normal',
-    },
-    localizedValues: {
-      currency_code: 'USD',
-      date_local: new Date().toLocaleDateString('en-US', { dateStyle: 'full' }),
-      date_utc: new Date().toISOString(),
-      jurisdiction_code: 'GLOBAL',
-      language_code: 'en',
-    },
-    eventData: {
-      // shared fields used across many templates
-      recipient_first_name: 'Alex',
-      tenant_display_name: brand.display_name,
-      user_masked_email: 'a***@example.com',
-      admin_masked_email: 'a***@example.com',
-      assigned_by_masked_display: 'System Administrator',
-      // COM
-      prospect_organization_name: 'Apex Telecom Ltd',
-      prospect_contact_name: 'Alex Rivera',
-      plan_name_display: 'ZoikoNex Enterprise',
-      previous_plan_display: 'ZoikoNex Standard',
-      new_plan_display: 'ZoikoNex Enterprise',
-      effective_date_display: 'August 1, 2026',
-      renewal_date_display: 'September 1, 2026',
-      renewal_amount_formatted: '$1,250.00',
-      cancellation_date_display: 'August 31, 2026',
-      offer_title_display: 'Enterprise Upgrade — 20% off first 3 months',
-      offer_discount_display: '20% discount',
-      offer_expiry_display: 'August 31, 2026',
-      promo_code: 'ENTERPRISE20',
-      // IAM
-      reset_expiry_minutes: 30,
-      login_location_display: 'Lagos, Nigeria',
-      login_device_display: 'Chrome on Windows',
-      otp_code: '847 291',
-      otp_expiry_minutes: 10,
-      recovery_expiry_minutes: 60,
-      // TNT
-      tenant_subdomain_display: 'apex-telecom.zoikonex.com',
-      services_activated_display: 'eSIM, Voice, Data, Billing',
-      user_count_display: '12 users',
-      admin_role_display: 'Tenant Administrator',
-      // CRM
-      ticket_reference: 'CASE-2026-4421',
-      ticket_subject_display: 'eSIM provisioning failed on device',
-      resolution_summary_display: 'Profile re-provisioned successfully',
-      agent_name_display: 'Support Team',
-      survey_expiry_display: '7 days',
-      escalation_level_display: 'L2 Specialist',
-      assigned_team_display: 'Network Operations Specialists',
-      ticket_priority_display: 'High',
-      // BIL
-      invoice_reference: 'INV-2026-0812',
-      invoice_amount_formatted: '$1,250.00',
-      payment_method_display: 'Visa ending 4921',
-      invoice_due_date_display: 'August 31, 2026',
-      overdue_days: 5,
-      // PAY
-      payment_reference: 'PAY-2026-7712',
-      payment_amount_formatted: '$1,250.00',
-      payment_status_display: 'COMPLETED',
-      refund_reference: 'REF-2026-0091',
-      refund_amount_formatted: '$250.00',
-      refund_method_display: 'Visa ending 4921',
-      refund_eta_display: '3–5 business days',
-      debit_amount_formatted: '$1,250.00',
-      debit_date_display: 'August 20, 2026',
-      invoice_number: 'INV-2026-0812',
-      billing_document_reference: 'DOC-INV-9901',
-      billing_amount_formatted: '$1,250.00 USD',
-      // CMP
-      change_summary_display: 'Updated data retention and AI processing clauses',
-      policy_version_display: 'v3.2',
-      consent_type_display: 'Marketing communications',
-      consent_action_display: 'Withdrawn',
-      audit_event_display: 'Admin role assigned to unverified user',
-      actor_masked_display: 'admin@***example.com',
-      affected_resource_display: 'User account: u***@example.com',
-      compliance_jurisdiction: 'United States (FCC / FTC)',
-      compliance_effective_date: 'August 1, 2026',
-      // PAR
-      partner_display_name: 'Global Connect Networks',
-      partner_organisation_display: 'Global Connect Networks',
-      partner_tier_display: 'Gold Partner',
-      onboarding_contact_display: 'Partner Success Manager',
-      partner_reference_period: '2026-Q3 Settlement',
-      integration_display_name: 'Stripe Payments Engine',
-      integration_name_display: 'Stripe Payments Engine v2',
-      update_type_display: 'Breaking change',
-      sla_metric_display: 'API Uptime SLA',
-      breach_threshold_display: '99.9% uptime',
-      current_value_display: '98.2% uptime',
-      partner_organisation: 'Global Connect Networks',
-      // CAT
-      product_name_display: 'ZoikoNex 5G eSIM Enterprise Pack',
-      product_category_display: 'eSIM & Connectivity',
-      launch_date_display: 'August 15, 2026',
-      update_summary_display: 'New 5G data bundles and revised eSIM tiers',
-      affected_products_display: '12 products updated',
-      service_name_display: 'eSIM Provisioning Service',
-      availability_status_display: 'Degraded — partial outage',
-      affected_regions_display: 'EU-West, AP-Southeast',
-      estimated_resolution_display: 'August 13, 2026 at 18:00 UTC',
-      // API
-      api_key_masked: 'sk_live_***...f7a2',
-      usage_percentage_display: '87% of monthly quota used',
-      quota_limit_display: '500,000 requests/month',
-      service_name: 'ZoikoNex Core API',
-      reset_date_display: 'September 1, 2026',
-      deprecated_endpoint_display: '/v1/esim/provision',
-      replacement_endpoint_display: '/v2/esim/provision',
-      api_version_display: 'v1 → v2',
-      sunset_date_display: 'October 1, 2026',
-      environment_name: 'production',
-      integration_name: 'Stripe Payments Engine',
-      // RISK
-      suspension_reason_display: 'Suspicious payment activity detected',
-      restriction_reason_display: 'Account under compliance review',
-      affected_data_categories: 'Account metadata, billing contact details',
-      case_id: 'CASE-RISK-7710',
-      case_severity: 'HIGH',
-      case_status_display: 'OPEN',
-      // OPS
-      operation_display_name: 'Quarterly Revenue Leakage Audit',
-      operation_status_display: 'COMPLETED',
-      // ORD
-      order_reference: 'ORD-2026-9901',
-      service_masked_reference: '+1 (555) ***-4921',
-      // USG
-      customer_masked_account_reference: 'ACC-8829-****',
-      usage_summary: '4.5 GB of 9 GB (50%) used',
-      percentage: 50,
-      // SUB
-      subscription_reference: 'SUB-ENTERPRISE-2026',
-      subscription_effective_date: 'August 1, 2026',
-      cancellation_effective_date_display: 'August 31, 2026',
-      data_retention_display: '90 days after cancellation',
-      next_renewal_date_display: 'September 1, 2027',
-      // NEXA
-      nexa_reference: 'NEXA-REC-404',
-      nexa_governance_summary: 'Policy Rule #14: Financial tariff adjustment requires Human Approval',
-      summary_period_display: 'August 1–12, 2026',
-      summary_headline_display: 'Revenue up 12% — 3 eSIM provisioning anomalies flagged',
-      key_metric_display: '12,441 active eSIMs (+8% WoW)',
-      recommendation_title_display: 'Switch high-volume accounts to annual billing',
-      recommendation_category_display: 'Revenue optimisation',
-      potential_impact_display: 'Estimated $48,000 ARR uplift',
-      advisory_title_display: 'Unusual bulk provisioning pattern detected',
-      advisory_severity_display: 'Medium',
-      advisory_summary_display: '340 eSIMs provisioned by single admin in 4 minutes',
-      brand_display_name: brand.display_name,
-    },
-  };
 
-  let element: React.ReactElement;
+// Default fallback
+import { Text } from '@react-email/components';
+
+function getPreviewEmailComponent(templateId: string, payload: CanonicalEmailPayload): React.ReactElement | null {
+  let element: React.ReactElement | null = null;
 
   switch (templateId) {
     // ── COM ──
     case 'ZNX-EM-COM-001': element = React.createElement(DemoRequestReceivedEmail, { payload }); break;
     case 'ZNX-EM-COM-002': element = React.createElement(DemoBookedEmail, { payload }); break;
-    case 'ZNX-EM-COM-003': element = React.createElement(OnboardingWelcomeEmail, { payload }); break;
-    case 'ZNX-EM-COM-004': element = React.createElement(PlanUpgradeEmail, { payload }); break;
-    case 'ZNX-EM-COM-005': element = React.createElement(RenewalReminderEmail, { payload }); break;
-    case 'ZNX-EM-COM-006': element = React.createElement(ChurnPreventionEmail, { payload }); break;
-    case 'ZNX-EM-COM-007': element = React.createElement(PromotionalOfferEmail, { payload }); break;
+    case 'ZNX-EM-COM-003': element = React.createElement(DemoReminderEmail, { payload }); break;
+    case 'ZNX-EM-COM-004': element = React.createElement(DemoRescheduledEmail, { payload }); break;
+    case 'ZNX-EM-COM-005': element = React.createElement(DemoCanceledEmail, { payload }); break;
+    case 'ZNX-EM-COM-006': element = React.createElement(SandboxRequestReceivedEmail, { payload }); break;
+    case 'ZNX-EM-COM-007': element = React.createElement(SandboxApprovedEmail, { payload }); break;
+    case 'ZNX-EM-COM-008': element = React.createElement(SandboxExpiringEmail, { payload }); break;
+    case 'ZNX-EM-COM-009': element = React.createElement(TrialStartedEmail, { payload }); break;
+    case 'ZNX-EM-COM-010': element = React.createElement(TrialEndingEmail, { payload }); break;
+    case 'ZNX-EM-COM-011': element = React.createElement(TrialExpiredEmail, { payload }); break;
+    case 'ZNX-EM-COM-012': element = React.createElement(ProposalSharedEmail, { payload }); break;
+    case 'ZNX-EM-COM-013': element = React.createElement(ProposalExpiringEmail, { payload }); break;
     // ── IAM ──
     case 'ZNX-EM-IAM-001': element = React.createElement(UserInvitationEmail, { payload }); break;
-    case 'ZNX-EM-IAM-002': element = React.createElement(PasswordResetEmail, { payload }); break;
-    case 'ZNX-EM-IAM-003': element = React.createElement(SuspiciousLoginEmail, { payload }); break;
-    case 'ZNX-EM-IAM-004': element = React.createElement(MfaChallengeEmail, { payload }); break;
-    case 'ZNX-EM-IAM-005': element = React.createElement(AccountRecoveryEmail, { payload }); break;
-    // ── TNT ──
-    case 'ZNX-EM-TNT-001': element = React.createElement(TenantWelcomeEmail, { payload }); break;
-    case 'ZNX-EM-TNT-002': element = React.createElement(TenantSetupConfirmedEmail, { payload }); break;
-    case 'ZNX-EM-TNT-003': element = React.createElement(AdminAssignedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-002': element = React.createElement(InvitationReminderEmail, { payload }); break;
+    case 'ZNX-EM-IAM-003': element = React.createElement(InvitationExpiredEmail, { payload }); break;
+    case 'ZNX-EM-IAM-004': element = React.createElement(AccountCreatedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-005': element = React.createElement(EmailVerificationEmail, { payload }); break;
+    case 'ZNX-EM-IAM-006': element = React.createElement(EmailVerificationReminderEmail, { payload }); break;
+    case 'ZNX-EM-IAM-007': element = React.createElement(PasswordCreatedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-008': element = React.createElement(PasswordResetRequestedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-009': element = React.createElement(PasswordChangedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-010': element = React.createElement(MfaEnrollmentRequiredEmail, { payload }); break;
+    case 'ZNX-EM-IAM-011': element = React.createElement(MfaEnabledEmail, { payload }); break;
+    case 'ZNX-EM-IAM-012': element = React.createElement(MfaDisabledEmail, { payload }); break;
+    case 'ZNX-EM-IAM-013': element = React.createElement(MfaRecoveryCodesRegeneratedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-014': element = React.createElement(NewDeviceSignInEmail, { payload }); break;
+    case 'ZNX-EM-IAM-015': element = React.createElement(SuspiciousSignInBlockedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-016': element = React.createElement(AccountLockedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-017': element = React.createElement(AccountUnlockedEmail, { payload }); break;
+    case 'ZNX-EM-IAM-018': element = React.createElement(SessionsOrAccessRevokedEmail, { payload }); break;
+    // ── RBAC ──
+    case 'ZNX-EM-RBAC-001': element = React.createElement(RoleAssignedEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-002': element = React.createElement(RoleChangedEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-003': element = React.createElement(ElevatedAccessRequestedEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-004': element = React.createElement(ElevatedAccessApprovedEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-005': element = React.createElement(ElevatedAccessDeniedEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-006': element = React.createElement(ElevatedAccessExpiringEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-007': element = React.createElement(PrivilegedAccessUsedEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-008': element = React.createElement(UserChangeApprovalRequiredEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-009': element = React.createElement(InactiveUserReviewEmail, { payload }); break;
+    case 'ZNX-EM-RBAC-010': element = React.createElement(UserDeactivatedEmail, { payload }); break;
     // ── CRM ──
     case 'ZNX-EM-CRM-001': element = React.createElement(SubscriberWelcomeEmail, { payload }); break;
-    case 'ZNX-EM-CRM-002': element = React.createElement(TicketResolvedEmail, { payload }); break;
-    case 'ZNX-EM-CRM-003': element = React.createElement(FeedbackRequestEmail, { payload }); break;
-    case 'ZNX-EM-CRM-004': element = React.createElement(EscalationNoticeEmail, { payload }); break;
+    case 'ZNX-EM-CRM-002': element = React.createElement(SubscriberEmailVerificationEmail, { payload }); break;
+    case 'ZNX-EM-CRM-003': element = React.createElement(CustomerProfileUpdatedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-006': element = React.createElement(AccountOwnershipTransferCompletedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-007': element = React.createElement(AccountMergeRequestedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-008': element = React.createElement(AccountMergeCompletedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-009': element = React.createElement(IdentityInformationRequiredEmail, { payload }); break;
+    case 'ZNX-EM-CRM-010': element = React.createElement(IdentityVerificationApprovedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-011': element = React.createElement(IdentityVerificationRejectedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-012': element = React.createElement(CustomerStatusChangedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-013': element = React.createElement(AccountReactivatedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-014': element = React.createElement(AccountClosureRequestedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-015': element = React.createElement(AccountClosureScheduledEmail, { payload }); break;
+    case 'ZNX-EM-CRM-016': element = React.createElement(AccountClosedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-017': element = React.createElement(PersonalDataExportReadyEmail, { payload }); break;
+    case 'ZNX-EM-CRM-018': element = React.createElement(DataCorrectionCompletedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-019': element = React.createElement(ComplaintAcknowledgedEmail, { payload }); break;
+    case 'ZNX-EM-CRM-020': element = React.createElement(ComplaintResolvedEmail, { payload }); break;
     // ── BIL ──
+    case 'ZNX-EM-BIL-001': element = React.createElement(BillGenerationStartedEmail, { payload }); break;
     case 'ZNX-EM-BIL-002': element = React.createElement(InvoiceIssuedEmail, { payload }); break;
-    case 'ZNX-EM-BIL-003': element = React.createElement(InvoiceReminderEmail, { payload }); break;
-    case 'ZNX-EM-BIL-004': element = React.createElement(InvoicePaidEmail, { payload }); break;
-    case 'ZNX-EM-BIL-005': element = React.createElement(InvoiceOverdueEmail, { payload }); break;
+    case 'ZNX-EM-BIL-003': element = React.createElement(InvoiceAvailableEmail, { payload }); break;
+    case 'ZNX-EM-BIL-004': element = React.createElement(ZeroBalanceStatementEmail, { payload }); break;
+    case 'ZNX-EM-BIL-005': element = React.createElement(InvoiceCorrectedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-006': element = React.createElement(InvoiceCanceledEmail, { payload }); break;
+    case 'ZNX-EM-BIL-007': element = React.createElement(CreditNoteIssuedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-008': element = React.createElement(DebitNoteIssuedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-009': element = React.createElement(AdjustmentRequestedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-010': element = React.createElement(AdjustmentApprovedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-011': element = React.createElement(AdjustmentRejectedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-012': element = React.createElement(ProratedChargeAppliedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-013': element = React.createElement(OneTimeChargeAppliedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-014': element = React.createElement(RecurringChargeChangedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-015': element = React.createElement(TaxRecalculationCompletedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-016': element = React.createElement(BillingCycleChangedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-017': element = React.createElement(ConsolidatedInvoiceAvailableEmail, { payload }); break;
+    case 'ZNX-EM-BIL-018': element = React.createElement(MultiEntityInvoiceAvailableEmail, { payload }); break;
+    case 'ZNX-EM-BIL-019': element = React.createElement(InvoiceDeliveryFailedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-020': element = React.createElement(InvoiceDownloadReadyEmail, { payload }); break;
+    case 'ZNX-EM-BIL-021': element = React.createElement(StatementReadyEmail, { payload }); break;
+    case 'ZNX-EM-BIL-022': element = React.createElement(BillShockReviewTriggeredEmail, { payload }); break;
+    case 'ZNX-EM-BIL-023': element = React.createElement(BillDisputeAcknowledgedEmail, { payload }); break;
+    case 'ZNX-EM-BIL-024': element = React.createElement(BillDisputeResolvedEmail, { payload }); break;
     // ── PAY ──
+    case 'ZNX-EM-PAY-001': element = React.createElement(PaymentDueSoonEmail, { payload }); break;
+    case 'ZNX-EM-PAY-002': element = React.createElement(PaymentDueTodayEmail, { payload }); break;
     case 'ZNX-EM-PAY-003': element = React.createElement(PaymentReceivedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-004': element = React.createElement(PaymentPendingEmail, { payload }); break;
     case 'ZNX-EM-PAY-005': element = React.createElement(PaymentFailedEmail, { payload }); break;
-    case 'ZNX-EM-PAY-006': element = React.createElement(RefundProcessedEmail, { payload }); break;
-    case 'ZNX-EM-PAY-007': element = React.createElement(AutoDebitNoticeEmail, { payload }); break;
+    case 'ZNX-EM-PAY-006': element = React.createElement(PaymentRetryScheduledEmail, { payload }); break;
+    case 'ZNX-EM-PAY-007': element = React.createElement(PaymentRetrySuccessfulEmail, { payload }); break;
+    case 'ZNX-EM-PAY-008': element = React.createElement(PaymentRetryFailedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-009': element = React.createElement(PaymentMethodExpiringEmail, { payload }); break;
+    case 'ZNX-EM-PAY-010': element = React.createElement(PaymentMethodUpdatedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-011': element = React.createElement(AutopayEnabledEmail, { payload }); break;
+    case 'ZNX-EM-PAY-012': element = React.createElement(AutopayDisabledEmail, { payload }); break;
+    case 'ZNX-EM-PAY-013': element = React.createElement(AutopayUpcomingEmail, { payload }); break;
+    case 'ZNX-EM-PAY-014': element = React.createElement(AutopaySuccessfulEmail, { payload }); break;
+    case 'ZNX-EM-PAY-015': element = React.createElement(AutopayFailedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-016': element = React.createElement(PartialPaymentReceivedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-017': element = React.createElement(OverdueNoticeOneEmail, { payload }); break;
+    case 'ZNX-EM-PAY-018': element = React.createElement(OverdueNoticeTwoEmail, { payload }); break;
+    case 'ZNX-EM-PAY-019': element = React.createElement(FinalDemandEmail, { payload }); break;
+    case 'ZNX-EM-PAY-020': element = React.createElement(ServiceRestrictionWarningEmail, { payload }); break;
+    case 'ZNX-EM-PAY-021': element = React.createElement(ServiceRestrictedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-022': element = React.createElement(PromiseToPayConfirmedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-023': element = React.createElement(PromiseToPayReminderEmail, { payload }); break;
+    case 'ZNX-EM-PAY-024': element = React.createElement(RefundInitiatedEmail, { payload }); break;
+    case 'ZNX-EM-PAY-025': element = React.createElement(RefundCompletedEmail, { payload }); break;
     // ── CMP ──
     case 'ZNX-EM-CMP-001': element = React.createElement(TermsUpdatedEmail, { payload }); break;
-    case 'ZNX-EM-CMP-002': element = React.createElement(PrivacyNoticeEmail, { payload }); break;
-    case 'ZNX-EM-CMP-003': element = React.createElement(ConsentChangedEmail, { payload }); break;
-    case 'ZNX-EM-CMP-004': element = React.createElement(AuditAlertEmail, { payload }); break;
+    case 'ZNX-EM-CMP-002': element = React.createElement(PrivacyNoticeUpdatedEmail, { payload }); break;
+    case 'ZNX-EM-CMP-003': element = React.createElement(ConsentRecordedEmail, { payload }); break;
+    case 'ZNX-EM-CMP-004': element = React.createElement(ConsentChangedEmail, { payload }); break;
+    case 'ZNX-EM-CMP-005': element = React.createElement(ConsentWithdrawnEmail, { payload }); break;
+    case 'ZNX-EM-CMP-006': element = React.createElement(DataProcessingAgreementReadyEmail, { payload }); break;
+    case 'ZNX-EM-CMP-007': element = React.createElement(DataProcessingAgreementSignedEmail, { payload }); break;
+    case 'ZNX-EM-CMP-008': element = React.createElement(SubprocessorChangeNoticeEmail, { payload }); break;
+    case 'ZNX-EM-CMP-009': element = React.createElement(DataResidencyChangeNoticeEmail, { payload }); break;
+    case 'ZNX-EM-CMP-010': element = React.createElement(RetentionPeriodApproachingEmail, { payload }); break;
+    case 'ZNX-EM-CMP-011': element = React.createElement(LegalHoldAppliedEmail, { payload }); break;
+    case 'ZNX-EM-CMP-012': element = React.createElement(RegulatoryInformationRequiredEmail, { payload }); break;
+    case 'ZNX-EM-CMP-013': element = React.createElement(RegulatorySubmissionAcceptedEmail, { payload }); break;
+    case 'ZNX-EM-CMP-014': element = React.createElement(RegulatorySubmissionRejectedEmail, { payload }); break;
     // ── PAR ──
     case 'ZNX-EM-PAR-001': element = React.createElement(PartnerInvitationEmail, { payload }); break;
-    case 'ZNX-EM-PAR-002': element = React.createElement(PartnerOnboardingEmail, { payload }); break;
-    case 'ZNX-EM-PAR-003': element = React.createElement(IntegrationUpdateEmail, { payload }); break;
-    case 'ZNX-EM-PAR-004': element = React.createElement(SlaBreachEmail, { payload }); break;
+    case 'ZNX-EM-PAR-002': element = React.createElement(PartnerOnboardingStartedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-003': element = React.createElement(PartnerDueDiligenceRequiredEmail, { payload }); break;
+    case 'ZNX-EM-PAR-004': element = React.createElement(PartnerApprovedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-005': element = React.createElement(PartnerRejectedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-006': element = React.createElement(CommercialAgreementReadyEmail, { payload }); break;
+    case 'ZNX-EM-PAR-007': element = React.createElement(CommercialAgreementSignedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-008': element = React.createElement(PartnerCredentialsReadyEmail, { payload }); break;
+    case 'ZNX-EM-PAR-009': element = React.createElement(DealerOrResellerAccountActivatedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-010': element = React.createElement(CommissionStatementReadyEmail, { payload }); break;
+    case 'ZNX-EM-PAR-011': element = React.createElement(CommissionAdjustmentEmail, { payload }); break;
+    case 'ZNX-EM-PAR-012': element = React.createElement(CommissionPaymentSentEmail, { payload }); break;
+    case 'ZNX-EM-PAR-013': element = React.createElement(SettlementStatementReadyEmail, { payload }); break;
+    case 'ZNX-EM-PAR-014': element = React.createElement(SettlementVarianceDetectedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-015': element = React.createElement(SettlementApprovedEmail, { payload }); break;
+    case 'ZNX-EM-PAR-016': element = React.createElement(WholesaleUsageFileReadyEmail, { payload }); break;
+    case 'ZNX-EM-PAR-017': element = React.createElement(PartnerSlaBreachEmail, { payload }); break;
+    case 'ZNX-EM-PAR-018': element = React.createElement(PartnerOffboardingCompletedEmail, { payload }); break;
     // ── CAT ──
-    case 'ZNX-EM-CAT-001': element = React.createElement(NewProductLaunchEmail, { payload }); break;
-    case 'ZNX-EM-CAT-002': element = React.createElement(CatalogUpdateEmail, { payload }); break;
-    case 'ZNX-EM-CAT-003': element = React.createElement(ServiceAvailabilityEmail, { payload }); break;
+    case 'ZNX-EM-CAT-001': element = React.createElement(ProductCreatedEmail, { payload }); break;
+    case 'ZNX-EM-CAT-002': element = React.createElement(ProductApprovalRequestedEmail, { payload }); break;
+    case 'ZNX-EM-CAT-003': element = React.createElement(ProductApprovedEmail, { payload }); break;
+    case 'ZNX-EM-CAT-004': element = React.createElement(ProductRejectedEmail, { payload }); break;
+    case 'ZNX-EM-CAT-005': element = React.createElement(PricePlanScheduledEmail, { payload }); break;
+    case 'ZNX-EM-CAT-006': element = React.createElement(PricePlanLiveEmail, { payload }); break;
+    case 'ZNX-EM-CAT-008': element = React.createElement(PromotionLaunchedEmail, { payload }); break;
+    case 'ZNX-EM-CAT-009': element = React.createElement(PromotionEndingEmail, { payload }); break;
+    case 'ZNX-EM-CAT-010': element = React.createElement(ProductRetiredEmail, { payload }); break;
     // ── API ──
+    case 'ZNX-EM-API-001': element = React.createElement(DeveloperAccountInvitationEmail, { payload }); break;
+    case 'ZNX-EM-API-002': element = React.createElement(ApiClientCreatedEmail, { payload }); break;
     case 'ZNX-EM-API-003': element = React.createElement(ApiSecretGeneratedEmail, { payload }); break;
-    case 'ZNX-EM-API-004': element = React.createElement(ApiUsageAlertEmail, { payload }); break;
-    case 'ZNX-EM-API-005': element = React.createElement(ApiQuotaExceededEmail, { payload }); break;
-    case 'ZNX-EM-API-006': element = React.createElement(ApiDeprecationNoticeEmail, { payload }); break;
+    case 'ZNX-EM-API-004': element = React.createElement(ApiSecretRotatedEmail, { payload }); break;
+    case 'ZNX-EM-API-005': element = React.createElement(ApiSecretExpiringEmail, { payload }); break;
+    case 'ZNX-EM-API-006': element = React.createElement(WebhookConfiguredEmail, { payload }); break;
+    case 'ZNX-EM-API-007': element = React.createElement(WebhookVerificationFailedEmail, { payload }); break;
+    case 'ZNX-EM-API-008': element = React.createElement(WebhookDeliveryFailureEmail, { payload }); break;
+    case 'ZNX-EM-API-009': element = React.createElement(WebhookDeliveryRecoveredEmail, { payload }); break;
+    case 'ZNX-EM-API-010': element = React.createElement(SftpCredentialsIssuedEmail, { payload }); break;
+    case 'ZNX-EM-API-011': element = React.createElement(BatchReceivedEmail, { payload }); break;
+    case 'ZNX-EM-API-012': element = React.createElement(BatchValidationFailedEmail, { payload }); break;
+    case 'ZNX-EM-API-013': element = React.createElement(BatchProcessedEmail, { payload }); break;
+    case 'ZNX-EM-API-014': element = React.createElement(SchemaVersionDeprecationEmail, { payload }); break;
+    case 'ZNX-EM-API-015': element = React.createElement(IntegrationCertificationStartedEmail, { payload }); break;
+    case 'ZNX-EM-API-016': element = React.createElement(IntegrationCertificationPassedEmail, { payload }); break;
+    case 'ZNX-EM-API-017': element = React.createElement(ProductionApiAccessApprovedEmail, { payload }); break;
+    case 'ZNX-EM-API-018': element = React.createElement(IntegrationSuspendedEmail, { payload }); break;
     // ── RISK ──
     case 'ZNX-EM-RISK-001': element = React.createElement(FraudAlertOpenedEmail, { payload }); break;
-    case 'ZNX-EM-RISK-002': element = React.createElement(AccountSuspensionEmail, { payload }); break;
-    case 'ZNX-EM-RISK-003': element = React.createElement(ServiceRestrictionEmail, { payload }); break;
-    case 'ZNX-EM-RISK-004': element = React.createElement(BreachNotificationEmail, { payload }); break;
-    // ── SUP ──
-    case 'ZNX-EM-SUP-001': element = React.createElement(SupportCaseCreatedEmail, { payload }); break;
-    case 'ZNX-EM-SUP-002': element = React.createElement(TicketOpenedEmail, { payload }); break;
-    case 'ZNX-EM-SUP-013': element = React.createElement(IncidentDetectedEmail, { payload }); break;
-    // ── SUB ──
-    case 'ZNX-EM-SUB-001': element = React.createElement(SubscriptionActivatedEmail, { payload }); break;
-    case 'ZNX-EM-SUB-002': element = React.createElement(SubscriptionCancelledEmail, { payload }); break;
-    case 'ZNX-EM-SUB-003': element = React.createElement(SubscriptionRenewedEmail, { payload }); break;
+    case 'ZNX-EM-RISK-002': element = React.createElement(SuspectedAccountTakeoverEmail, { payload }); break;
+    case 'ZNX-EM-RISK-003': element = React.createElement(SimSwapRiskHoldEmail, { payload }); break;
+    case 'ZNX-EM-RISK-004': element = React.createElement(PaymentFraudHoldEmail, { payload }); break;
+    case 'ZNX-EM-RISK-005': element = React.createElement(IdentityMismatchEmail, { payload }); break;
+    case 'ZNX-EM-RISK-006': element = React.createElement(UnusualUsagePatternEmail, { payload }); break;
+    case 'ZNX-EM-RISK-007': element = React.createElement(RevenueLeakageAlertEmail, { payload }); break;
+    case 'ZNX-EM-RISK-008': element = React.createElement(RatingVarianceAlertEmail, { payload }); break;
+    case 'ZNX-EM-RISK-009': element = React.createElement(MediationGapDetectedEmail, { payload }); break;
+    case 'ZNX-EM-RISK-010': element = React.createElement(DuplicateChargeRiskEmail, { payload }); break;
+    case 'ZNX-EM-RISK-011': element = React.createElement(CreditLimitApproachingEmail, { payload }); break;
+    case 'ZNX-EM-RISK-012': element = React.createElement(CreditLimitExceededEmail, { payload }); break;
+    case 'ZNX-EM-RISK-013': element = React.createElement(RiskCaseResolvedEmail, { payload }); break;
+    case 'ZNX-EM-RISK-014': element = React.createElement(HighRiskActionApprovalRequiredEmail, { payload }); break;
     // ── OPS ──
     case 'ZNX-EM-OPS-001': element = React.createElement(ScheduledReportReadyEmail, { payload }); break;
-    // ── ORD ──
-    case 'ZNX-EM-ORD-001': element = React.createElement(OrderReceivedEmail, { payload }); break;
-    case 'ZNX-EM-ORD-014': element = React.createElement(EsimReadyEmail, { payload }); break;
-    // ── USG ──
-    case 'ZNX-EM-USG-001': element = React.createElement(UsageThresholdNoticeEmail, { payload }); break;
+    case 'ZNX-EM-OPS-002': element = React.createElement(DataExportReadyEmail, { payload }); break;
+    case 'ZNX-EM-OPS-003': element = React.createElement(DataExportFailedEmail, { payload }); break;
+    case 'ZNX-EM-OPS-004': element = React.createElement(ReconciliationCompletedEmail, { payload }); break;
+    case 'ZNX-EM-OPS-005': element = React.createElement(ReconciliationVarianceEmail, { payload }); break;
+    case 'ZNX-EM-OPS-006': element = React.createElement(ApprovalRequestEmail, { payload }); break;
+    case 'ZNX-EM-OPS-007': element = React.createElement(ApprovalReminderEmail, { payload }); break;
+    case 'ZNX-EM-OPS-008': element = React.createElement(ApprovalCompletedEmail, { payload }); break;
+    case 'ZNX-EM-OPS-009': element = React.createElement(ApprovalRejectedEmail, { payload }); break;
+    case 'ZNX-EM-OPS-010': element = React.createElement(ScheduledJobFailedEmail, { payload }); break;
+    // ── SUB ──
+    case 'ZNX-EM-SUB-001': element = React.createElement(SubscriptionActivatedEmail, { payload }); break;
+    case 'ZNX-EM-SUB-002': element = React.createElement(SubscriptionPlanChangedEmail, { payload }); break;
+    case 'ZNX-EM-SUB-003': element = React.createElement(UsageOverageForecastEmail, { payload }); break;
+    case 'ZNX-EM-SUB-004': element = React.createElement(RenewalDueIn90DaysEmail, { payload }); break;
+    case 'ZNX-EM-SUB-005': element = React.createElement(RenewalDueIn30DaysEmail, { payload }); break;
+    case 'ZNX-EM-SUB-007': element = React.createElement(RenewalCompletedEmail, { payload }); break;
+    case 'ZNX-EM-SUB-009': element = React.createElement(PlatformServiceSuspensionForNonpaymentEmail, { payload }); break;
+    case 'ZNX-EM-SUB-010': element = React.createElement(ContractTerminationConfirmedEmail, { payload }); break;
     // ── NEXA ──
-    case 'ZNX-EM-NEXA-001': element = React.createElement(NexaSummaryEmail, { payload }); break;
-    case 'ZNX-EM-NEXA-002': element = React.createElement(NexaRecommendationEmail, { payload }); break;
-    case 'ZNX-EM-NEXA-003': element = React.createElement(NexaAdvisoryEmail, { payload }); break;
+    case 'ZNX-EM-NEXA-001': element = React.createElement(NexaEnabledEmail, { payload }); break;
+    case 'ZNX-EM-NEXA-002': element = React.createElement(NexaAccessGrantedEmail, { payload }); break;
+    case 'ZNX-EM-NEXA-003': element = React.createElement(NexaRecommendationReadyEmail, { payload }); break;
     case 'ZNX-EM-NEXA-004': element = React.createElement(NexaActionApprovalRequiredEmail, { payload }); break;
+    case 'ZNX-EM-NEXA-005': element = React.createElement(NexaApprovedActionCompletedEmail, { payload }); break;
+    case 'ZNX-EM-NEXA-006': element = React.createElement(NexaActionFailedEmail, { payload }); break;
+    case 'ZNX-EM-NEXA-007': element = React.createElement(NexaPolicyViolationBlockedEmail, { payload }); break;
+
     default:
-      element = React.createElement(UserInvitationEmail, { payload });
+      console.warn(`Template ${templateId} not mapped in renderPreviewEmail.ts`);
+      return React.createElement(Text, null, `Template ${templateId} is not registered.`);
   }
 
-  try {
-    const html = await render(element);
-    return { success: true, html, payload };
-  } catch (error: any) {
-    console.error('Failed to render preview:', error);
-    return { success: false, error: error.message };
+  return element;
+}
+
+export async function renderPreviewEmail(
+  templateId: string, 
+  brandOverride?: Partial<CanonicalEmailPayload['rendering']['brand']>, 
+  senderOverride?: Partial<CanonicalEmailPayload['rendering']['sender']>, 
+  supportOverride?: Partial<CanonicalEmailPayload['rendering']['support']>
+) {
+  // Safe defaults mimicking CanonicalLayout defaults
+  const brand = brandOverride || {
+    display_name: 'ZoikoNex',
+    logo_url: 'https://cdn.zoikonex.com/logo-light.png',
+    primary_color: '#0052FF'
+  };
+  
+  const sender = senderOverride || {
+    from_address: 'notifications@zoikonex.com',
+    from_name: 'ZoikoNex',
+    reply_to: 'no-reply@zoikonex.com'
+  };
+  
+  const support = supportOverride || {
+    url: 'https://support.zoikonex.com'
+  };
+
+  const payload: CanonicalEmailPayload = {
+    identity: {
+      tenant_id: 't-123',
+      operator_id: 'op-123',
+      brand_id: 'b-123',
+      environment_name: 'preview',
+      recipient_role: 'subscriber',
+      recipient_locale: 'en-US',
+      recipient_time_zone: 'UTC'
+    },
+    traceability: {
+      event_type: 'preview_generated',
+      event_version: '1.0',
+      event_id: 'evt-123',
+      correlation_id: 'corr-123',
+      message_reference: 'msg-123',
+      template_id: templateId,
+      template_version: '1.0'
+    },
+    rendering: { brand, sender, support },
+    governance: {
+      message_classification: 'P3 Operational Notice',
+      message_legal_basis: 'Contract',
+      message_preference_category: 'System',
+      message_sensitivity: 'Normal'
+    },
+    localizedValues: {
+      jurisdiction_code: 'US',
+      language_code: 'en-US',
+      currency_code: 'USD',
+      date_local: 'Jul 24, 2026',
+      date_utc: '2026-07-24T12:00:00Z'
+    },
+    eventData: {
+      tenant_display_name: 'Acme Corp',
+      environment_name: 'Production',
+      event_occurred_at_local: 'Jul 24, 2026 12:00 PM'
+    }
+  };
+
+  const element = getPreviewEmailComponent(templateId, payload);
+  if (!element) {
+    return { success: false, error: 'Template not found' };
   }
+
+  const html = await render(element);
+  return { success: true, html, payload };
 }
