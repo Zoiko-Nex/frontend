@@ -19,6 +19,11 @@ import PaymentsManagement from "./PaymentsManagement";
 import FinanceLedger from "./FinanceLedger";
 import TaxJurisdiction from "./TaxJurisdiction";
 import UsageCharging from "./UsageCharging";
+import PartnerSettlement from "./PartnerSettlement";
+import RevenueAssurance from "./RevenueAssurance";
+import FraudRisk from "./FraudRisk";
+import DunningDisputes from "./DunningDisputes";
+import RegulatoryExports from "./RegulatoryExports";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -72,6 +77,11 @@ const TAB_DOMAIN: Record<string, string> = {
   TaxJurisdiction: "tax",
   // Two services on one screen; gated on usage, the one that owns the records.
   UsageCharging: "usage",
+  PartnerSettlement: "partner",
+  RevenueAssurance: "revenueAssurance",
+  FraudRisk: "fraud",
+  DunningDisputes: "dunning",
+  RegulatoryExports: "reporting",
 };
 
 function LockedPanel({ label }: { label: string }) {
@@ -1494,6 +1504,15 @@ export default function DashboardsPage() {
         { label: "Tax & Jurisdiction", tabKey: "TaxJurisdiction", iconPath: "/image/dashboard/document.svg" },
         { label: "Finance Ledger", tabKey: "FinanceLedger", iconPath: "/image/dashboard/bar-chart.svg" },
         { label: "Usage & Charging", tabKey: "UsageCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
+        { label: "Partner & Settlement", tabKey: "PartnerSettlement", iconPath: "/image/dashboard/bar-chart.svg" },
+        { label: "Dunning & Disputes", tabKey: "DunningDisputes", iconPath: "/image/dashboard/credit-card.svg" },
+      ]
+    },
+    {
+      section: "ASSURE", items: [
+        { label: "Revenue Assurance", tabKey: "RevenueAssurance", iconPath: "/image/dashboard/shield.svg" },
+        { label: "Fraud & Risk", tabKey: "FraudRisk", iconPath: "/image/dashboard/shield.svg" },
+        { label: "Regulatory Exports", tabKey: "RegulatoryExports", iconPath: "/image/dashboard/document.svg" },
       ]
     },
     {
@@ -2062,7 +2081,7 @@ export default function DashboardsPage() {
                         category: "Monetization",
                         desc: "Wholesale, interconnect, revenue share, and partner billing.",
                         icon: "/image/dashboard/user-profile.svg",
-                        tabKey: "Billing",
+                        tabKey: "PartnerSettlement",
                         badge: "Provisioning",
                         badgeStyle: "bg-indigo-50 text-indigo-700 border-indigo-200"
                       },
@@ -2162,7 +2181,7 @@ export default function DashboardsPage() {
                         category: "Intelligence",
                         desc: "Operational dashboards, revenue assurance, and reports.",
                         icon: "/image/dashboard/bar-chart.svg",
-                        tabKey: "Dashboard",
+                        tabKey: "RegulatoryExports",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -3600,6 +3619,41 @@ export default function DashboardsPage() {
               <UsageCharging />
             ) : (
               <LockedPanel label="Usage & Charging" />
+            ))}
+
+            {/* Partner & Settlement Tab */}
+            {currentTab === "PartnerSettlement" && (canAccess(TAB_DOMAIN.PartnerSettlement) ? (
+              <PartnerSettlement />
+            ) : (
+              <LockedPanel label="Partner & Settlement" />
+            ))}
+
+            {/* Revenue Assurance Tab — leakage, distinct from Fraud & Risk (P1-9) */}
+            {currentTab === "RevenueAssurance" && (canAccess(TAB_DOMAIN.RevenueAssurance) ? (
+              <RevenueAssurance />
+            ) : (
+              <LockedPanel label="Revenue Assurance" />
+            ))}
+
+            {/* Fraud & Risk Tab — abuse, distinct from Revenue Assurance (P1-9) */}
+            {currentTab === "FraudRisk" && (canAccess(TAB_DOMAIN.FraudRisk) ? (
+              <FraudRisk />
+            ) : (
+              <LockedPanel label="Fraud & Risk" />
+            ))}
+
+            {/* Dunning, Collections & Disputes Tab */}
+            {currentTab === "DunningDisputes" && (canAccess(TAB_DOMAIN.DunningDisputes) ? (
+              <DunningDisputes />
+            ) : (
+              <LockedPanel label="Dunning & Disputes" />
+            ))}
+
+            {/* Reporting & Regulatory Tab */}
+            {currentTab === "RegulatoryExports" && (canAccess(TAB_DOMAIN.RegulatoryExports) ? (
+              <RegulatoryExports />
+            ) : (
+              <LockedPanel label="Reporting & Regulatory" />
             ))}
 
 

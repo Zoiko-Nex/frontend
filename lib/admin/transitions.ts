@@ -249,3 +249,206 @@ export function transitionsFor(table: TransitionTable, status: string | undefine
 export function isTerminal(table: TransitionTable, status: string | undefined): boolean {
   return transitionsFor(table, status).length === 0;
 }
+
+// ─── Assurance, risk, collections and regulatory ──────────────────────────────
+//
+// Mirrored from the Go transition maps, same rule as every table above: the UI
+// must only ever offer a move the backend permits.
+//
+//   SETTLEMENT_RUN / PARTNER_DISPUTE   services/partner-settlement
+//   RECON_RUN / LEAKAGE_CASE / RULE    services/revenue-assurance
+//   FRAUD_CASE                         services/fraud-risk
+//   DUNNING_CASE / BILLING_DISPUTE     services/dunning-collections-disputes
+//   REGULATORY_EXPORT                  services/reporting-regulatory
+
+/**
+ * Settlement run. Two edges look wrong and are not: DISPUTED returns to
+ * APPROVED rather than rewinding to STATEMENT_GENERATED, and SETTLED moves to
+ * ADJUSTMENT_PENDING because money that has already moved is corrected by a
+ * follow-up adjustment, never by reopening the run.
+ */
+export const SETTLEMENT_RUN_TRANSITIONS: TransitionTable = {
+  OPEN: [{ action: "CLOSE", label: "Close period" }],
+  CLOSED: [
+    { action: "GENERATE_STATEMENT", label: "Generate statement" },
+    { action: "DISPUTE", label: "Raise dispute", destructive: true },
+  ],
+  STATEMENT_GENERATED: [
+    { action: "APPROVE", label: "Approve" },
+    { action: "DISPUTE", label: "Raise dispute", destructive: true },
+  ],
+  APPROVED: [
+    { action: "INITIATE_PAYMENT", label: "Initiate payment" },
+    { action: "DISPUTE", label: "Raise dispute", destructive: true },
+  ],
+  PAYMENT_INITIATED: [{ action: "SETTLE", label: "Mark settled" }],
+  DISPUTED: [{ action: "APPROVE", label: "Approve after dispute" }],
+  SETTLED: [{ action: "ADJUSTMENT_PENDING", label: "Flag adjustment", destructive: true }],
+  ADJUSTMENT_PENDING: [],
+};
+
+/** Partner settlement dispute — raised by a partner against a run. */
+export const PARTNER_DISPUTE_TRANSITIONS: TransitionTable = {
+  OPEN: [
+    { action: "INVESTIGATE", label: "Investigate" },
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "REJECT", label: "Reject", destructive: true },
+  ],
+  UNDER_INVESTIGATION: [
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "ESCALATE", label: "Escalate", destructive: true },
+    { action: "REJECT", label: "Reject", destructive: true },
+  ],
+  ESCALATED: [
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "REJECT", label: "Reject", destructive: true },
+  ],
+  RESOLVED: [],
+  REJECTED: [],
+};
+
+/** Reconciliation run. PARTIAL is a terminal outcome, not a pause. */
+export const RECON_RUN_TRANSITIONS: TransitionTable = {
+  RUNNING: [
+    { action: "COMPLETE", label: "Complete" },
+    { action: "PARTIAL", label: "Complete (partial)" },
+    { action: "FAIL", label: "Fail", destructive: true },
+  ],
+  COMPLETED: [],
+  PARTIAL: [],
+  FAILED: [],
+};
+
+/**
+ * Leakage case. WRITE_OFF and FALSE_POSITIVE are both terminal but mean
+ * opposite things — the leak was real and abandoned, versus there was no leak.
+ * Assurance reporting counts them separately, so they stay separate actions.
+ */
+export const LEAKAGE_CASE_TRANSITIONS: TransitionTable = {
+  OPEN: [
+    { action: "INVESTIGATE", label: "Investigate" },
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "WRITE_OFF", label: "Write off", destructive: true },
+    { action: "FALSE_POSITIVE", label: "False positive", destructive: true },
+  ],
+  UNDER_INVESTIGATION: [
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "WRITE_OFF", label: "Write off", destructive: true },
+    { action: "FALSE_POSITIVE", label: "False positive", destructive: true },
+  ],
+  RESOLVED: [],
+  WRITTEN_OFF: [],
+  FALSE_POSITIVE: [],
+};
+
+/** Shared by assurance rules and fraud rules — both services use this table. */
+export const RULE_TRANSITIONS: TransitionTable = {
+  DRAFT: [{ action: "ACTIVATE", label: "Activate" }],
+  ACTIVE: [
+    { action: "DISABLE", label: "Disable", destructive: true },
+    { action: "ARCHIVE", label: "Archive", destructive: true },
+  ],
+  DISABLED: [
+    { action: "ACTIVATE", label: "Re-activate" },
+    { action: "ARCHIVE", label: "Archive", destructive: true },
+  ],
+  ARCHIVED: [],
+};
+
+/** Fraud case. ESCALATED can drop back to INVESTIGATING — escalation is not one-way. */
+export const FRAUD_CASE_TRANSITIONS: TransitionTable = {
+  OPEN: [
+    { action: "INVESTIGATE", label: "Investigate" },
+    { action: "ESCALATE", label: "Escalate", destructive: true },
+    { action: "FALSE_POSITIVE", label: "False positive", destructive: true },
+    { action: "CLOSE", label: "Close", destructive: true },
+  ],
+  INVESTIGATING: [
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "ESCALATE", label: "Escalate", destructive: true },
+    { action: "FALSE_POSITIVE", label: "False positive", destructive: true },
+  ],
+  ESCALATED: [
+    { action: "INVESTIGATE", label: "Back to investigation" },
+    { action: "RESOLVE", label: "Resolve" },
+    { action: "FALSE_POSITIVE", label: "False positive", destructive: true },
+  ],
+  RESOLVED: [{ action: "CLOSE", label: "Close" }],
+  FALSE_POSITIVE: [{ action: "CLOSE", label: "Close" }],
+  CLOSED: [],
+};
+
+/**
+ * Dunning case — a strict escalation ladder. Each rung has exactly one forward
+ * move plus RESOLVE, because payment can land at any point. Skipping a rung is
+ * rejected by the backend, so none is offered.
+ */
+export const DUNNING_CASE_TRANSITIONS: TransitionTable = {
+  PENDING: [
+    { action: "GRACE_PERIOD", label: "Start grace period" },
+    { action: "RESOLVE", label: "Resolve (paid)" },
+  ],
+  GRACE_PERIOD: [
+    { action: "WARNING", label: "Send warning" },
+    { action: "RESOLVE", label: "Resolve (paid)" },
+  ],
+  WARNING: [
+    { action: "FINAL_NOTICE", label: "Final notice" },
+    { action: "RESOLVE", label: "Resolve (paid)" },
+  ],
+  FINAL_NOTICE: [
+    { action: "RESTRICT", label: "Restrict service", destructive: true },
+    { action: "RESOLVE", label: "Resolve (paid)" },
+  ],
+  RESTRICTED: [
+    { action: "SUSPEND", label: "Suspend service", destructive: true },
+    { action: "RESOLVE", label: "Resolve (paid)" },
+  ],
+  SUSPENDED: [
+    { action: "COLLECTIONS", label: "Send to collections", destructive: true },
+    { action: "RESOLVE", label: "Resolve (paid)" },
+  ],
+  COLLECTIONS: [
+    { action: "RESOLVE", label: "Resolve (paid)" },
+    { action: "WRITE_OFF", label: "Write off", destructive: true },
+  ],
+  RESOLVED: [],
+  WRITTEN_OFF: [],
+};
+
+/** Customer billing dispute (dunning service) — distinct from a partner dispute. */
+export const BILLING_DISPUTE_TRANSITIONS: TransitionTable = {
+  OPEN: [
+    { action: "INVESTIGATE", label: "Investigate" },
+    { action: "RESOLVE_IN_FAVOUR", label: "Resolve for customer" },
+    { action: "RESOLVE_AGAINST", label: "Resolve against", destructive: true },
+    { action: "PARTIALLY_ADJUST", label: "Partially adjust" },
+    { action: "WRITE_OFF", label: "Write off", destructive: true },
+  ],
+  INVESTIGATING: [
+    { action: "RESOLVE_IN_FAVOUR", label: "Resolve for customer" },
+    { action: "RESOLVE_AGAINST", label: "Resolve against", destructive: true },
+    { action: "PARTIALLY_ADJUST", label: "Partially adjust" },
+    { action: "WRITE_OFF", label: "Write off", destructive: true },
+  ],
+  RESOLVED_IN_FAVOUR: [{ action: "CLOSE", label: "Close" }],
+  RESOLVED_AGAINST: [{ action: "CLOSE", label: "Close" }],
+  PARTIALLY_ADJUSTED: [{ action: "CLOSE", label: "Close" }],
+  WRITTEN_OFF: [{ action: "CLOSE", label: "Close" }],
+  CLOSED: [],
+};
+
+/**
+ * Regulatory export. GENERATING is entered on create; the service marks it
+ * READY once the artefact is signed. ACKNOWLEDGED is the regulator's receipt.
+ */
+export const EXPORT_TRANSITIONS: TransitionTable = {
+  GENERATING: [
+    { action: "READY", label: "Mark ready" },
+    { action: "FAIL", label: "Fail", destructive: true },
+  ],
+  READY: [{ action: "SUBMIT", label: "Submit to regulator" }],
+  SUBMITTED: [{ action: "ACKNOWLEDGE", label: "Record acknowledgement" }],
+  ACKNOWLEDGED: [],
+  FAILED: [],
+};
