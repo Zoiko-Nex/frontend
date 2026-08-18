@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
 import { getSession } from "@/lib/admin/session";
+import { errMessage } from "@/lib/admin/envelope";
 
 /* ───────── Types mirroring integration-ecosystem domain models ───────── */
 
@@ -163,7 +164,7 @@ function StatusBadge({ status }: { status?: string | null }) {
 /* ───────── Main Integration Component ───────── */
 
 export default function IntegrationTab() {
-  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds">("providers");
+  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds" | "invocations">("providers");
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
@@ -277,6 +278,16 @@ export default function IntegrationTab() {
         >
           IDD Registry
         </button>
+        <button
+          onClick={() => setTab("invocations")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "invocations"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Invocations
+        </button>
       </div>
 
       {tab === "providers" && <ProvidersTab />}
@@ -289,6 +300,7 @@ export default function IntegrationTab() {
       {tab === "b2b" && <B2BTab />}
       {tab === "mtls" && <MTLSTab />}
       {tab === "idds" && <IDDRegistryTab />}
+      {tab === "invocations" && <InvocationsTab />}
     </div>
   );
 }
@@ -1157,6 +1169,20 @@ function ActivationSection({ connector, onChanged }: { connector: Connector; onC
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to record approval"),
   });
 
+  /**
+   * Qualification is the pre-flight the activation workflow expects before
+   * approvals are collected. It was registered and unreachable, which meant the
+   * gate could only ever be skipped.
+   */
+  const qualify = useMutation({
+    mutationFn: (id: string) => api.post("integration", `/v1/activations/${id}/qualification`, {}),
+    onSuccess: () => {
+      toast.success("Qualification recorded");
+      qc.invalidateQueries({ queryKey: ["integration", "activations"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Qualification failed"),
+  });
+
   const activate = useMutation({
     mutationFn: (id: string) => api.post("integration", `/v1/activations/${id}/activate`, {}),
     onSuccess: () => {
@@ -1225,6 +1251,19 @@ function ActivationSection({ connector, onChanged }: { connector: Connector; onC
                   <td className="px-3.5 py-2.5 text-right">
                     {a.state !== "ACTIVATED" && (
                       <div className="flex gap-1.5 justify-end">
+                        {/* Qualification is the pre-flight the workflow expects
+                            before approvals. Offered only while it is still
+                            outstanding, so it reads as a gate rather than a
+                            button that can be pressed forever. */}
+                        {String(a.qualification_status ?? "").toUpperCase() !== "QUALIFIED" && (
+                          <button
+                            onClick={() => qualify.mutate(a.activation_id)}
+                            disabled={qualify.isPending}
+                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[11px] rounded-md border border-amber-200 transition cursor-pointer disabled:opacity-50"
+                          >
+                            {qualify.isPending ? "Qualifying…" : "Run qualification"}
+                          </button>
+                        )}
                         {required.map((role) => (
                           <button
                             key={role}
@@ -1263,6 +1302,21 @@ function WebhooksTab() {
   const q = useQuery({
     queryKey: ["integration", "webhooks"],
     queryFn: () => api.get<{ subscriptions?: WebhookSubscription[] }>("integration", "/v1/hub"),
+  });
+
+  /**
+   * Rotating a signing secret invalidates the old one immediately, and the new
+   * value is returned exactly once. It goes into the same one-time reveal the
+   * create flow already uses rather than a toast that scrolls away.
+   */
+  const rotate = useMutation({
+    mutationFn: (id: string) => api.post<{ signing_secret?: string }>("integration", `/v1/hub/${id}/rotate-secret`, {}),
+    onSuccess: (res) => {
+      if (res?.signing_secret) setSigningSecret(res.signing_secret);
+      toast.success("Signing secret rotated — the previous one no longer validates");
+      qc.invalidateQueries({ queryKey: ["integration", "webhooks"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Secret rotation failed"),
   });
 
   const remove = useMutation({
@@ -1366,12 +1420,22 @@ function WebhooksTab() {
                     <td className="px-4 py-3.5"><StatusBadge status={s.status} /></td>
                     <td className="px-4 py-3.5 text-slate-500">{new Date(s.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3.5 text-right">
-                      <button
-                        onClick={() => remove.mutate(s.subscription_id)}
-                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition cursor-pointer"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => rotate.mutate(s.subscription_id)}
+                          disabled={rotate.isPending}
+                          title="Invalidates the current signing secret immediately"
+                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-bold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
+                        >
+                          {rotate.isPending ? "Rotating…" : "Rotate secret"}
+                        </button>
+                        <button
+                          onClick={() => remove.mutate(s.subscription_id)}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1753,13 +1817,14 @@ function ConnectionsTab() {
               <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Region</th>
               <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
               <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Endpoint</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {q.isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
             ) : connections.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No connections registered.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No connections registered.</td></tr>
             ) : connections.map((c: any) => (
               <tr key={c.connection_id} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
@@ -1771,6 +1836,9 @@ function ConnectionsTab() {
                 <td className="px-4 py-3 font-mono text-slate-600">{c.region}</td>
                 <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                 <td className="px-4 py-3 font-mono text-slate-600 text-[11px] truncate max-w-[180px]">{c.endpoint_url}</td>
+                <td className="px-4 py-3 text-right">
+                  <KillSwitchButton connectionId={c.connection_id} name={c.connection_name} status={c.status} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -2168,5 +2236,298 @@ function IDDRegistryTab() {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ───────── Invocations Sub-Tab ─────────
+ *
+ * The outbound call log: every time this platform invoked a connector, what it
+ * asked for and what came back. This is the answer to "did we actually call
+ * them, and what did they say" from our side, where the webhook delivery log
+ * answers it from theirs.
+ *
+ * Note on what is deliberately NOT here. integration-ecosystem also registers
+ * /v1/schema-versions, /v1/mapping-versions, /v1/sla-profiles,
+ * /v1/rate-limit-profiles and /v1/connections/{id}/interfaces — but all five
+ * return hardcoded arrays from the handler rather than reading a repository
+ * (ext_handlers.go). Wiring a table to them would put fabricated governance
+ * data on screen dressed as live, which is the exact failure this console was
+ * cleaned up to remove. They stay unwired until they read real state.
+ */
+function InvocationsTab() {
+  const qc = useQueryClient();
+  const [replayFor, setReplayFor] = useState<any | null>(null);
+  const [invokeForm, setInvokeForm] = useState({ connector_id: "", operation: "", path_params: "{}" });
+  const [invokeOpen, setInvokeOpen] = useState(false);
+
+  const q = useQuery({
+    queryKey: ["integration", "invocations"],
+    refetchInterval: 30_000,
+    queryFn: () => api.get<{ invocations?: any[] }>("integration", "/v1/invocations"),
+  });
+  const invocations = q.data?.invocations ?? [];
+
+  const connectorsQ = useQuery({
+    queryKey: ["integration", "connectors"],
+    queryFn: () => api.get<{ connectors?: Connector[] }>("integration", "/v1/connectors"),
+  });
+
+  /**
+   * A manual invoke is a real outbound call to a real partner, so it is behind
+   * an explicit form rather than a one-click button on a row.
+   */
+  const invoke = useMutation({
+    mutationFn: () => {
+      let pathParams: unknown = {};
+      try {
+        pathParams = JSON.parse(invokeForm.path_params);
+      } catch (err) {
+        throw new Error(`path_params is not valid JSON: ${(err as Error).message}`);
+      }
+      return api.post("integration", `/v1/connectors/${invokeForm.connector_id}/invoke`, {
+        operation: invokeForm.operation,
+        path_params: pathParams,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Invocation sent");
+      setInvokeOpen(false);
+      qc.invalidateQueries({ queryKey: ["integration", "invocations"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Invocation failed"),
+  });
+
+  const succeeded = invocations.filter((i: any) => {
+    const s = String(i.status ?? i.outcome ?? "").toUpperCase();
+    return s === "SUCCESS" || s === "SUCCEEDED" || s === "OK";
+  }).length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+      <div className="flex justify-between items-start gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Outbound Invocations</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Calls this platform made to a partner. The webhook delivery log covers the opposite direction.
+          </p>
+        </div>
+        <button
+          onClick={() => setInvokeOpen(true)}
+          className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+        >
+          Invoke a connector
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invocations</div>
+          <div className="text-lg font-bold text-slate-800 font-mono">{q.isLoading ? "…" : invocations.length}</div>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Succeeded</div>
+          <div className="text-lg font-bold text-emerald-600 font-mono">{q.isLoading ? "…" : succeeded}</div>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Failed</div>
+          <div className="text-lg font-bold text-rose-600 font-mono">
+            {q.isLoading ? "…" : invocations.length - succeeded}
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Invocation</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Connector</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Operation</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Latency</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">When</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {q.isLoading ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+            ) : q.isError ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-rose-600">{errMessage(q.error, "Could not load invocations.")}</td></tr>
+            ) : invocations.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No outbound invocations recorded.</td></tr>
+            ) : (
+              invocations.map((iv: any, i: number) => {
+                const id = iv.invocation_id ?? iv.id ?? String(i);
+                const status = String(iv.status ?? iv.outcome ?? "—").toUpperCase();
+                const ok = ["SUCCESS", "SUCCEEDED", "OK"].includes(status);
+                return (
+                  <tr key={id} className="hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-mono text-[11px] text-slate-700">{String(id).slice(0, 8)}</td>
+                    <td className="px-4 py-3 font-mono text-[10px] text-slate-500">
+                      {String(iv.connector_id ?? "—").slice(0, 8)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{iv.operation ?? iv.operation_name ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${ok ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                        {status}
+                      </span>
+                      {iv.http_status ? <span className="ml-1.5 text-[10px] text-slate-400 font-mono">HTTP {iv.http_status}</span> : null}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[11px]">{iv.latency_ms != null ? `${iv.latency_ms} ms` : "—"}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500">
+                      {iv.created_at ? new Date(iv.created_at).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {invokeOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[520px] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-200">
+              <h2 className="text-slate-800 text-lg font-bold">Invoke a connector</h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                This makes a real outbound call to the partner. It is not a dry run.
+              </p>
+            </div>
+            <div className="p-6 flex flex-col gap-4 text-xs">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Connector</span>
+                <select
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
+                  value={invokeForm.connector_id}
+                  onChange={(e) => setInvokeForm({ ...invokeForm, connector_id: e.target.value })}
+                >
+                  <option value="">— select —</option>
+                  {(connectorsQ.data?.connectors ?? []).map((c) => (
+                    <option key={c.connector_id} value={c.connector_id}>
+                      {c.connector_name} · {c.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Operation</span>
+                <input
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono outline-none focus:border-sky-500"
+                  value={invokeForm.operation}
+                  onChange={(e) => setInvokeForm({ ...invokeForm, operation: e.target.value })}
+                  placeholder="getBalance"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Path params (JSON)</span>
+                <textarea
+                  className="w-full h-24 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono outline-none focus:border-sky-500 resize-y"
+                  value={invokeForm.path_params}
+                  onChange={(e) => setInvokeForm({ ...invokeForm, path_params: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setInvokeOpen(false)}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => invoke.mutate()}
+                disabled={invoke.isPending || !invokeForm.connector_id || !invokeForm.operation}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white rounded-lg text-xs font-bold cursor-pointer"
+              >
+                {invoke.isPending ? "Invoking…" : "Invoke"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────── Emergency kill switch ─────────
+ *
+ * INT-ARC-003 / NFR-INT-05: every connection must be independently disableable
+ * within 15 minutes. That guarantee is worth nothing if the only way to invoke
+ * it is a curl command, so it lives on the row.
+ *
+ * Deliberately two-step. This severs live traffic to a partner — the kind of
+ * action where a misclick is an outage — so it asks for a reason first, and the
+ * reason is what gets recorded against the connection.
+ */
+function KillSwitchButton({ connectionId, name, status }: { connectionId: string; name?: string; status?: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const kill = useMutation({
+    mutationFn: () => api.post("integration", `/v1/connections/${connectionId}/kill-switch`, { reason }),
+    onSuccess: () => {
+      toast.success("Kill switch engaged — traffic to this connection is stopped");
+      setOpen(false);
+      setReason("");
+      qc.invalidateQueries({ queryKey: ["integration", "connections"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Kill switch failed"),
+  });
+
+  if (String(status ?? "").toUpperCase() === "DISABLED") {
+    return <span className="text-[10px] text-slate-400">disabled</span>;
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="px-2.5 py-1.5 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 rounded text-[10px] font-bold transition cursor-pointer"
+      >
+        Kill switch
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[460px] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-200">
+              <h2 className="text-slate-800 text-lg font-bold">Engage kill switch</h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Stops all traffic to <strong>{name ?? connectionId}</strong> immediately. Anything in flight to this
+                partner will fail.
+              </p>
+            </div>
+            <div className="p-6 text-xs">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Reason</span>
+                <input
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Partner returning malformed responses since 14:02"
+                />
+                <span className="text-[10px] text-slate-400">Recorded against the connection.</span>
+              </label>
+            </div>
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setOpen(false)}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => kill.mutate()}
+                disabled={kill.isPending || !reason.trim()}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-lg text-xs font-bold cursor-pointer"
+              >
+                {kill.isPending ? "Engaging…" : "Engage kill switch"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
