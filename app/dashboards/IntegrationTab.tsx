@@ -164,7 +164,7 @@ function StatusBadge({ status }: { status?: string | null }) {
 /* ───────── Main Integration Component ───────── */
 
 export default function IntegrationTab() {
-  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds" | "invocations">("providers");
+  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds" | "invocations" | "governance">("providers");
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
@@ -288,6 +288,16 @@ export default function IntegrationTab() {
         >
           Invocations
         </button>
+        <button
+          onClick={() => setTab("governance")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "governance"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Governance
+        </button>
       </div>
 
       {tab === "providers" && <ProvidersTab />}
@@ -301,6 +311,7 @@ export default function IntegrationTab() {
       {tab === "mtls" && <MTLSTab />}
       {tab === "idds" && <IDDRegistryTab />}
       {tab === "invocations" && <InvocationsTab />}
+      {tab === "governance" && <GovernanceTab />}
     </div>
   );
 }
@@ -2246,13 +2257,15 @@ function IDDRegistryTab() {
  * them, and what did they say" from our side, where the webhook delivery log
  * answers it from theirs.
  *
- * Note on what is deliberately NOT here. integration-ecosystem also registers
- * /v1/schema-versions, /v1/mapping-versions, /v1/sla-profiles,
- * /v1/rate-limit-profiles and /v1/connections/{id}/interfaces — but all five
- * return hardcoded arrays from the handler rather than reading a repository
- * (ext_handlers.go). Wiring a table to them would put fabricated governance
- * data on screen dressed as live, which is the exact failure this console was
- * cleaned up to remove. They stay unwired until they read real state.
+ * Governance registries (schema versions, mapping versions, SLA and rate-limit
+ * profiles) used to return hardcoded arrays from the handler; they now read the
+ * tables migrations 000009/000010 created, so they are wired below.
+ *
+ * What is still NOT wired, and why: AS2 exchanges and certificates, eSIM
+ * profiles, roaming batches, portability requests, IDDs and telecom gateway
+ * sessions have no table at all yet — their handlers are annotated as such in
+ * ext_handlers.go. Wiring them would put fabricated data on screen dressed as
+ * live, which is the exact failure this console was cleaned up to remove.
  */
 function InvocationsTab() {
   const qc = useQueryClient();
@@ -2529,5 +2542,183 @@ function KillSwitchButton({ connectionId, name, status }: { connectionId: string
         </div>
       )}
     </>
+  );
+}
+
+/* ───────── Contract Governance Sub-Tab ─────────
+ *
+ * Schema versions, mapping versions, SLA profiles and rate-limit profiles —
+ * the four registries that decide whether an integration is contract-governed
+ * (P1-10) or just a URL someone configured.
+ *
+ * All four returned hardcoded arrays from the handler until the ExtRepository
+ * was added; they now read the tables migrations 000009/000010 created. Empty
+ * here means genuinely empty, which is itself the finding: an integration
+ * estate with no registered schemas has no compatibility gate.
+ */
+function GovernanceTab() {
+  const schemasQ = useQuery({
+    queryKey: ["integration", "schema-versions"],
+    queryFn: () => api.get<{ schema_versions?: any[] }>("integration", "/v1/schema-versions"),
+  });
+  const mappingsQ = useQuery({
+    queryKey: ["integration", "mapping-versions"],
+    queryFn: () => api.get<{ mapping_versions?: any[] }>("integration", "/v1/mapping-versions"),
+  });
+  const slaQ = useQuery({
+    queryKey: ["integration", "sla-profiles"],
+    queryFn: () => api.get<{ sla_profiles?: any[] }>("integration", "/v1/sla-profiles"),
+  });
+  const rateQ = useQuery({
+    queryKey: ["integration", "rate-limit-profiles"],
+    queryFn: () => api.get<{ rate_limit_profiles?: any[] }>("integration", "/v1/rate-limit-profiles"),
+  });
+
+  const schemas = schemasQ.data?.schema_versions ?? [];
+  const mappings = mappingsQ.data?.mapping_versions ?? [];
+  const slas = slaQ.data?.sla_profiles ?? [];
+  const rates = rateQ.data?.rate_limit_profiles ?? [];
+
+  const cell = "px-4 py-3";
+  const th = "px-4 py-3 font-bold text-slate-500 uppercase text-[10px]";
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <h2 className="text-lg font-bold text-slate-900">Contract Governance</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          P1-10 — every external integration needs a versioned contract, a compatibility mode, an SLA and a rate limit.
+          An empty registry here is a finding, not a blank screen.
+        </p>
+      </div>
+
+      {/* Schema versions */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex justify-between items-baseline">
+          <h3 className="text-sm font-bold text-slate-900">Schema versions</h3>
+          <span className="text-[10px] font-mono text-slate-400">{schemas.length} registered</span>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className={th}>Schema</th><th className={th}>Type</th><th className={th}>Version</th>
+                <th className={th}>Compatibility</th><th className={th}>Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {schemasQ.isLoading ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              ) : schemasQ.isError ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-rose-600">{errMessage(schemasQ.error, "Could not load schema versions.")}</td></tr>
+              ) : schemas.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No schemas registered — nothing gates a breaking change.</td></tr>
+              ) : schemas.map((v: any) => (
+                <tr key={v.schema_version_id} className="hover:bg-slate-50/50">
+                  <td className={`${cell} font-bold text-slate-800`}>{v.schema_name}</td>
+                  <td className={`${cell} font-mono`}>{v.schema_type}</td>
+                  <td className={`${cell} font-mono`}>{v.version}</td>
+                  <td className={cell}><StatusBadge status={v.compatibility_mode} /></td>
+                  <td className={cell}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${v.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      {v.is_active ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Mapping versions */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex justify-between items-baseline">
+          <h3 className="text-sm font-bold text-slate-900">Mapping versions</h3>
+          <span className="text-[10px] font-mono text-slate-400">{mappings.length} registered</span>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className={th}>Mapping</th><th className={th}>Version</th>
+                <th className={th}>Registered</th><th className={th}>Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {mappingsQ.isLoading ? (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              ) : mappings.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No canonical mappings registered.</td></tr>
+              ) : mappings.map((m: any) => (
+                <tr key={m.mapping_id} className="hover:bg-slate-50/50">
+                  <td className={`${cell} font-bold text-slate-800`}>{m.mapping_name}</td>
+                  <td className={`${cell} font-mono`}>{m.version}</td>
+                  <td className={cell}>{m.is_registered ? "yes" : "no"}</td>
+                  <td className={cell}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${m.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      {m.is_active ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* SLA + rate limits side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-slate-900">SLA profiles</h3>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr><th className={th}>Profile</th><th className={th}>Availability</th><th className={th}>RTO</th><th className={th}>RPO</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {slaQ.isLoading ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+                ) : slas.length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No SLA profiles defined.</td></tr>
+                ) : slas.map((p: any) => (
+                  <tr key={p.sla_profile_id}>
+                    <td className={`${cell} font-bold text-slate-800`}>{p.profile_name}</td>
+                    <td className={`${cell} font-mono`}>{p.availability_target}%</td>
+                    <td className={`${cell} font-mono`}>{p.rto_minutes}m</td>
+                    <td className={`${cell} font-mono`}>{p.rpo_minutes}m</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-slate-900">Rate-limit profiles</h3>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr><th className={th}>Profile</th><th className={th}>Per min</th><th className={th}>Burst</th><th className={th}>Concurrency</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rateQ.isLoading ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+                ) : rates.length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No rate-limit profiles defined — nothing throttles an outbound partner.</td></tr>
+                ) : rates.map((p: any) => (
+                  <tr key={p.rate_profile_id}>
+                    <td className={`${cell} font-bold text-slate-800`}>{p.profile_name}</td>
+                    <td className={`${cell} font-mono`}>{p.requests_per_minute}</td>
+                    <td className={`${cell} font-mono`}>{p.burst_allowance}</td>
+                    <td className={`${cell} font-mono`}>{p.concurrency_limit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
