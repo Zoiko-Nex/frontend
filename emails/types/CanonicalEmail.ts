@@ -42,6 +42,7 @@ export interface GovernanceContract {
 }
 
 export interface LocalizedValuesContract {
+  amount_formatted?: string;
   currency_code: string;
   date_local: string;
   date_utc: string;

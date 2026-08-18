@@ -10,6 +10,7 @@ export interface AutoDebitNoticeData {
   debit_date_display: string;
   payment_method_display: string;
   invoice_reference: string;
+  [key: string]: any;
 }
 
 export interface AutoDebitNoticeEmailProps {

@@ -8,6 +8,7 @@ export interface ApprovalRejectedData {
   recipient_first_name?: string;
   operation_display_name?: string;
   operation_status_display?: string;
+  [key: string]: any;
 }
 
 export interface ApprovalRejectedEmailProps {

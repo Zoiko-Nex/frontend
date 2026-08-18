@@ -9,6 +9,7 @@ export interface CatalogUpdateData {
   update_summary_display: string;
   affected_products_display: string;
   effective_date_display: string;
+  [key: string]: any;
 }
 
 export interface CatalogUpdateEmailProps {

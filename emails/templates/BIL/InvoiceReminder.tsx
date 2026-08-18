@@ -10,6 +10,7 @@ export interface InvoiceReminderData {
   invoice_amount_formatted: string;
   invoice_due_date_display: string;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface InvoiceReminderEmailProps {

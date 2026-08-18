@@ -8,6 +8,7 @@ export interface PartialPaymentReceivedData {
   recipient_first_name?: string;
   payment_reference?: string;
   payment_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface PartialPaymentReceivedEmailProps {
@@ -28,7 +29,7 @@ export const PartialPaymentReceivedEmail: React.FC<PartialPaymentReceivedEmailPr
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Partial payment received for invoice {{invoice.number}}"
+      subject={`Partial payment received for invoice ${data.invoice_number || 'INV-2026-08892'}`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, We have received partial payment.`}
       primaryCtaText="View balance"

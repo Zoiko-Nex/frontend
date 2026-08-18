@@ -9,6 +9,7 @@ export interface TicketResolvedData {
   ticket_reference: string;
   ticket_subject_display: string;
   resolution_summary_display: string;
+  [key: string]: any;
 }
 
 export interface TicketResolvedEmailProps {

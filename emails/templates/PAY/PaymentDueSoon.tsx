@@ -8,6 +8,7 @@ export interface PaymentDueSoonData {
   recipient_first_name?: string;
   payment_reference?: string;
   payment_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface PaymentDueSoonEmailProps {
@@ -28,7 +29,7 @@ export const PaymentDueSoonEmail: React.FC<PaymentDueSoonEmailProps> = ({ payloa
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Reminder: Payment is due on {{invoice.due_date}}"
+      subject={`Reminder: Payment is due on ${data.invoice_due_date || 'August 1, 2026'}`}
       preheader="Review the event details and any next step in ZoikoNex."
       openingText={`Hello ${firstName}, This email relates to payment due soon.`}
       primaryCtaText="Pay invoice"

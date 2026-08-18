@@ -9,6 +9,7 @@ export interface FeedbackRequestData {
   ticket_reference: string;
   agent_name_display: string;
   survey_expiry_display: string;
+  [key: string]: any;
 }
 
 export interface FeedbackRequestEmailProps {

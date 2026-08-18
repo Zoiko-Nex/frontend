@@ -10,6 +10,7 @@ export interface InvoicePaidData {
   invoice_amount_formatted: string;
   payment_method_display: string;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface InvoicePaidEmailProps {

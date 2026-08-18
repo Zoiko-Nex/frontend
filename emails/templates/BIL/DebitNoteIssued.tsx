@@ -8,6 +8,7 @@ export interface DebitNoteIssuedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface DebitNoteIssuedEmailProps {
@@ -28,7 +29,7 @@ export const DebitNoteIssuedEmail: React.FC<DebitNoteIssuedEmailProps> = ({ payl
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Debit note {{debit_note.number}} has been issued"
+      subject={`Debit note ${data.debit_note_number || 'DB-2026-0012'} has been issued`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This has been issued: debit note.`}
       primaryCtaText="View debit note"

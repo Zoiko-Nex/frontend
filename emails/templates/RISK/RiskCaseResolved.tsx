@@ -8,6 +8,7 @@ export interface RiskCaseResolvedData {
   recipient_first_name?: string;
   case_id?: string;
   case_severity?: string;
+  [key: string]: any;
 }
 
 export interface RiskCaseResolvedEmailProps {
@@ -28,7 +29,7 @@ export const RiskCaseResolvedEmail: React.FC<RiskCaseResolvedEmailProps> = ({ pa
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Risk case {{case.id}} has been resolved"
+      subject={`Risk case ${data.case_id || 'CAS-88219'} has been resolved`}
       preheader="Review the event details and any next step in ZoikoNex."
       openingText={`Hello ${firstName}, This has been resolved: risk case.`}
       primaryCtaText="Review resolution"

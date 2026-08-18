@@ -8,6 +8,7 @@ export interface InvoiceCorrectedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface InvoiceCorrectedEmailProps {
@@ -28,7 +29,7 @@ export const InvoiceCorrectedEmail: React.FC<InvoiceCorrectedEmailProps> = ({ pa
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Corrected invoice {{invoice.number}} is now available"
+      subject={`Corrected invoice ${data.invoice_number || 'INV-2026-08892'} is now available`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This email relates to invoice corrected.`}
       primaryCtaText="View corrected invoice"

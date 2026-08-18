@@ -8,6 +8,7 @@ export interface BillGenerationStartedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface BillGenerationStartedEmailProps {
@@ -28,7 +29,7 @@ export const BillGenerationStartedEmail: React.FC<BillGenerationStartedEmailProp
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Billing run started for {{billing_cycle.name}}"
+      subject={`Billing run started for ${data.billing_cycle_name || 'July 2026'}`}
       preheader="Important information about your account, service or configuration."
       openingText={`Hello ${firstName}, This has started: bill generation.`}
       primaryCtaText="Monitor billing run"

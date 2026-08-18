@@ -9,6 +9,7 @@ export interface NexaAdvisoryData {
   advisory_title_display: string;
   advisory_severity_display: string;
   advisory_summary_display: string;
+  [key: string]: any;
 }
 
 export interface NexaAdvisoryEmailProps {
