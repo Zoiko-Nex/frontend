@@ -50,6 +50,18 @@ export const SERVICES = {
   payments: { key: "payments", label: "Payments", envVar: "NEXT_PUBLIC_SVC_PAYMENTS", port: 8096, headerStyle: "jwt", idempotent: true },
   integration: { key: "integration", label: "Integration Ecosystem", envVar: "NEXT_PUBLIC_SVC_INTEGRATION", port: 8097, headerStyle: "jwt", idempotent: true },
   reporting: { key: "reporting", label: "Reporting & Regulatory", envVar: "NEXT_PUBLIC_SVC_REPORTING", port: 8098, headerStyle: "tenant-brand-idem", idempotent: true },
+  /**
+   * The 19th service, and the odd one out: request-forms backs the PUBLIC
+   * marketing forms (demo request, contact, careers, press, terms review) and
+   * every route on it is unauthenticated by design — a prospect filling in a
+   * form has no tenant and no token.
+   *
+   * It is registered here anyway so the read side (listing what was submitted)
+   * goes through the same client as everything else instead of a bare fetch.
+   * headerStyle is "jwt" only because the client needs a value; with no session
+   * it simply sends no Authorization header, which is what this service wants.
+   */
+  requestForms: { key: "requestForms", label: "Request Forms", envVar: "NEXT_PUBLIC_SVC_REQUEST_FORMS", port: 8099, headerStyle: "jwt" },
 } satisfies Record<string, ServiceDef>;
 
 export type ServiceKey = keyof typeof SERVICES;
@@ -86,6 +98,7 @@ const SERVICE_BASE_URLS: Record<string, string | undefined> = {
   NEXT_PUBLIC_SVC_PAYMENTS: process.env.NEXT_PUBLIC_SVC_PAYMENTS,
   NEXT_PUBLIC_SVC_INTEGRATION: process.env.NEXT_PUBLIC_SVC_INTEGRATION,
   NEXT_PUBLIC_SVC_REPORTING: process.env.NEXT_PUBLIC_SVC_REPORTING,
+  NEXT_PUBLIC_SVC_REQUEST_FORMS: process.env.NEXT_PUBLIC_SVC_REQUEST_FORMS,
 };
 
 const PORT_TO_LIVE_URL: Record<number, string> = {
@@ -107,6 +120,7 @@ const PORT_TO_LIVE_URL: Record<number, string> = {
   8096: "https://payments.api.zoikonex.com",
   8097: "https://integration.api.zoikonex.com",
   8098: "https://reporting.api.zoikonex.com",
+  8099: "https://forms.api.zoikonex.com",
 };
 
 /** Resolve a service's base URL from its NEXT_PUBLIC env var, falling back to the live domain or localhost. */

@@ -24,6 +24,7 @@ import RevenueAssurance from "./RevenueAssurance";
 import FraudRisk from "./FraudRisk";
 import DunningDisputes from "./DunningDisputes";
 import RegulatoryExports from "./RegulatoryExports";
+import AccessGroups from "./AccessGroups";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -82,6 +83,7 @@ const TAB_DOMAIN: Record<string, string> = {
   FraudRisk: "fraud",
   DunningDisputes: "dunning",
   RegulatoryExports: "reporting",
+  AccessGroups: "identity",
 };
 
 function LockedPanel({ label }: { label: string }) {
@@ -1520,6 +1522,7 @@ export default function DashboardsPage() {
         { label: "Support & Success", tabKey: "Support", iconPath: "/image/dashboard/sidebar-notification.svg" },
         { label: "Billing & Commercials", tabKey: "Billing", iconPath: "/image/dashboard/credit-card.svg" },
         { label: "Integrations", tabKey: "Integration", iconPath: "/image/dashboard/api-braces.svg" },
+        { label: "Access Groups", tabKey: "AccessGroups", iconPath: "/image/dashboard/user-profile.svg" },
         { label: "Admin Settings", tabKey: "Settings", iconPath: "/image/dashboard/settings-gear.svg" }
       ]
     }
@@ -3647,6 +3650,13 @@ export default function DashboardsPage() {
               <DunningDisputes />
             ) : (
               <LockedPanel label="Dunning & Disputes" />
+            ))}
+
+            {/* Access Groups Tab — the group half of RBAC */}
+            {currentTab === "AccessGroups" && (canAccess(TAB_DOMAIN.AccessGroups) ? (
+              <AccessGroups />
+            ) : (
+              <LockedPanel label="Access Groups" />
             ))}
 
             {/* Reporting & Regulatory Tab */}

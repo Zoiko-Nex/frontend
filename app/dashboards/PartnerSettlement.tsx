@@ -110,6 +110,8 @@ export default function PartnerSettlement() {
   const [runAction, setRunAction] = useState<{ run: SettlementRun; action: string } | null>(null);
   const [disputeAction, setDisputeAction] = useState<{ dispute: PartnerDispute; action: string } | null>(null);
   const [newDisputeFor, setNewDisputeFor] = useState<SettlementRun | null>(null);
+  /** Disputes filed against one run — its own endpoint, not a client-side filter. */
+  const [runDisputesFor, setRunDisputesFor] = useState<SettlementRun | null>(null);
 
   const fail = (fallback: string) => (e: unknown) => toast.error(errMessage(e, fallback));
   const refresh = () => qc.invalidateQueries({ queryKey: ["partner"] });
@@ -144,12 +146,37 @@ export default function PartnerSettlement() {
     queryKey: ["partner", "runs", "dashboard"],
     queryFn: () => api.get<{ status_counts?: Record<string, number> }>("partner", "/v1/settlement-runs/dashboard"),
   });
+  /**
+   * Cost totals grouped by settlement type, computed by the service rather than
+   * summed from the page. The page is capped at 100 rows, so a client-side sum
+   * would silently under-report as soon as a partner exceeds that.
+   */
+  const sumsQ = useQuery({
+    queryKey: ["partner", "sums-by-type"],
+    enabled: tab === "costs",
+    queryFn: () =>
+      api.get<{ sums_by_type?: Record<string, number>; currency_code?: string }>(
+        "partner",
+        "/v1/partner-cost-lines/sum-by-type",
+      ),
+  });
+
   const disputeDashQ = useQuery({
     queryKey: ["partner", "disputes", "dashboard"],
     queryFn: () => api.get<{ status_counts?: Record<string, number> }>("partner", "/v1/settlement-disputes/dashboard"),
   });
 
   // ─── Forms ──────────────────────────────────────────────────────────────────
+
+  const runDisputesQ = useQuery({
+    queryKey: ["partner", "run-disputes", runDisputesFor?.id],
+    enabled: !!runDisputesFor,
+    queryFn: async () =>
+      listOf<PartnerDispute>(
+        await api.get("partner", `/v1/settlement-runs/${runDisputesFor!.id}/disputes`),
+        ENVELOPE.assurance,
+      ),
+  });
 
   const [runForm, setRunForm] = useState({
     partner_id: "",
@@ -452,6 +479,12 @@ export default function PartnerSettlement() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-1.5 justify-end flex-wrap">
+                        <button
+                          onClick={() => setRunDisputesFor(r)}
+                          className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                        >
+                          Disputes
+                        </button>
                         <TransitionButtons
                           table={SETTLEMENT_RUN_TRANSITIONS}
                           status={r.status}
@@ -474,6 +507,24 @@ export default function PartnerSettlement() {
       )}
 
       {/* Cost lines */}
+      {tab === "costs" && Object.keys(sumsQ.data?.sums_by_type ?? {}).length > 0 && (
+        <div className="self-stretch bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div className="text-slate-800 text-sm font-bold mb-1">Cost by settlement type</div>
+          <p className="text-[11px] text-slate-500 mb-3">
+            Totalled by the service across every cost line, not just the rows below.
+          </p>
+          <div className="flex flex-wrap gap-6">
+            {Object.entries(sumsQ.data!.sums_by_type!).map(([type, amount]) => (
+              <div key={type}>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider">{type}</div>
+                <div className="font-mono font-bold text-slate-800 text-sm">
+                  {formatMoney(amount, sumsQ.data?.currency_code)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {tab === "costs" && (
         <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm">
           <div className="overflow-x-auto">
@@ -784,6 +835,51 @@ export default function PartnerSettlement() {
               <input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} />
             </Field>
           )}
+        </Modal>
+      )}
+
+      {/* ─── Disputes filed against one run ───────────────────────────────── */}
+      {runDisputesFor && (
+        <Modal
+          title={`Disputes · ${runDisputesFor.partner_name}`}
+          subtitle={`${new Date(runDisputesFor.period_start).toLocaleDateString()} → ${new Date(runDisputesFor.period_end).toLocaleDateString()}`}
+          width="w-[620px]"
+          onClose={() => setRunDisputesFor(null)}
+          footer={
+            <button
+              className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+              onClick={() => { setNewDisputeFor(runDisputesFor); setRunDisputesFor(null); }}
+            >
+              Open a new dispute
+            </button>
+          }
+        >
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <table className="w-full text-left text-[11px]">
+              <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr><th className="px-3 py-2">DISPUTE</th><th className="px-3 py-2">REASON</th><th className="px-3 py-2">ADJUSTMENT</th><th className="px-3 py-2">STATUS</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableState
+                  colSpan={4}
+                  loading={runDisputesQ.isLoading}
+                  error={runDisputesQ.error}
+                  empty={(runDisputesQ.data ?? []).length === 0}
+                  emptyLabel="No disputes against this run."
+                />
+                {(runDisputesQ.data ?? []).map((d) => (
+                  <tr key={d.id}>
+                    <td className="px-3 py-2 font-mono text-slate-600">{shortId(d.id)}</td>
+                    <td className="px-3 py-2 text-slate-700">{d.reason}</td>
+                    <td className="px-3 py-2 font-mono">
+                      {d.adjustment_amount_minor_units != null ? formatMoney(d.adjustment_amount_minor_units, d.currency_code) : "—"}
+                    </td>
+                    <td className="px-3 py-2"><StatusPill status={d.status} size="xs" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Modal>
       )}
 

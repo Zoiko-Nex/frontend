@@ -31,9 +31,11 @@ import { api } from "@/lib/admin/client";
 import { formatMoney } from "@/lib/admin/money";
 import { ENVELOPE, errMessage, isNotFound, listOf, shortId } from "@/lib/admin/envelope";
 import {
+  DetailToggle,
   Field,
   Modal,
   ModalActions,
+  RecordDetail,
   StatusPill,
   TableState,
   inputClass,
@@ -139,6 +141,7 @@ export default function UsageCharging() {
 
   const [ingestOpen, setIngestOpen] = useState(false);
   const [rateFor, setRateFor] = useState<NormalisedRecord | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [reviewFor, setReviewFor] = useState<SuspenseEntry | null>(null);
   const [writeOffFor, setWriteOffFor] = useState<SuspenseEntry | null>(null);
 
@@ -601,6 +604,10 @@ export default function UsageCharging() {
                       <td className="px-6 py-4">
                         <div className="font-mono text-[11px] text-slate-700">{shortId(r.id)}</div>
                         <div className="text-[10px] text-slate-400 font-mono">from {shortId(r.normalised_id)}</div>
+                        <DetailToggle open={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} />
+                        {expandedId === r.id && (
+                          <RecordDetail service="usage" path={`/v1/usage/rated/${r.id}`} queryKey={["usage", "rated", r.id]} />
+                        )}
                       </td>
                       <td className="px-6 py-4 text-xs font-semibold text-slate-700">
                         {r.usage_type}
@@ -682,7 +689,13 @@ export default function UsageCharging() {
                   />
                   {suspense.map((s) => (
                     <tr key={s.id} className="hover:bg-slate-50/40 transition">
-                      <td className="px-6 py-4 font-mono text-[11px] text-slate-700">{shortId(s.id)}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-mono text-[11px] text-slate-700">{shortId(s.id)}</div>
+                        <DetailToggle open={expandedId === s.id} onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)} />
+                        {expandedId === s.id && (
+                          <RecordDetail service="usage" path={`/v1/usage/suspense/${s.id}`} queryKey={["usage", "suspense", s.id]} />
+                        )}
+                      </td>
                       <td className="px-6 py-4 font-mono text-[11px] text-slate-600">
                         {s.subscriber_id ?? <span className="text-amber-600">unresolved</span>}
                       </td>

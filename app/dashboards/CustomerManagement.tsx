@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
-import { ACCOUNT_TRANSITIONS, CUSTOMER_TRANSITIONS } from "@/lib/admin/transitions";
+import { ACCOUNT_TRANSITIONS, CUSTOMER_TRANSITIONS, KYC_DOCUMENT_TRANSITIONS } from "@/lib/admin/transitions";
+import { ENVELOPE, errMessage, listOf, shortId } from "@/lib/admin/envelope";
 import { StatusPill, TransitionButtons } from "@/components/admin/primitives";
 
 /**
@@ -54,6 +55,25 @@ interface KYCCase {
   verification_level: string;
   risk_score?: number;
   risk_level?: string;
+}
+
+interface KYCDocument {
+  document_id: string;
+  case_id: string;
+  document_type: string;
+  document_number?: string;
+  issuing_country?: string;
+  status: string;
+  rejection_reason?: string;
+  created_at: string;
+}
+
+interface LifecycleEvent {
+  event_id?: string;
+  event_type?: string;
+  from_status?: string;
+  to_status?: string;
+  occurred_at?: string;
 }
 
 export default function CustomerManagement() {
@@ -238,6 +258,27 @@ export default function CustomerManagement() {
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Erasure failed"),
   });
 
+  /**
+   * Documents on the open case. The upload endpoint was already wired but
+   * nothing read the documents back, so an uploaded passport vanished from the
+   * UI the moment it was posted — and the verify/reject step had no surface at
+   * all despite KYC_DOCUMENT_TRANSITIONS existing for it.
+   */
+  const kycDocsQ = useQuery({
+    queryKey: ["customers", "kyc-docs", kycCase?.case_id],
+    enabled: !!kycCase?.case_id,
+    queryFn: async () =>
+      listOf<KYCDocument>(await api.get("kyc", `/v1/kyc/cases/${kycCase!.case_id}/documents`), ENVELOPE.kyc),
+  });
+
+  /** Lifecycle events for the subscriber — the audit trail behind kyc_status. */
+  const lifecycleQ = useQuery({
+    queryKey: ["customers", "kyc-lifecycle", selectedCustomerId],
+    enabled: !!selectedCustomerId,
+    queryFn: async () =>
+      listOf<LifecycleEvent>(await api.get("kyc", `/v1/kyc/customers/${selectedCustomerId}/lifecycle`), ENVELOPE.kyc),
+  });
+
   // KYC Mutations
   const openKYC = useMutation({
     mutationFn: (customerId: string) =>
@@ -267,6 +308,25 @@ export default function CustomerManagement() {
       qc.invalidateQueries({ queryKey: ["customers", "kyc-case", selectedCustomerId] });
     },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Document upload failed"),
+  });
+
+  /**
+   * Verify or reject a single document. The case cannot be approved on the
+   * strength of documents nobody looked at, so this is the step between upload
+   * and approval rather than a detail.
+   */
+  const transitionDoc = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: string }) =>
+      api.patch("kyc", `/v1/kyc/documents/${id}`, {
+        action,
+        rejection_reason: action === "REJECT" ? "Rejected by operator from the KYC workspace" : undefined,
+      }),
+    onSuccess: (_r, v) => {
+      toast.success(`Document ${v.action.toLowerCase()}ed`);
+      qc.invalidateQueries({ queryKey: ["customers", "kyc-docs"] });
+      qc.invalidateQueries({ queryKey: ["customers", "kyc-case", selectedCustomerId] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Document transition failed"),
   });
 
   const approveKYC = useMutation({
@@ -580,6 +640,70 @@ export default function CustomerManagement() {
                       >
                         {approveKYC.isPending ? "Approving..." : "Approve Verification"}
                       </button>
+                    )}
+
+                    {/* Documents on this case */}
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <div className="font-bold text-slate-700 text-[11px] mb-1.5">Documents</div>
+                      {kycDocsQ.isLoading ? (
+                        <div className="text-[10px] text-slate-400 italic">Loading documents…</div>
+                      ) : kycDocsQ.isError ? (
+                        <div className="text-[10px] text-rose-600">
+                          {errMessage(kycDocsQ.error, "Could not load documents.")}
+                        </div>
+                      ) : (kycDocsQ.data ?? []).length === 0 ? (
+                        <div className="text-[10px] text-slate-400">
+                          No documents uploaded. A case cannot be verified without one.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {(kycDocsQ.data ?? []).map((d) => (
+                            <div key={d.document_id} className="flex items-start justify-between gap-2 bg-white rounded border border-slate-200 px-2 py-1.5">
+                              <div className="min-w-0">
+                                <div className="text-[10px] font-semibold text-slate-700">{d.document_type}</div>
+                                <div className="text-[9px] text-slate-400 font-mono truncate">
+                                  {d.document_number || shortId(d.document_id)}
+                                  {d.issuing_country ? ` · ${d.issuing_country}` : ""}
+                                </div>
+                                {d.rejection_reason && (
+                                  <div className="text-[9px] text-rose-600">{d.rejection_reason}</div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <StatusPill status={d.status} size="xs" />
+                                <TransitionButtons
+                                  table={KYC_DOCUMENT_TRANSITIONS}
+                                  status={d.status}
+                                  pending={transitionDoc.isPending}
+                                  onAction={(action) => transitionDoc.mutate({ id: d.document_id, action })}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Lifecycle audit */}
+                    {(lifecycleQ.data ?? []).length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <div className="font-bold text-slate-700 text-[11px] mb-1.5">Lifecycle</div>
+                        <ul className="flex flex-col gap-1">
+                          {(lifecycleQ.data ?? []).slice(0, 8).map((ev, i) => (
+                            <li key={ev.event_id ?? i} className="flex justify-between gap-2 text-[10px]">
+                              <span className="text-slate-600">
+                                {ev.event_type ?? "—"}
+                                {ev.from_status || ev.to_status ? (
+                                  <span className="text-slate-400 font-mono"> {ev.from_status ?? "—"} → {ev.to_status ?? "—"}</span>
+                                ) : null}
+                              </span>
+                              <span className="text-slate-400 font-mono shrink-0">
+                                {ev.occurred_at ? new Date(ev.occurred_at).toLocaleDateString() : ""}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                   </div>
                 )}

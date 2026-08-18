@@ -22,7 +22,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/admin/client";
 import { formatBps, formatMoney } from "@/lib/admin/money";
-import { ENVELOPE, errMessage, listOf, shortId } from "@/lib/admin/envelope";
+import { ENVELOPE, errMessage, isNotFound, listOf, shortId } from "@/lib/admin/envelope";
 import {
   DetailToggle,
   Field,
@@ -102,6 +102,8 @@ export default function TaxJurisdiction() {
   const [supersedeFor, setSupersedeFor] = useState<Policy | null>(null);
   /** The result of the most recent determination, shown inline rather than in a toast. */
   const [lastDecision, setLastDecision] = useState<TaxDecision | null>(null);
+  /** Which jurisdiction the active-policy lookup is asking about. */
+  const [activeLookup, setActiveLookup] = useState("");
 
   // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -121,6 +123,25 @@ export default function TaxJurisdiction() {
     queryFn: async () => listOf<Policy>(await api.get("tax", "/v1/jurisdiction-policies?page_size=100"), ENVELOPE.tax),
   });
   const policies = policiesQ.data ?? [];
+
+  /**
+   * The one policy actually governing a jurisdiction right now. Derivable
+   * from the list, but the service answers it directly and authoritatively -
+   * the list is paginated and could omit the active one.
+   */
+  const activePolicyQ = useQuery({
+    queryKey: ["tax", "active-policy", activeLookup],
+    enabled: !!activeLookup,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await api.get<Policy>("tax", `/v1/jurisdiction-policies/active?jurisdiction_code=${encodeURIComponent(activeLookup)}`);
+      } catch (e) {
+        if (isNotFound(e)) return null;
+        throw e;
+      }
+    },
+  });
 
   const exemptionsQ = useQuery({
     queryKey: ["tax", "exemptions"],
@@ -489,6 +510,39 @@ export default function TaxJurisdiction() {
         </div>
       )}
 
+      {/* Which policy actually governs a jurisdiction right now. */}
+      {subTab === "policies" && (
+        <div className="self-stretch bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[240px]">
+            <Field label="Active policy lookup" hint="Asks the engine which policy governs this jurisdiction now.">
+              <input
+                className={inputMonoClass}
+                value={activeLookup}
+                onChange={(e) => setActiveLookup(e.target.value.toUpperCase())}
+                placeholder="GB"
+              />
+            </Field>
+          </div>
+          {activeLookup && (
+            <div className="text-xs pb-2">
+              {activePolicyQ.isLoading ? (
+                <span className="text-slate-400">Looking up…</span>
+              ) : activePolicyQ.data ? (
+                <span className="text-slate-700">
+                  <StatusPill status="ACTIVE" />{" "}
+                  <span className="font-mono">{activePolicyQ.data.policy_version}</span> by{" "}
+                  {activePolicyQ.data.provider_name}
+                </span>
+              ) : (
+                <span className="text-amber-700">
+                  No active policy for {activeLookup} — decisions there use the fallback rate.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Policies */}
       {subTab === "policies" && (
         <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm">
@@ -607,6 +661,10 @@ export default function TaxJurisdiction() {
                   <tr key={ex.exemption_id} className="hover:bg-slate-50/40 transition">
                     <td className="px-6 py-4">
                       <div className="font-mono text-[11px] text-slate-700">{ex.certificate_ref}</div>
+                      <DetailToggle open={expanded === ex.exemption_id} onToggle={() => setExpanded(expanded === ex.exemption_id ? null : ex.exemption_id)} />
+                      {expanded === ex.exemption_id && (
+                        <RecordDetail service="tax" path={`/v1/tax-exemptions/${ex.exemption_id}`} queryKey={["tax", "exemption", ex.exemption_id]} />
+                      )}
                       {ex.exemption_reason && <div className="text-[10px] text-slate-500">{ex.exemption_reason}</div>}
                     </td>
                     <td className="px-6 py-4 font-mono text-[10px] text-slate-500">{shortId(ex.customer_id)}</td>

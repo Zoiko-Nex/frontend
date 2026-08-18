@@ -91,6 +91,7 @@ export default function FraudRisk() {
   const [ruleOpen, setRuleOpen] = useState(false);
   const [signalOpen, setSignalOpen] = useState(false);
   const [caseAction, setCaseAction] = useState<{ item: FraudCase; action: string } | null>(null);
+  const [editRule, setEditRule] = useState<FraudRule | null>(null);
   const [scoreFor, setScoreFor] = useState<FraudCase | null>(null);
   const [signalsFor, setSignalsFor] = useState<FraudCase | null>(null);
 
@@ -122,6 +123,16 @@ export default function FraudRisk() {
     queryFn: async () => listOf<FraudRule>(await api.get("fraud", "/v1/fraud-rules?page_size=100"), ENVELOPE.assurance),
   });
   const rules = rulesQ.data ?? [];
+
+  /**
+   * Active rules only. Separate from the full list because "how many rules are
+   * actually scoring traffic" is a different question from "how many exist",
+   * and the service answers it directly rather than making us filter.
+   */
+  const activeRulesQ = useQuery({
+    queryKey: ["fraud", "rules", "active"],
+    queryFn: async () => listOf<FraudRule>(await api.get("fraud", "/v1/fraud-rules/active"), ENVELOPE.assurance),
+  });
 
   const dashQ = useQuery({
     queryKey: ["fraud", "dashboard"],
@@ -242,6 +253,17 @@ export default function FraudRisk() {
     onError: fail("The case transition was rejected"),
   });
 
+  const saveRule = useMutation({
+    mutationFn: () =>
+      api.put("fraud", `/v1/fraud-rules/${editRule!.id}`, {
+        name: editRule!.name,
+        description: editRule!.description ?? "",
+        updated_by: "console",
+      }),
+    onSuccess: () => { toast.success("Rule updated"); setEditRule(null); refresh(); },
+    onError: fail("Could not update the rule"),
+  });
+
   const rescore = useMutation({
     mutationFn: () =>
       api.patch("fraud", `/v1/fraud-cases/${scoreFor!.id}/risk-score`, { risk_score: newScore, updated_by: "console" }),
@@ -287,7 +309,11 @@ export default function FraudRisk() {
         <SummaryTile label="OPEN CASES" value={dashQ.isLoading ? "…" : String(openCases)} hint="Open + investigating + escalated" />
         <SummaryTile label="ESCALATED" value={dashQ.isLoading ? "…" : String(counts.ESCALATED ?? 0)} hint={(counts.ESCALATED ?? 0) > 0 ? "Needs senior review" : "None"} />
         <SummaryTile label="CRITICAL RISK" value={casesQ.isLoading ? "…" : String(criticalOpen)} hint="Unclosed, this page" />
-        <SummaryTile label="FALSE POSITIVE" value={dashQ.isLoading ? "…" : String(counts.FALSE_POSITIVE ?? 0)} hint="Consider retuning the rule" />
+        <SummaryTile
+          label="ACTIVE RULES"
+          value={activeRulesQ.isLoading ? "…" : String((activeRulesQ.data ?? []).length)}
+          hint={(activeRulesQ.data ?? []).length === 0 ? "Nothing is being scored" : `${counts.FALSE_POSITIVE ?? 0} false positives — retune?`}
+        />
       </div>
 
       <div className="self-stretch flex flex-wrap gap-3 items-center justify-between">
@@ -468,13 +494,21 @@ export default function FraudRisk() {
                     <td className="px-6 py-4 text-[11px] text-slate-500">{new Date(r.created_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4"><StatusPill status={r.status} /></td>
                     <td className="px-6 py-4">
-                      <TransitionButtons
-                        table={RULE_TRANSITIONS}
-                        status={r.status}
-                        pending={ruleTransition.isPending}
-                        onAction={(action) => ruleTransition.mutate({ id: r.id, action })}
-                        className="justify-end"
-                      />
+                      <div className="flex gap-1.5 justify-end flex-wrap">
+                        <button
+                          onClick={() => setEditRule(r)}
+                          className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <TransitionButtons
+                          table={RULE_TRANSITIONS}
+                          status={r.status}
+                          pending={ruleTransition.isPending}
+                          onAction={(action) => ruleTransition.mutate({ id: r.id, action })}
+                          className="justify-end"
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -649,6 +683,22 @@ export default function FraudRisk() {
         >
           <Field label="Risk score" hint="0–100. The service derives the risk level from it.">
             <input type="number" min={0} max={100} className={inputMonoClass} value={newScore} onChange={(e) => setNewScore(Number(e.target.value))} />
+          </Field>
+        </Modal>
+      )}
+
+      {editRule && (
+        <Modal
+          title="Edit rule"
+          subtitle="Name and description only. Changing what a rule DOES means retiring it and creating a new one, so its scoring history stays attributable."
+          onClose={() => setEditRule(null)}
+          footer={<ModalActions onCancel={() => setEditRule(null)} onConfirm={() => saveRule.mutate()} confirmLabel="Save" pendingLabel="Saving…" pending={saveRule.isPending} disabled={!editRule.name.trim()} />}
+        >
+          <Field label="Name">
+            <input className={inputClass} value={editRule.name} onChange={(e) => setEditRule({ ...editRule, name: e.target.value })} />
+          </Field>
+          <Field label="Description">
+            <input className={inputClass} value={editRule.description ?? ""} onChange={(e) => setEditRule({ ...editRule, description: e.target.value })} />
           </Field>
         </Modal>
       )}

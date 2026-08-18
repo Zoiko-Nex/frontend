@@ -592,7 +592,13 @@ export default function PaymentsManagement() {
                   />
                   {(refundsQ.data ?? []).map((r) => (
                     <tr key={r.refund_id} className="hover:bg-slate-50/40 transition">
-                      <td className="px-6 py-4 font-mono text-[11px] text-slate-700">{shortId(r.refund_id)}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-mono text-[11px] text-slate-700">{shortId(r.refund_id)}</div>
+                        <DetailToggle open={expanded === r.refund_id} onToggle={() => setExpanded(expanded === r.refund_id ? null : r.refund_id)} />
+                        {expanded === r.refund_id && (
+                          <RecordDetail service="payments" path={`/v1/refunds/${r.refund_id}`} queryKey={["payments", "refund", r.refund_id]} />
+                        )}
+                      </td>
                       <td className="px-6 py-4 font-mono text-xs font-bold text-slate-800">
                         {formatMoney(r.refund_amount_minor_units, r.currency_code)}
                       </td>
@@ -642,7 +648,13 @@ export default function PaymentsManagement() {
                   />
                   {(settlementsQ.data ?? []).map((s) => (
                     <tr key={s.settlement_id} className="hover:bg-slate-50/40 transition">
-                      <td className="px-6 py-4 font-mono text-[11px] text-slate-700">{shortId(s.settlement_id)}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-mono text-[11px] text-slate-700">{shortId(s.settlement_id)}</div>
+                        <DetailToggle open={expanded === s.settlement_id} onToggle={() => setExpanded(expanded === s.settlement_id ? null : s.settlement_id)} />
+                        {expanded === s.settlement_id && (
+                          <RecordDetail service="payments" path={`/v1/settlements/${s.settlement_id}`} queryKey={["payments", "settlement", s.settlement_id]} />
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-xs">
                         <div className="font-semibold text-slate-700">{s.provider_name}</div>
                         {s.settlement_batch_id && (

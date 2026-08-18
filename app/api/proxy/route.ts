@@ -51,6 +51,7 @@ const PORT_TO_ENV_VAR: Record<number, string> = {
   8096: "NEXT_PUBLIC_SVC_PAYMENTS",
   8097: "NEXT_PUBLIC_SVC_INTEGRATION",
   8098: "NEXT_PUBLIC_SVC_REPORTING",
+  8099: "NEXT_PUBLIC_SVC_REQUEST_FORMS",
 };
 
 const BLOCKED_HEADERS = new Set(["connection", "content-length", "cookie", "host", "origin", "referer"]);
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
       else if (path.startsWith('/v1/payments') || path.startsWith('/v1/payment-intents')) port = 8096;
       else if (path.startsWith('/v1/integration') || path.startsWith('/v1/mft') || path.startsWith('/v1/quarantine') || path.startsWith('/v1/reconciliation') || path.startsWith('/v1/egress')) port = 8097;
       else if (path.startsWith('/v1/reporting')) port = 8098;
+      else if (path.startsWith('/v1/demo-requests') || path.startsWith('/v1/contact-us') || path.startsWith('/v1/careers') || path.startsWith('/v1/press-media') || path.startsWith('/v1/terms-and-services')) port = 8099;
       else port = 8080;
     }
 

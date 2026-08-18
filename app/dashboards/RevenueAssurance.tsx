@@ -114,6 +114,9 @@ export default function RevenueAssurance() {
   const [caseAction, setCaseAction] = useState<{ item: LeakageCase; action: string } | null>(null);
   const [runAction, setRunAction] = useState<{ item: ReconRun; action: string } | null>(null);
   const [severityFilter, setSeverityFilter] = useState("");
+  const [editRule, setEditRule] = useState<AssuranceRule | null>(null);
+  /** Leakage found by one run - its own endpoint, not a client-side filter. */
+  const [runCasesFor, setRunCasesFor] = useState<ReconRun | null>(null);
 
   const fail = (fallback: string) => (e: unknown) => toast.error(errMessage(e, fallback));
   const refresh = () => qc.invalidateQueries({ queryKey: ["ra"] });
@@ -145,6 +148,23 @@ export default function RevenueAssurance() {
       listOf<AssuranceRule>(await api.get("revenueAssurance", "/v1/assurance-rules?page_size=100"), ENVELOPE.assurance),
   });
   const rules = rulesQ.data ?? [];
+
+  /** Active rules only - "what is actually checking" vs "what exists". */
+  const activeRulesQ = useQuery({
+    queryKey: ["ra", "rules", "active"],
+    queryFn: async () =>
+      listOf<AssuranceRule>(await api.get("revenueAssurance", "/v1/assurance-rules/active"), ENVELOPE.assurance),
+  });
+
+  const runCasesQ = useQuery({
+    queryKey: ["ra", "run-cases", runCasesFor?.id],
+    enabled: !!runCasesFor,
+    queryFn: async () =>
+      listOf<LeakageCase>(
+        await api.get("revenueAssurance", `/v1/reconciliation-runs/${runCasesFor!.id}/leakage-cases`),
+        ENVELOPE.assurance,
+      ),
+  });
 
   const caseDashQ = useQuery({
     queryKey: ["ra", "cases", "dashboard"],
@@ -293,6 +313,18 @@ export default function RevenueAssurance() {
     onError: fail("The run transition was rejected"),
   });
 
+  const saveRule = useMutation({
+    mutationFn: () =>
+      api.put("revenueAssurance", `/v1/assurance-rules/${editRule!.id}`, {
+        name: editRule!.name,
+        description: editRule!.description ?? "",
+        config_json: editRule!.config_json,
+        updated_by: "console",
+      }),
+    onSuccess: () => { toast.success("Rule updated"); setEditRule(null); refresh(); },
+    onError: fail("Could not update the rule"),
+  });
+
   const ruleTransition = useMutation({
     mutationFn: ({ id, action }: { id: string; action: string }) =>
       api.post("revenueAssurance", `/v1/assurance-rules/${id}/${action.toLowerCase()}`, { updated_by: "console" }),
@@ -343,7 +375,11 @@ export default function RevenueAssurance() {
           hint="Open cases with an amount"
         />
         <SummaryTile label="WRITTEN OFF" value={caseDashQ.isLoading ? "…" : String(counts.WRITTEN_OFF ?? 0)} hint="Real, abandoned" />
-        <SummaryTile label="FALSE POSITIVE" value={caseDashQ.isLoading ? "…" : String(counts.FALSE_POSITIVE ?? 0)} hint="No leak — rule needs tuning" />
+        <SummaryTile
+          label="ACTIVE RULES"
+          value={activeRulesQ.isLoading ? "…" : String((activeRulesQ.data ?? []).length)}
+          hint={(activeRulesQ.data ?? []).length === 0 ? "Runs will check nothing" : `${counts.FALSE_POSITIVE ?? 0} false positives`}
+        />
       </div>
 
       <div className="self-stretch flex flex-wrap gap-3 items-center justify-between">
@@ -468,6 +504,10 @@ export default function RevenueAssurance() {
                     <td className="px-6 py-4 font-mono text-xs">{r.leakage_cases_opened}</td>
                     <td className="px-6 py-4"><StatusPill status={r.status} /></td>
                     <td className="px-6 py-4">
+                      <div className="flex gap-1.5 justify-end flex-wrap">
+                      {r.leakage_cases_opened > 0 && (
+                        <button onClick={() => setRunCasesFor(r)} className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer">Leakage</button>
+                      )}
                       <TransitionButtons
                         table={RECON_RUN_TRANSITIONS}
                         status={r.status}
@@ -485,6 +525,7 @@ export default function RevenueAssurance() {
                         }}
                         className="justify-end"
                       />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -531,6 +572,13 @@ export default function RevenueAssurance() {
                     </td>
                     <td className="px-6 py-4"><StatusPill status={r.status} /></td>
                     <td className="px-6 py-4">
+                      <div className="flex gap-1.5 justify-end flex-wrap">
+                      <button
+                        onClick={() => setEditRule(r)}
+                        className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                      >
+                        Edit
+                      </button>
                       <TransitionButtons
                         table={RULE_TRANSITIONS}
                         status={r.status}
@@ -538,6 +586,7 @@ export default function RevenueAssurance() {
                         onAction={(action) => ruleTransition.mutate({ id: r.id, action })}
                         className="justify-end"
                       />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -661,6 +710,50 @@ export default function RevenueAssurance() {
             />
           </Field>
           {configError && <p className="text-[11px] text-rose-600 -mt-2">Invalid JSON: {configError}</p>}
+        </Modal>
+      )}
+
+      {editRule && (
+        <Modal
+          title="Edit assurance rule"
+          subtitle="Runs already completed keep the rule as it was; edits apply to future runs only."
+          width="w-[560px]"
+          onClose={() => setEditRule(null)}
+          footer={<ModalActions onCancel={() => setEditRule(null)} onConfirm={() => saveRule.mutate()} confirmLabel="Save" pendingLabel="Saving…" pending={saveRule.isPending} disabled={!editRule.name.trim()} />}
+        >
+          <Field label="Name"><input className={inputClass} value={editRule.name} onChange={(e) => setEditRule({ ...editRule, name: e.target.value })} /></Field>
+          <Field label="Description"><input className={inputClass} value={editRule.description ?? ""} onChange={(e) => setEditRule({ ...editRule, description: e.target.value })} /></Field>
+          <Field label="Config (JSON)">
+            <textarea className={`${inputMonoClass} h-32 resize-y`} value={editRule.config_json} onChange={(e) => setEditRule({ ...editRule, config_json: e.target.value })} />
+          </Field>
+        </Modal>
+      )}
+
+      {runCasesFor && (
+        <Modal
+          title="Leakage found by this run"
+          subtitle={`${runCasesFor.run_type} · ${runCasesFor.leakage_cases_opened} case(s) opened`}
+          width="w-[640px]"
+          onClose={() => setRunCasesFor(null)}
+        >
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <table className="w-full text-left text-[11px]">
+              <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr><th className="px-3 py-2">TYPE</th><th className="px-3 py-2">SEVERITY</th><th className="px-3 py-2">AMOUNT</th><th className="px-3 py-2">STATUS</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableState colSpan={4} loading={runCasesQ.isLoading} error={runCasesQ.error} empty={(runCasesQ.data ?? []).length === 0} emptyLabel="No leakage cases attached to this run." />
+                {(runCasesQ.data ?? []).map((c) => (
+                  <tr key={c.id}>
+                    <td className="px-3 py-2 text-slate-700">{c.leakage_type}<div className="text-[9px] text-slate-400">{c.description}</div></td>
+                    <td className="px-3 py-2"><StatusPill status={c.severity} size="xs" /></td>
+                    <td className="px-3 py-2 font-mono">{c.leakage_amount_minor_units != null ? formatMoney(c.leakage_amount_minor_units, c.currency_code) : "—"}</td>
+                    <td className="px-3 py-2"><StatusPill status={c.status} size="xs" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Modal>
       )}
 

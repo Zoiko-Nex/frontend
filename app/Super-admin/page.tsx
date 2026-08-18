@@ -308,6 +308,10 @@ export default function SuperAdminPage() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [statusFor, setStatusFor] = useState<{ tenant: Tenant; next: string } | null>(null);
   const [credentials, setCredentials] = useState<string | null>(null);
+  /** Chain-range verification inputs for the evidence module. */
+  const [verifyRange, setVerifyRange] = useState({ from: "1", to: "100" });
+  const [rangeResult, setRangeResult] = useState<{ verified: boolean; chain_sequence?: number } | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   // ─── Auth gate ──────────────────────────────────────────────────────────────
   // A session alone is not enough: it must carry role_platform_admin, the same
@@ -534,6 +538,41 @@ export default function SuperAdminPage() {
     clearPlatformSession();
     router.replace("/Super-admin/login");
   }, [router]);
+
+  /**
+   * Chain verification is the whole point of an append-only ledger: without it
+   * "append-only" is a claim rather than a property. Both endpoints were
+   * registered and never called until now.
+   */
+  const runRangeVerify = async () => {
+    setVerifying(true);
+    setRangeResult(null);
+    try {
+      const res = await platformApi.get<{ verified: boolean; chain_sequence?: number }>(
+        "evidence",
+        `/v1/evidence/verify-range?from=${encodeURIComponent(verifyRange.from)}&to=${encodeURIComponent(verifyRange.to)}`,
+      );
+      setRangeResult(res);
+      toast[res.verified ? "success" : "error"](
+        res.verified ? "Chain range verified intact" : "CHAIN BROKEN over this range — treat as a tamper event",
+      );
+    } catch (e) {
+      toast.error(errMessage(e, "Verification could not run."));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const verifyOne = async (id: string) => {
+    try {
+      const res = await platformApi.get<{ verified: boolean }>("evidence", `/v1/evidence/${id}/verify`);
+      toast[res.verified ? "success" : "error"](
+        res.verified ? `Record ${shortId(id)} verified` : `Record ${shortId(id)} FAILED verification`,
+      );
+    } catch (e) {
+      toast.error(errMessage(e, "Verification could not run."));
+    }
+  };
 
   if (authorised !== true) {
     return (
@@ -879,11 +918,49 @@ export default function SuperAdminPage() {
                 </div>
               </div>
 
+              {/* Chain integrity (P0-6). Tamper detection is only real if
+                  someone can actually run it. */}
+              <div className="panel" style={{ marginBottom: 14 }}>
+                <h3>Chain integrity</h3>
+                <p className="psub" style={{ margin: "4px 0 10px" }}>
+                  Verify a contiguous range of the hash chain. A failure here is a tamper event, not a bug report.
+                </p>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11 }}>
+                    <span>From sequence</span>
+                    <input
+                      className="mono"
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-l)", color: "inherit", width: 120 }}
+                      value={verifyRange.from}
+                      onChange={(e) => setVerifyRange({ ...verifyRange, from: e.target.value })}
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11 }}>
+                    <span>To sequence</span>
+                    <input
+                      className="mono"
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-l)", color: "inherit", width: 120 }}
+                      value={verifyRange.to}
+                      onChange={(e) => setVerifyRange({ ...verifyRange, to: e.target.value })}
+                    />
+                  </label>
+                  <button className="btn btn-primary btn-sm" onClick={runRangeVerify} disabled={verifying}>
+                    {verifying ? "Verifying…" : "Verify range"}
+                  </button>
+                  {rangeResult && (
+                    <Chip tone={rangeResult.verified ? "c-green" : "c-red"}>
+                      {rangeResult.verified ? "INTACT" : "CHAIN BROKEN"}
+                      {rangeResult.chain_sequence != null ? ` · seq ${rangeResult.chain_sequence}` : ""}
+                    </Chip>
+                  )}
+                </div>
+              </div>
+
               <div className="tablewrap">
                 <table>
-                  <thead><tr><th>Time (UTC)</th><th>Evidence ID</th><th>Aggregate</th><th>Event</th><th>Actor</th></tr></thead>
+                  <thead><tr><th>Time (UTC)</th><th>Evidence ID</th><th>Aggregate</th><th>Event</th><th>Actor</th><th></th></tr></thead>
                   <tbody>
-                    <TableState colSpan={5} loading={evidenceQ.isLoading} error={evidenceQ.error} empty={(evidenceQ.data ?? []).length === 0} emptyLabel="No evidence records for the platform tenant." />
+                    <TableState colSpan={6} loading={evidenceQ.isLoading} error={evidenceQ.error} empty={(evidenceQ.data ?? []).length === 0} emptyLabel="No evidence records for the platform tenant." />
                     {(evidenceQ.data ?? []).map((e, i) => {
                       const when = e.occurred_at ?? e.created_at;
                       return (
@@ -893,6 +970,15 @@ export default function SuperAdminPage() {
                           <td className="mono" style={{ fontSize: 11 }}>{e.aggregate_type ? `${e.aggregate_type} ${shortId(e.aggregate_id)}` : "—"}</td>
                           <td>{e.event_type ?? "—"}</td>
                           <td>{e.actor ?? "—"}</td>
+                          <td style={{ textAlign: "right" }}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => verifyOne((e.evidence_id ?? e.id) as string)}
+                              disabled={!(e.evidence_id ?? e.id)}
+                            >
+                              Verify
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
