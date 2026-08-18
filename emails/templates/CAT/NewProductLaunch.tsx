@@ -9,6 +9,7 @@ export interface NewProductLaunchData {
   product_name_display: string;
   product_category_display: string;
   launch_date_display: string;
+  [key: string]: any;
 }
 
 export interface NewProductLaunchEmailProps {

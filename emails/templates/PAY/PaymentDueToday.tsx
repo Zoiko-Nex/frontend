@@ -8,6 +8,7 @@ export interface PaymentDueTodayData {
   recipient_first_name?: string;
   payment_reference?: string;
   payment_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface PaymentDueTodayEmailProps {
@@ -28,7 +29,7 @@ export const PaymentDueTodayEmail: React.FC<PaymentDueTodayEmailProps> = ({ payl
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Payment for invoice {{invoice.number}} is due today"
+      subject={`Payment for invoice ${data.invoice_number || 'INV-2026-08892'} is due today`}
       preheader="Review the event details and any next step in ZoikoNex."
       openingText={`Hello ${firstName}, This email relates to payment due today.`}
       primaryCtaText="Pay invoice"

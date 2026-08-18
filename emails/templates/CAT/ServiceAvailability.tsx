@@ -10,6 +10,7 @@ export interface ServiceAvailabilityData {
   availability_status_display: string;
   affected_regions_display: string;
   estimated_resolution_display?: string;
+  [key: string]: any;
 }
 
 export interface ServiceAvailabilityEmailProps {

@@ -10,6 +10,7 @@ export interface ApiQuotaExceededData {
   service_name_display: string;
   quota_limit_display: string;
   reset_date_display: string;
+  [key: string]: any;
 }
 
 export interface ApiQuotaExceededEmailProps {

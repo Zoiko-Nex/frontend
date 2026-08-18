@@ -8,6 +8,7 @@ export interface InvoiceCanceledData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface InvoiceCanceledEmailProps {
@@ -28,7 +29,7 @@ export const InvoiceCanceledEmail: React.FC<InvoiceCanceledEmailProps> = ({ payl
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Invoice {{invoice.number}} has been canceled"
+      subject={`Invoice ${data.invoice_number || 'INV-2026-08892'} has been canceled`}
       preheader="Important information about your account, service or configuration."
       openingText={`Hello ${firstName}, This has been canceled: invoice.`}
       primaryCtaText="Review account"

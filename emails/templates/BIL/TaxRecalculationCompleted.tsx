@@ -8,6 +8,7 @@ export interface TaxRecalculationCompletedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface TaxRecalculationCompletedEmailProps {
@@ -28,7 +29,7 @@ export const TaxRecalculationCompletedEmail: React.FC<TaxRecalculationCompletedE
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Tax recalculation completed for invoice {{invoice.number}}"
+      subject={`Tax recalculation completed for invoice ${data.invoice_number || 'INV-2026-08892'}`}
       preheader="Important information about your account, service or configuration."
       openingText={`Hello ${firstName}, This has been completed: tax recalculation.`}
       primaryCtaText="Review calculation"

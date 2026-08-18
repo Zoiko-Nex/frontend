@@ -10,6 +10,7 @@ export interface SubscriptionCancelledData {
   plan_name_display: string;
   cancellation_effective_date_display: string;
   data_retention_display: string;
+  [key: string]: any;
 }
 
 export interface SubscriptionCancelledEmailProps {

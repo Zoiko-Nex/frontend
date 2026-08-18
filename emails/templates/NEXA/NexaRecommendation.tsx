@@ -9,6 +9,7 @@ export interface NexaRecommendationData {
   recommendation_title_display: string;
   recommendation_category_display: string;
   potential_impact_display: string;
+  [key: string]: any;
 }
 
 export interface NexaRecommendationEmailProps {

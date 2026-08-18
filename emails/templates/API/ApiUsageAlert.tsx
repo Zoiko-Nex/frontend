@@ -10,6 +10,7 @@ export interface ApiUsageAlertData {
   usage_percentage_display: string;
   quota_limit_display: string;
   service_name_display: string;
+  [key: string]: any;
 }
 
 export interface ApiUsageAlertEmailProps {

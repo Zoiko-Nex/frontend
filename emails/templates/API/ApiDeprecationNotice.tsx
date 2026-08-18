@@ -10,6 +10,7 @@ export interface ApiDeprecationNoticeData {
   replacement_endpoint_display: string;
   sunset_date_display: string;
   api_version_display: string;
+  [key: string]: any;
 }
 
 export interface ApiDeprecationNoticeEmailProps {

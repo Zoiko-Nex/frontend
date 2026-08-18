@@ -8,6 +8,7 @@ export interface ReconciliationCompletedData {
   recipient_first_name?: string;
   operation_display_name?: string;
   operation_status_display?: string;
+  [key: string]: any;
 }
 
 export interface ReconciliationCompletedEmailProps {
@@ -28,7 +29,7 @@ export const ReconciliationCompletedEmail: React.FC<ReconciliationCompletedEmail
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Reconciliation completed for {{reconciliation.period}}"
+      subject={`Reconciliation completed for ${data.reconciliation_period || 'Q3 2026'}`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This has been completed: reconciliation.`}
       primaryCtaText="View results"

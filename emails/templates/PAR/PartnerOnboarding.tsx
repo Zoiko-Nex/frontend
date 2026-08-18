@@ -9,6 +9,7 @@ export interface PartnerOnboardingData {
   partner_organisation_display: string;
   partner_tier_display: string;
   onboarding_contact_display: string;
+  [key: string]: any;
 }
 
 export interface PartnerOnboardingEmailProps {

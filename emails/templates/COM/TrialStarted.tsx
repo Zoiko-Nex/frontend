@@ -8,6 +8,7 @@ export interface TrialStartedData {
   recipient_first_name?: string;
   prospect_organization_name?: string;
   prospect_contact_name?: string;
+  [key: string]: any;
 }
 
 export interface TrialStartedEmailProps {

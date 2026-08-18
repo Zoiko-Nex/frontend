@@ -10,6 +10,7 @@ export interface EscalationNoticeData {
   ticket_subject_display: string;
   escalation_level_display: string;
   assigned_team_display: string;
+  [key: string]: any;
 }
 
 export interface EscalationNoticeEmailProps {

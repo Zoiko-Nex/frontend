@@ -8,6 +8,7 @@ export interface PartnerApprovedData {
   recipient_first_name?: string;
   partner_display_name?: string;
   partner_reference_period?: string;
+  [key: string]: any;
 }
 
 export interface PartnerApprovedEmailProps {

@@ -10,6 +10,7 @@ export interface InvoiceOverdueData {
   invoice_amount_formatted: string;
   overdue_days: number;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface InvoiceOverdueEmailProps {

@@ -8,6 +8,7 @@ export interface NewDeviceSignInData {
   recipient_first_name?: string;
   user_masked_email?: string;
   tenant_display_name?: string;
+  [key: string]: any;
 }
 
 export interface NewDeviceSignInEmailProps {

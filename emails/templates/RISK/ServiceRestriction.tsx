@@ -9,6 +9,7 @@ export interface ServiceRestrictionData {
   service_name_display: string;
   restriction_reason_display: string;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface ServiceRestrictionEmailProps {

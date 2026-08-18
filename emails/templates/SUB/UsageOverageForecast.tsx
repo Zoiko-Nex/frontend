@@ -8,6 +8,7 @@ export interface UsageOverageForecastData {
   recipient_first_name?: string;
   subscription_reference?: string;
   subscription_effective_date?: string;
+  [key: string]: any;
 }
 
 export interface UsageOverageForecastEmailProps {

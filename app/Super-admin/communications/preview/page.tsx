@@ -311,150 +311,418 @@ const TEMPLATE_REGISTRY: TemplateRegistryItem[] = [
   { id: 'ZNX-EM-NEXA-005', name: "Nexa approved action completed", family: 'NEXA', classification: "AI audit notice", recipient: "Approver and affected stakeholders" },
   { id: 'ZNX-EM-NEXA-006', name: "Nexa action failed", family: 'NEXA', classification: "AI operational alert", recipient: "Approver and operations" },
   { id: 'ZNX-EM-NEXA-007', name: "Nexa policy violation blocked", family: 'NEXA', classification: "AI governance alert", recipient: "Requester, approver and governance owner" },
+  // ── OPS ────────────────────────────────────────────
+  // ── SUB ────────────────────────────────────────────
+  { id: 'ZNX-EM-SUB-006', name: 'Subscription renewal is complete', family: 'SUB', classification: 'P3 Operational Notice', recipient: 'Tenant Owner' },
+  { id: 'ZNX-EM-SUB-008', name: 'Contract termination confirmed', family: 'SUB', classification: 'P3 Operational Notice', recipient: 'Tenant Owner' }
 ];
+
+import { DeliveryPolicy } from '@/lib/communications/deliveryPolicy';
+import { ValidationResult } from '@/lib/communications/eventContract';
+
+interface BrandPersona {
+  name: string;
+  brand: BrandRendering;
+  sender: SenderRendering;
+  support: SupportRendering;
+}
+
+const BRAND_PERSONAS: Record<string, BrandPersona> = {
+  zoikonex: {
+    name: 'ZoikoNex Core (Platform)',
+    brand: {
+      display_name: 'ZoikoNex Telecom',
+      logo_url: 'https://react.email/static/logo-v.png',
+      primary_color: '#0052FF',
+    },
+    sender: {
+      from_name: 'ZoikoNex Notifications',
+      reply_to: 'notifications@zoikonex.com',
+    },
+    support: {
+      url: 'https://support.zoikonex.com',
+    },
+  },
+  apex_mvno: {
+    name: 'Apex Mobile (MVNO White-label)',
+    brand: {
+      display_name: 'Apex Mobile',
+      logo_url: 'https://react.email/static/logo-v.png',
+      primary_color: '#4F46E5',
+    },
+    sender: {
+      from_name: 'Apex Mobile Customer Care',
+      reply_to: 'care@apexmobile.example',
+    },
+    support: {
+      url: 'https://help.apexmobile.example',
+    },
+  },
+  sovereign: {
+    name: 'Sovereign Carrier (Tier-1 Telco)',
+    brand: {
+      display_name: 'Sovereign National Network',
+      logo_url: 'https://react.email/static/logo-v.png',
+      primary_color: '#0D9488',
+    },
+    sender: {
+      from_name: 'Sovereign Telecom Operations',
+      reply_to: 'operations@sovereign-telco.example',
+    },
+    support: {
+      url: 'https://portal.sovereign-telco.example/support',
+    },
+  },
+  travel_esim: {
+    name: 'Voyage Connect (Travel eSIM)',
+    brand: {
+      display_name: 'Voyage Connect',
+      logo_url: 'https://react.email/static/logo-v.png',
+      primary_color: '#EA580C',
+    },
+    sender: {
+      from_name: 'Voyage Connect Service Team',
+      reply_to: 'hello@voyageconnect.example',
+    },
+    support: {
+      url: 'https://voyageconnect.example/help',
+    },
+  }
+};
 
 export default function EmailPreviewPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('ZNX-EM-IAM-001');
+  const [selectedPersona, setSelectedPersona] = useState<string>('zoikonex');
+  const [activeTab, setActiveTab] = useState<'html' | 'text' | 'contract' | 'simulate'>('html');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedFamilyFilter, setSelectedFamilyFilter] = useState<string>('ALL');
+
   const [renderedHtml, setRenderedHtml] = useState<string>('');
+  const [renderedPlainText, setRenderedPlainText] = useState<string>('');
   const [currentPayload, setCurrentPayload] = useState<any>(null);
-  const [showJsonModal, setShowJsonModal] = useState<boolean>(false);
+  const [deliveryPolicy, setDeliveryPolicy] = useState<DeliveryPolicy | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [customJsonInput, setCustomJsonInput] = useState<string>('');
   const [isPending, startTransition] = useTransition();
 
-  const brand: BrandRendering = {
-    display_name: 'ZoikoNex Telecom',
-    logo_url: 'https://react.email/static/logo-v.png',
-    primary_color: '#4f46e5',
-  };
-
-  const sender: SenderRendering = {
-    from_name: 'ZoikoNex Platform Operations',
-    reply_to: 'support@zoikonex.example',
-  };
-
-  const support: SupportRendering = {
-    url: 'https://support.zoikonex.example',
-  };
-
   const currentTemplate = TEMPLATE_REGISTRY.find(t => t.id === selectedTemplateId) || TEMPLATE_REGISTRY[0];
+  const persona = BRAND_PERSONAS[selectedPersona] || BRAND_PERSONAS.zoikonex;
 
-  useEffect(() => {
+  const loadTemplatePreview = (templateId: string, customData?: any) => {
     startTransition(async () => {
-      const result = await renderPreviewEmail(selectedTemplateId, brand, sender, support);
-      if (result.success && result.html) {
-        setRenderedHtml(result.html);
+      const result = await renderPreviewEmail(
+        templateId, 
+        persona.brand, 
+        persona.sender, 
+        persona.support,
+        customData
+      );
+      if (result.success) {
+        setRenderedHtml(result.html || '');
+        setRenderedPlainText(result.plainText || '');
         setCurrentPayload(result.payload);
+        setDeliveryPolicy(result.deliveryPolicy || null);
+        setValidationResult(result.validation || null);
+        if (!customData) {
+          setCustomJsonInput(JSON.stringify(result.payload?.eventData || {}, null, 2));
+        }
       }
     });
-  }, [selectedTemplateId]);
+  };
+
+  useEffect(() => {
+    loadTemplatePreview(selectedTemplateId);
+  }, [selectedTemplateId, selectedPersona]);
+
+  const handleSimulateSubmit = () => {
+    try {
+      const parsedEventData = JSON.parse(customJsonInput);
+      loadTemplatePreview(selectedTemplateId, { eventData: parsedEventData });
+    } catch (e: any) {
+      alert(`Invalid JSON in Simulator: ${e.message}`);
+    }
+  };
+
+  const filteredTemplates = TEMPLATE_REGISTRY.filter(t => {
+    const matchesFamily = selectedFamilyFilter === 'ALL' || t.family === selectedFamilyFilter;
+    const matchesSearch = searchTerm === '' || 
+      t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.classification.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFamily && matchesSearch;
+  });
+
+  const allFamilies = ['ALL', ...Array.from(new Set(TEMPLATE_REGISTRY.map(t => t.family)))];
 
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden font-sans">
-      {/* Sidebar for Template Selection */}
-      <div className="w-80 bg-white border-r border-gray-200 p-6 flex flex-col h-full overflow-y-auto shrink-0">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Communications</h1>
-          <p className="text-xs text-gray-500 mt-1">290-Template Baseline Explorer</p>
+    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+      {/* Sidebar: Template Browser & Filter */}
+      <aside className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
+        <div className="p-4 border-b border-slate-800">
+          <div className="flex items-center justify-between">
+            <h1 className="text-sm font-bold text-white tracking-wide uppercase">Communications Hub</h1>
+            <span className="text-[10px] font-mono bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
+              290 Baseline
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Section 06 Canonical Template Register</p>
+
+          {/* Search Box */}
+          <div className="mt-3">
+            <input
+              type="text"
+              placeholder="Search templates, IDs, classes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Family Filter Dropdown */}
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-[11px] text-slate-400 shrink-0">Family:</span>
+            <select
+              value={selectedFamilyFilter}
+              onChange={(e) => setSelectedFamilyFilter(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            >
+              {allFamilies.map(f => (
+                <option key={f} value={f}>
+                  {f === 'ALL' ? 'All 18 Families' : `${f} (${TEMPLATE_REGISTRY.filter(t => t.family === f).length})`}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        
-        <div className="space-y-6">
-          {Array.from(new Set(TEMPLATE_REGISTRY.map(t => t.family))).map(family => (
-            <div key={family}>
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Family: {family}
-              </h2>
-              <ul className="space-y-1">
-                {TEMPLATE_REGISTRY.filter(t => t.family === family).map(template => (
-                  <li key={template.id}>
-                    <button
-                      onClick={() => setSelectedTemplateId(template.id)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                        selectedTemplateId === template.id
-                          ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="truncate">{template.name}</span>
-                        <span className="text-[10px] text-gray-400 font-mono ml-2 shrink-0">{template.id.split('-').pop()}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+
+        {/* Template List */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-4">
+          {Array.from(new Set(filteredTemplates.map(t => t.family))).map(family => (
+            <div key={family} className="space-y-1">
+              <div className="px-2 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-800/40 rounded flex justify-between items-center">
+                <span>{family}</span>
+                <span className="text-[10px] font-mono text-slate-500">
+                  {filteredTemplates.filter(t => t.family === family).length}
+                </span>
+              </div>
+              <ul className="space-y-0.5">
+                {filteredTemplates.filter(t => t.family === family).map(template => {
+                  const isSelected = selectedTemplateId === template.id;
+                  return (
+                    <li key={template.id}>
+                      <button
+                        onClick={() => setSelectedTemplateId(template.id)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded text-xs transition-colors flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-blue-600 text-white font-medium shadow-sm'
+                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        }`}
+                      >
+                        <span className="truncate pr-2">{template.name}</span>
+                        <span className={`text-[10px] font-mono shrink-0 ${isSelected ? 'text-blue-200' : 'text-slate-500'}`}>
+                          {template.id.replace('ZNX-EM-', '')}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
         </div>
-      </div>
+      </aside>
 
-      {/* Main Preview Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center shrink-0">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-gray-100 text-gray-700 rounded border border-gray-200">
-                {currentTemplate.id}
-              </span>
-              <h2 className="text-lg font-bold text-gray-900">{currentTemplate.name}</h2>
+      {/* Main Workspace */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
+        {/* Top Header with Brand Persona & Policy Badges */}
+        <header className="bg-slate-900 border-b border-slate-800 px-6 py-3 shrink-0 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono font-bold px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded">
+              {currentTemplate.id}
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-white">{currentTemplate.name}</h2>
+              <p className="text-[11px] text-slate-400">
+                Recipient: <span className="text-slate-200 font-medium">{currentTemplate.recipient}</span>
+              </p>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Class: <span className="font-medium text-gray-700">{currentTemplate.classification}</span> &bull; Recipient: <span className="font-medium text-gray-700">{currentTemplate.recipient}</span>
-            </p>
           </div>
 
-          <div className="flex gap-3 items-center">
-            {isPending && <span className="text-xs text-indigo-600 animate-pulse font-medium">Rendering...</span>}
-            <button
-              onClick={() => setShowJsonModal(true)}
-              className="px-3.5 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors"
+          {/* Section 03 Delivery Policy Badge */}
+          {deliveryPolicy && (
+            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg">
+              <span className={`text-xs font-bold px-2 py-0.5 rounded border ${deliveryPolicy.badgeColor}`}>
+                {deliveryPolicy.classLevel}
+              </span>
+              <div className="text-[11px]">
+                <span className="font-semibold text-slate-200">{deliveryPolicy.className}</span>
+                <span className="text-slate-500 mx-1.5">•</span>
+                <span className="text-slate-400">{deliveryPolicy.timing}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Brand Switcher */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-400 font-medium shrink-0">Brand Identity:</label>
+            <select
+              value={selectedPersona}
+              onChange={(e) => setSelectedPersona(e.target.value)}
+              className="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2.5 py-1 focus:outline-none focus:border-blue-500"
             >
-              View JSON Payload
-            </button>
+              {Object.entries(BRAND_PERSONAS).map(([key, p]) => (
+                <option key={key} value={key}>{p.name}</option>
+              ))}
+            </select>
           </div>
         </header>
-        
-        <main className="flex-1 p-8 overflow-y-auto flex justify-center bg-gray-100">
-          <div className="w-[750px] h-[820px] bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
-            <iframe 
-              srcDoc={renderedHtml} 
-              className="w-full h-full border-0" 
-              title="Canonical Email Live Preview"
-            />
-          </div>
-        </main>
-      </div>
 
-      {/* JSON Payload Modal */}
-      {showJsonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 flex flex-col max-h-[85vh]">
-            <div className="flex justify-between items-center pb-4 border-b border-gray-200">
-              <div>
-                <h3 className="text-base font-bold text-gray-900">Canonical Contract Payload</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{currentTemplate.id} — Mandatory Contract Compliance</p>
-              </div>
-              <button
-                onClick={() => setShowJsonModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg font-bold"
-              >
-                &times;
-              </button>
-            </div>
-            
-            <div className="my-4 flex-1 overflow-y-auto bg-gray-900 text-emerald-400 p-4 rounded-lg font-mono text-xs leading-relaxed">
-              <pre>{JSON.stringify(currentPayload, null, 2)}</pre>
-            </div>
+        {/* Action / Mode Tabs */}
+        <div className="bg-slate-900/60 border-b border-slate-800 px-6 flex items-center justify-between">
+          <nav className="flex space-x-1">
+            <button
+              onClick={() => setActiveTab('html')}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                activeTab === 'html'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              HTML Visual Preview
+            </button>
+            <button
+              onClick={() => setActiveTab('text')}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                activeTab === 'text'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Plain-Text Alternative (Section 08)
+            </button>
+            <button
+              onClick={() => setActiveTab('contract')}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                activeTab === 'contract'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Mandatory Contract (Section 05)
+            </button>
+            <button
+              onClick={() => setActiveTab('simulate')}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                activeTab === 'simulate'
+                  ? 'border-blue-500 text-blue-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Event Trigger Simulator
+            </button>
+          </nav>
 
-            <div className="flex justify-end pt-3 border-t border-gray-200">
-              <button
-                onClick={() => setShowJsonModal(false)}
-                className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-md hover:bg-gray-800"
-              >
-                Close Payload Inspector
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            {isPending && (
+              <span className="text-[11px] text-blue-400 animate-pulse font-mono">
+                Rendering...
+              </span>
+            )}
+            {validationResult && (
+              <span className={`text-[11px] px-2 py-0.5 rounded font-mono ${
+                validationResult.isValid ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'
+              }`}>
+                {validationResult.isValid ? '✓ Contract Valid' : '✗ Contract Incomplete'}
+              </span>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Tab Content Display */}
+        <div className="flex-1 p-6 overflow-y-auto flex justify-center bg-slate-950">
+          {/* TAB 1: HTML Live Render */}
+          {activeTab === 'html' && (
+            <div className="w-[720px] max-w-full h-full min-h-[750px] bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-800 flex flex-col">
+              <iframe
+                srcDoc={renderedHtml}
+                className="w-full flex-1 border-0"
+                title="ZoikoNex Email Live Visual Preview"
+              />
+            </div>
+          )}
+
+          {/* TAB 2: Plain-Text Alternative */}
+          {activeTab === 'text' && (
+            <div className="w-[720px] max-w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-6 font-mono text-xs text-slate-200 overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-xl">
+              <div className="text-[11px] text-slate-400 pb-3 mb-4 border-b border-slate-800 flex justify-between items-center">
+                <span>RFC 2046 Multipart/Alternative Standard</span>
+                <span className="text-emerald-400">Zero CSS/Tracking Dependency</span>
+              </div>
+              {renderedPlainText || 'Generating plain text alternative...'}
+            </div>
+          )}
+
+          {/* TAB 3: Mandatory Contract Validator */}
+          {activeTab === 'contract' && (
+            <div className="w-[840px] max-w-full space-y-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-2">Section 05 Contract Audit</h3>
+                {validationResult?.errors.length === 0 ? (
+                  <p className="text-xs text-emerald-400 font-medium">✓ All mandatory fields (Identity, Traceability, Rendering, Governance, Localized Values, Safe References) verified.</p>
+                ) : (
+                  <ul className="text-xs text-red-400 list-disc list-inside space-y-1">
+                    {validationResult?.errors.map((e, idx) => <li key={idx}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Resolved Canonical Payload</h4>
+                <pre className="bg-slate-950 p-4 rounded-lg font-mono text-xs text-emerald-400 overflow-x-auto max-h-[500px]">
+                  {JSON.stringify(currentPayload, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: Event Trigger Simulator */}
+          {activeTab === 'simulate' && (
+            <div className="w-[840px] max-w-full space-y-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <h3 className="text-sm font-bold text-white mb-1">Domain Event Payload Simulator</h3>
+                <p className="text-xs text-slate-400 mb-4">
+                  Modify the synthetic domain event payload to test dynamic data expansion, currency localization, and reference masking.
+                </p>
+
+                <div className="space-y-3">
+                  <label className="block text-xs font-mono text-slate-300">eventData (JSON):</label>
+                  <textarea
+                    value={customJsonInput}
+                    onChange={(e) => setCustomJsonInput(e.target.value)}
+                    rows={12}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-emerald-400 focus:outline-none focus:border-blue-500"
+                  />
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      onClick={() => loadTemplatePreview(selectedTemplateId)}
+                      className="px-3 py-1.5 text-xs text-slate-400 hover:text-white border border-slate-800 rounded hover:bg-slate-800"
+                    >
+                      Reset Defaults
+                    </button>
+                    <button
+                      onClick={handleSimulateSubmit}
+                      className="px-4 py-1.5 text-xs font-bold bg-blue-600 text-white rounded hover:bg-blue-500 shadow-md"
+                    >
+                      Dispatch Simulation
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

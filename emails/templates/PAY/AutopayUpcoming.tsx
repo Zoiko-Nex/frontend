@@ -8,6 +8,7 @@ export interface AutopayUpcomingData {
   recipient_first_name?: string;
   payment_reference?: string;
   payment_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface AutopayUpcomingEmailProps {
@@ -28,7 +29,7 @@ export const AutopayUpcomingEmail: React.FC<AutopayUpcomingEmailProps> = ({ payl
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Upcoming automatic payment for invoice {{invoice.number}}"
+      subject={`Upcoming automatic payment for invoice ${data.invoice_number || 'INV-2026-08892'}`}
       preheader="Review the event details and any next step in ZoikoNex."
       openingText={`Hello ${firstName}, This email relates to autopay upcoming.`}
       primaryCtaText="Review payment"

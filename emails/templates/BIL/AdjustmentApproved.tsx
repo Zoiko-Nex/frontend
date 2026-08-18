@@ -8,6 +8,7 @@ export interface AdjustmentApprovedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface AdjustmentApprovedEmailProps {

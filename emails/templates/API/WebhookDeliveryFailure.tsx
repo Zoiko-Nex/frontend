@@ -8,6 +8,7 @@ export interface WebhookDeliveryFailureData {
   recipient_first_name?: string;
   integration_display_name?: string;
   environment_name?: string;
+  [key: string]: any;
 }
 
 export interface WebhookDeliveryFailureEmailProps {
