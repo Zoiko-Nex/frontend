@@ -8,6 +8,7 @@ import { fetchMe, canAccessDomain, hasFullAccess, type Me } from "@/lib/admin/pe
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
+import { formatMoney } from "@/lib/admin/money";
 import { PermissionPicker, type PolicyRule } from "../components/admin/PermissionPicker";
 import { buildInvite, generatePassword } from "../components/admin/invite";
 import IntegrationTab from "./IntegrationTab";
@@ -86,6 +87,18 @@ const TAB_DOMAIN: Record<string, string> = {
   AccessGroups: "identity",
 };
 
+/**
+ * The tenant the customer-portal preview should operate on: whoever is signed
+ * in. Several proxy calls in that flow used to hardcode the seeded Acme tenant
+ * UUID, which meant they read and wrote that tenant's records no matter who was
+ * signed in — a cross-tenant access bug, not just fixture data. Returning ""
+ * when there is no session is deliberate: the backend rejects it, which is the
+ * correct outcome for an unauthenticated call.
+ */
+function portalTenantId(): string {
+  return getSession()?.tenantId ?? "";
+}
+
 function LockedPanel({ label }: { label: string }) {
   return (
     <div className="self-stretch flex flex-col items-center justify-center gap-3 w-full py-24 bg-white rounded-2xl border border-slate-200">
@@ -104,6 +117,16 @@ function LockedPanel({ label }: { label: string }) {
 
 interface Brand { id: string; name: string; code_name: string; created_at: string }
 
+/** Minimal invoice shape for the Billing & Commercials summary. */
+interface BillingInvoiceRow {
+  id: string;
+  invoice_number: string;
+  status: string;
+  currency_code: string;
+  total_minor_units: number;
+  due_date?: string;
+}
+
 /**
  * Lets a multi-brand tenant (e.g. "VI Group") add every brand it operates
  * under this one account (Vodafone, Idea, Vi, ...) -- backed by the new
@@ -114,6 +137,7 @@ interface Brand { id: string; name: string; code_name: string; created_at: strin
  */
 function BrandsPanel() {
   const qc = useQueryClient();
+
   const brandsQ = useQuery({
     queryKey: ["dash", "brands"],
     queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
@@ -673,6 +697,12 @@ interface DomainService {
   iconPath: string;
 }
 
+/**
+ * Static by design, not a stale binding: there is no document-management domain
+ * among the 19 services, so this catalogue has no source of truth to read from.
+ * The Trust tab says so on screen. If a document service is ever added, this is
+ * the array to delete.
+ */
 const trustDocuments = [
   { name: "MSA preview", category: "Legal", version: "2.1", status: "APPROVED" },
   { name: "Data Processing Addendum", category: "Legal", version: "1.4", status: "APPROVED" },
@@ -683,6 +713,7 @@ const trustDocuments = [
   { name: "SOC 2 report", category: "Compliance", version: "2026", status: "RESTRICTED" },
 ];
 
+/** Documentation index — editorial content, deliberately not API-backed. */
 const docGuides = [
   { title: "Getting started", category: "PLATFORM", desc: "Overview & first steps" },
   { title: "Real-time charging", category: "MONETIZATION", desc: "Charging concepts & APIs" },
@@ -756,6 +787,46 @@ export default function DashboardsPage() {
 
   // Active Tab state
   const [currentTab, setCurrentTab] = useState<string>("Services");
+
+  /**
+   * Backs the Billing & Commercials tab. Three services, one tile row: the
+   * tenant's own customer count, its rated-usage volume and its issued
+   * invoices. Each is caught individually so one unreachable service degrades
+   * a single tile to "—" instead of blanking the panel.
+   */
+  const commercialsQ = useQuery({
+    queryKey: ["commercials", "summary"],
+    enabled: currentTab === "Billing",
+    queryFn: async () => {
+      const [customers, rated, invoices] = await Promise.all([
+        api.get<{ customers?: unknown[] }>("customer", "/v1/customers")
+          .then((r) => (r.customers ?? []).length)
+          .catch(() => null),
+        api.get<{ data?: unknown[] }>("usage", "/v1/usage/rated?limit=100")
+          .then((r) => (r.data ?? []).length)
+          .catch(() => null),
+        api.get<{ items?: BillingInvoiceRow[] }>("billing", "/v1/invoices?limit=100")
+          .then((r) => r.items ?? [])
+          .catch(() => [] as BillingInvoiceRow[]),
+      ]);
+
+      const issued = invoices.filter((i) => i.status === "ISSUED");
+      // Grouped by currency: a single total mixing GBP and USD minor units
+      // would be a fiction.
+      const issuedByCurrency = issued.reduce<Record<string, number>>((acc, i) => {
+        acc[i.currency_code] = (acc[i.currency_code] ?? 0) + i.total_minor_units;
+        return acc;
+      }, {});
+
+      return {
+        customers,
+        ratedRecords: rated,
+        issuedCount: issued.length,
+        issuedByCurrency,
+        invoices,
+      };
+    },
+  });
 
   // ── Navbar dynamic states ──
   const [searchQuery, setSearchQuery] = useState("");
@@ -961,10 +1032,13 @@ export default function DashboardsPage() {
   }, []);
 
   // Customer Self-Service Portal states
-  const [custPortalCustomerId, setCustPortalCustomerId] = useState("1f211ae1-b736-43d2-86ff-08463bd7be36");
-  const [custPortalAccountId, setCustPortalAccountId] = useState("393d645f-07ca-460c-93f1-939a7676bbe3");
-  const [orderOfferId, setOrderOfferId] = useState("a0000002-0000-4000-8000-000000000002");
-  const [orderProductId, setOrderProductId] = useState("a0000001-0000-4000-8000-000000000001");
+  // Blank by default. These used to be pre-filled with seeded demo UUIDs, which
+  // exist in no real tenant — the portal opened on an error that read as a bug
+  // rather than as "you have not chosen a customer yet".
+  const [custPortalCustomerId, setCustPortalCustomerId] = useState("");
+  const [custPortalAccountId, setCustPortalAccountId] = useState("");
+  const [orderOfferId, setOrderOfferId] = useState("");
+  const [orderProductId, setOrderProductId] = useState("");
   const [prepaidBalance, setPrepaidBalance] = useState(15.00);
   const [portalInvoices, setPortalInvoices] = useState<any[]>([]);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -980,7 +1054,7 @@ export default function DashboardsPage() {
           port: 8092,
           method: "GET",
           path: `/v1/invoices?limit=20`,
-          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" }
+          headers: { "X-Tenant-ID": portalTenantId() }
         })
       });
       if (res.ok) {
@@ -1013,7 +1087,7 @@ export default function DashboardsPage() {
           port: 8083,
           method: "POST",
           path: "/v1/orders",
-          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          headers: { "X-Tenant-ID": portalTenantId() },
           body: {
             customer_id: custPortalCustomerId,
             account_id: custPortalAccountId,
@@ -1051,7 +1125,7 @@ export default function DashboardsPage() {
           port: 8083,
           method: "POST",
           path: "/v1/provisioning",
-          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          headers: { "X-Tenant-ID": portalTenantId() },
           body: {
             order_id: orderId,
             customer_id: custPortalCustomerId,
@@ -1090,7 +1164,7 @@ export default function DashboardsPage() {
           port: 8092,
           method: "POST",
           path: "/v1/invoices",
-          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          headers: { "X-Tenant-ID": portalTenantId() },
           body: {
             account_id: custPortalAccountId,
             customer_id: custPortalCustomerId,
@@ -1124,7 +1198,7 @@ export default function DashboardsPage() {
           port: 8092,
           method: "POST",
           path: `/v1/invoices/${invoiceId}/issue`,
-          headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+          headers: { "X-Tenant-ID": portalTenantId() },
           body: {}
         })
       });
@@ -1364,7 +1438,7 @@ export default function DashboardsPage() {
             port: 8080,
             method: "GET",
             path: "/v1/me",
-            headers: { "X-Tenant-ID": sessionData.tenantId || "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" }
+            headers: { "X-Tenant-ID": sessionData.tenantId }
           })
         });
         if (healthRes.ok) {
@@ -2446,7 +2520,7 @@ export default function DashboardsPage() {
                                             setSelectedService(service);
                                             setRequestMethod("GET");
                                             setRequestPath("/health");
-                                            setRequestHeaders(`{\n  "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"\n}`);
+                                            setRequestHeaders(`{\n  "X-Tenant-ID": "${portalTenantId()}"\n}`);
                                             setRequestBody("");
                                             setApiResponse(null);
                                             setSelectedEndpoint("");
@@ -2476,89 +2550,34 @@ export default function DashboardsPage() {
             {/* Super Admin view body */}
             {currentTab === "Services" && currentConsole === "super-admin" && (
               <div className="self-stretch flex flex-col gap-6 w-full transition-all duration-300">
-                {/* KPIs */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[100px]">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Tenants</span>
-                    <span className="text-3xl font-extrabold text-slate-800 mt-1">12</span>
-                    <span className="text-xs text-emerald-600 font-semibold mt-1">▲ +2 this month</span>
+                {/* This used to be a mockup of the platform console: invented tenant
+                    counts, an invented tenant registry and an invented log feed. The
+                    real console now exists at /Super-admin, and it is the only place
+                    that can show this data honestly — cross-tenant reads need
+                    role_platform_admin, which a tenant-console session does not have
+                    (only identity-tenancy and order-management honour the override at
+                    all). Faking it here was worse than not having it. */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col items-start gap-4">
+                  <div>
+                    <h3 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">
+                      The platform console is a separate application
+                    </h3>
+                    <p className="text-slate-600 text-sm mt-1 max-w-[640px]">
+                      Cross-tenant views — the tenant registry, platform-wide health, the evidence chain — live at{" "}
+                      <span className="font-mono text-xs">/Super-admin</span> and require a platform-admin session.
+                      This tenant console cannot read another tenant&apos;s data, so anything shown here would be
+                      invented rather than measured.
+                    </p>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[100px]">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Subscribers</span>
-                    <span className="text-3xl font-extrabold text-slate-800 mt-1">2,408,190</span>
-                    <span className="text-xs text-emerald-600 font-semibold mt-1">▲ +12.4% YoY</span>
-                  </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[100px]">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Global MRR</span>
-                    <span className="text-3xl font-extrabold text-slate-800 mt-1">$18,402,900</span>
-                    <span className="text-xs text-slate-500 mt-1">Convergent Mediated Feed</span>
-                  </div>
-                  <div className="bg-white p-5 rounded-xl border border-rose-100 bg-rose-50/10 shadow-sm flex flex-col justify-between min-h-[100px]">
-                    <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Failed Provisioning</span>
-                    <span className="text-3xl font-extrabold text-rose-600 mt-1">4</span>
-                    <span className="text-xs text-rose-500 font-semibold mt-1">● 4 manual holds</span>
-                  </div>
-                </div>
-
-                {/* Tenants Table */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-2">
-                  <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-700">Active Tenant Registry (Multi-Tenant Estate)</span>
-                    <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-mono font-semibold">100% Isolation Enforced</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-600">
-                      <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
-                        <tr>
-                          <th className="px-6 py-3">Tenant Name</th>
-                          <th className="px-6 py-3">Market</th>
-                          <th className="px-6 py-3">Primary Domain</th>
-                          <th className="px-6 py-3">Subscribers</th>
-                          <th className="px-6 py-3">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-sans">
-                        <tr>
-                          <td className="px-6 py-4 font-bold text-slate-700">Acme Corporation</td>
-                          <td className="px-6 py-4">US-NY (Telecom-Tax)</td>
-                          <td className="px-6 py-4 font-mono text-xs">acme.zoikonex.com</td>
-                          <td className="px-6 py-4">1.2M</td>
-                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-bold font-mono">ONLINE</span></td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 font-bold text-slate-700">SilverX Mobile</td>
-                          <td className="px-6 py-4">UK (VAT-Compliant)</td>
-                          <td className="px-6 py-4 font-mono text-xs">silverx.zoikonex.com</td>
-                          <td className="px-6 py-4">850K</td>
-                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-bold font-mono">ONLINE</span></td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 font-bold text-slate-700">GoLite Connectivity</td>
-                          <td className="px-6 py-4">EU (GDPR-Regulated)</td>
-                          <td className="px-6 py-4 font-mono text-xs">golite.zoikonex.com</td>
-                          <td className="px-6 py-4">350K</td>
-                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-bold font-mono">ONLINE</span></td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 font-bold text-slate-700">DriverX Telematics</td>
-                          <td className="px-6 py-4">DE (IoT Fleet)</td>
-                          <td className="px-6 py-4 font-mono text-xs">driverx.zoikonex.com</td>
-                          <td className="px-6 py-4">8,190</td>
-                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-xs font-bold font-mono">DEGRADED</span></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Platform Activity Feed */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                  <h4 className="text-sm font-bold text-slate-700 mb-4">Platform Infrastructure Orchestration</h4>
-                  <div className="space-y-3 font-mono text-xs text-slate-500">
-                    <div className="flex items-center gap-2"><span className="text-emerald-500">●</span> [16:01:22] [GLOBAL] Kubernetes cluster nodes healthy. Pod replication factor 3x.</div>
-                    <div className="flex items-center gap-2"><span className="text-indigo-500">○</span> [15:58:10] [IDENTITY] Seeding check completed for tenant Acme Corporation.</div>
-                    <div className="flex items-center gap-2"><span className="text-rose-500">■</span> [15:45:00] [PROVISIONING] eSIM provision timeout for subscriber ID sub-0987. Escalated to Saga Action Queue.</div>
-                  </div>
+                  <Link
+                    href="/Super-admin"
+                    className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
+                  >
+                    Open the platform console
+                  </Link>
+                  <p className="text-[11px] text-slate-400">
+                    Signing in there is restricted to <span className="font-mono">super-admin.zoikonex.com</span>.
+                  </p>
                 </div>
               </div>
             )}
@@ -2808,6 +2827,10 @@ export default function DashboardsPage() {
                     <div className="w-[704px] max-w-[717.36px] pt-px left-0 top-[60px] absolute inline-flex flex-col justify-start items-start">
                       <div className="w-[902px] justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
                         Controlled access to procurement, security, and legal materials. Sensitive documents are gated and logged.
+                        <span className="block mt-1 text-[11px] text-amber-700">
+                          Static catalogue — no document-management service owns this list yet, so versions and statuses
+                          are maintained in code rather than read from a system of record.
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -3303,110 +3326,117 @@ export default function DashboardsPage() {
             {/* Billing Tab */}
             {currentTab === "Billing" && (canAccess(TAB_DOMAIN.Billing) ? (
               <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
-                <div className="self-stretch inline-flex justify-between items-center">
+                <div className="self-stretch inline-flex justify-between items-center flex-wrap gap-3">
                   <div className="inline-flex flex-col justify-start items-start gap-1">
-                    <div className="self-stretch flex flex-col justify-start items-start">
-                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">Billing & commercials</div>
+                    <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">
+                      Billing &amp; commercials
                     </div>
-                    <div className="w-full pt-px flex flex-col justify-start items-start">
-                      <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Contracted scope, usage bands, invoices, and renewal — visibility without surprises.</div>
+                    <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                      This tenant&apos;s own consumption and invoices, read from the platform rather than estimated.
                     </div>
                   </div>
-                  <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold text-sm shadow-sm hover:bg-slate-50 transition">
-                    Request scope change
-                  </button>
                 </div>
 
+                {/* Every figure below is a count or sum of records a service
+                    returned. This panel previously showed invented ones —
+                    412,800 subscribers, 18.4M API calls, three $48,200 invoices
+                    — which are exactly the numbers someone repeats in a
+                    commercial conversation. */}
                 <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PATHWAY</span>
-                    <span className="text-xl font-bold text-slate-800 mt-2">Scale</span>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customers</span>
+                    <span className="text-xl font-bold text-slate-800 font-mono">
+                      {commercialsQ.isLoading ? "…" : commercialsQ.data?.customers ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">customer-account</span>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">USAGE BAND</span>
-                    <span className="text-xl font-bold text-slate-800 mt-2">100k-1M</span>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rated usage records</span>
+                    <span className="text-xl font-bold text-slate-800 font-mono">
+                      {commercialsQ.isLoading ? "…" : commercialsQ.data?.ratedRecords ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">usage-ingestion-mediation</span>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CONTRACT TERM</span>
-                    <span className="text-xl font-bold text-slate-800 mt-2">Annual</span>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoices issued</span>
+                    <span className="text-xl font-bold text-slate-800 font-mono">
+                      {commercialsQ.isLoading ? "…" : commercialsQ.data?.issuedCount ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">billing-invoice</span>
                   </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">RENEWAL</span>
-                    <span className="text-xl font-bold text-slate-800 mt-2">Mar 31, 2027</span>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Issued value</span>
+                    <span className="text-lg font-bold text-slate-800 font-mono break-words">
+                      {commercialsQ.isLoading
+                        ? "…"
+                        : Object.keys(commercialsQ.data?.issuedByCurrency ?? {}).length === 0
+                          ? "—"
+                          : Object.entries(commercialsQ.data!.issuedByCurrency).map(([c, amt]) => formatMoney(amt, c)).join("  ·  ")}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Per currency — not summed</span>
                   </div>
                 </div>
 
-                <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-                  {/* Current Usage */}
-                  <div className="px-6 py-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-6">
-                    <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">Current usage</div>
-
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600 text-sm">Active subscribers</span>
-                        <span className="text-slate-800 text-sm font-bold font-mono">412,800</span>
-                      </div>
-                      <div className="h-2 bg-slate-100 rounded-full w-full relative mb-2">
-                        <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-sky-700 to-lime-500 w-[41%] rounded-full"></div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-0 border-t border-slate-100 pt-2">
-                      <div className="flex justify-between items-center py-4 border-b border-slate-100">
-                        <span className="text-slate-500 text-sm">API calls (month)</span>
-                        <span className="text-slate-800 text-sm font-bold font-mono">18.4M</span>
-                      </div>
-                      <div className="flex justify-between items-center py-4 border-b border-slate-100">
-                        <span className="text-slate-500 text-sm">Rated events</span>
-                        <span className="text-slate-800 text-sm font-bold font-mono">126M</span>
-                      </div>
-                      <div className="flex justify-between items-center py-4">
-                        <span className="text-slate-500 text-sm">Overage</span>
-                        <div className="px-2 py-1 bg-stone-100 outline outline-1 outline-lime-500/30 rounded text-lime-600 text-[10px] font-bold font-mono flex items-center gap-1">
-                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                          WITHIN BAND
-                        </div>
-                      </div>
-                    </div>
+                {/* Contracted scope has no service behind it. There is no
+                    tenant-contract domain among the 19, so pathway, usage band,
+                    term and renewal cannot be read from anywhere — and inventing
+                    them is what this panel used to do. */}
+                <div className="w-full bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
+                  <div className="text-xs font-bold text-amber-800">Contracted scope is not shown</div>
+                  <div className="text-[11px] text-amber-700 mt-0.5">
+                    Pathway, usage band, contract term and renewal date have no owning service — there is no
+                    tenant-contract domain among the 19. They were previously hardcoded here. Until a service owns
+                    them, this panel shows consumption and invoices only.
                   </div>
+                </div>
 
-                  {/* Invoices */}
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-fit">
-                    <div className="px-6 py-6 border-b border-slate-100">
-                      <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">Invoices</div>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-sm text-slate-600">
-                        <thead className="bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                          <tr>
-                            <th className="px-6 py-4">INVOICE</th>
-                            <th className="px-6 py-4">PERIOD</th>
-                            <th className="px-6 py-4">AMOUNT</th>
-                            <th className="px-6 py-4">STATUS</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 font-sans">
-                          <tr>
-                            <td className="px-6 py-4 font-mono text-xs text-slate-500">INV-2026-05</td>
-                            <td className="px-6 py-4 text-slate-600">May 2026</td>
-                            <td className="px-6 py-4 font-bold text-slate-800 font-mono">$48,200</td>
-                            <td className="px-6 py-4"><span className="px-2 py-0.5 bg-stone-100 text-lime-600 outline outline-1 outline-lime-500/30 rounded-md text-[10px] font-bold font-mono flex items-center gap-1 w-fit"><svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>PAID</span></td>
-                          </tr>
-                          <tr>
-                            <td className="px-6 py-4 font-mono text-xs text-slate-500">INV-2026-06</td>
-                            <td className="px-6 py-4 text-slate-600">Jun 2026</td>
-                            <td className="px-6 py-4 font-bold text-slate-800 font-mono">$48,200</td>
-                            <td className="px-6 py-4"><span className="px-2 py-0.5 bg-orange-50 text-orange-600 outline outline-1 outline-orange-500/30 rounded-md text-[10px] font-bold font-mono flex items-center gap-1 w-fit"><svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>DUE</span></td>
-                          </tr>
-                          <tr>
-                            <td className="px-6 py-4 font-mono text-xs text-slate-500">INV-2026-04</td>
-                            <td className="px-6 py-4 text-slate-600">Apr 2026</td>
-                            <td className="px-6 py-4 font-bold text-slate-800 font-mono">$45,900</td>
-                            <td className="px-6 py-4"><span className="px-2 py-0.5 bg-stone-100 text-lime-600 outline outline-1 outline-lime-500/30 rounded-md text-[10px] font-bold font-mono flex items-center gap-1 w-fit"><svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>PAID</span></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                <div className="self-stretch bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                    <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">Invoices</div>
+                    <button
+                      onClick={() => setCurrentTab("BillingManagement")}
+                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
+                    >
+                      Open Billing &amp; Invoice
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead className="bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4">INVOICE</th>
+                          <th className="px-6 py-4">DUE</th>
+                          <th className="px-6 py-4">TOTAL</th>
+                          <th className="px-6 py-4">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        {commercialsQ.isLoading ? (
+                          <tr><td colSpan={4} className="px-6 py-10 text-center text-xs text-slate-400">Loading invoices…</td></tr>
+                        ) : commercialsQ.isError ? (
+                          <tr><td colSpan={4} className="px-6 py-10 text-center text-xs text-rose-600">Could not load invoices.</td></tr>
+                        ) : (commercialsQ.data?.invoices ?? []).length === 0 ? (
+                          <tr><td colSpan={4} className="px-6 py-10 text-center text-xs text-slate-400">No invoices raised for this tenant.</td></tr>
+                        ) : (
+                          (commercialsQ.data?.invoices ?? []).slice(0, 8).map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="px-6 py-4 font-mono text-xs text-slate-600">{inv.invoice_number}</td>
+                              <td className="px-6 py-4 text-slate-600 text-xs">
+                                {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="px-6 py-4 font-bold text-slate-800 font-mono">
+                                {formatMoney(inv.total_minor_units, inv.currency_code)}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-slate-100 text-slate-600">
+                                  {inv.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -3766,7 +3796,7 @@ export default function DashboardsPage() {
                       } else {
                         setRequestMethod("GET");
                         setRequestPath("/health");
-                        setRequestHeaders(`{\n  "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"\n}`);
+                        setRequestHeaders(`{\n  "X-Tenant-ID": "${portalTenantId()}"\n}`);
                         setRequestBody("");
                       }
                     }}
@@ -4124,7 +4154,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 3a: Create Product Specification (POST /v1/products)",
       method: "POST",
       path: "/v1/products",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         product_name: "Premium 5G Unlimited Plan",
         product_type: "DATA",
@@ -4140,7 +4170,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 3b: Create Commercial Offer (POST /v1/offers)",
       method: "POST",
       path: "/v1/offers",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         product_id: "prod-1234",
         offer_name: "Promo Offer June 2026",
@@ -4154,7 +4184,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 3c: Associate Price Rule (POST /v1/price-rules)",
       method: "POST",
       path: "/v1/price-rules",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         product_id: "prod-1234",
         offer_id: "offer-1234",
@@ -4173,7 +4203,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Prepaid: Initiate Balance Reservation (POST /v1/charging/reservations)",
       method: "POST",
       path: "/v1/charging/reservations",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         session_id: "charge-session-9988",
         subscriber_id: "sub-0987",
@@ -4187,7 +4217,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Prepaid: Process Usage CDR (POST /v1/rating/calculate)",
       method: "POST",
       path: "/v1/rating/calculate",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         subscriber_id: "sub-0987",
         volume: 1024,
@@ -4201,7 +4231,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 8: Create Draft Invoice (POST /v1/invoices)",
       method: "POST",
       path: "/v1/invoices",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         account_id: "acc-1234",
         billing_period: "2026-06",
@@ -4213,7 +4243,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Trigger Billing Cycle Run (POST /v1/billing/runs)",
       method: "POST",
       path: "/v1/billing/runs",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         bill_cycle_id: "cycle-2026-06",
         account_id: "acc-1234",
@@ -4226,7 +4256,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 9: Create Payment Intent (POST /v1/payment-intents)",
       method: "POST",
       path: "/v1/payment-intents",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         amount_minor_units: 4500,
         currency: "USD",
@@ -4240,7 +4270,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Calculate Interconnect Revenue Share (POST /v1/settlements)",
       method: "POST",
       path: "/v1/settlements",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         partner_id: "partner-helios-net",
         traffic_period: "2026-06",
@@ -4255,8 +4285,9 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       method: "POST",
       path: "/v1/sessions",
       headers: {
-        "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
-        "X-Brand-ID": "b1a2b3c4-d5e6-47a8-89c0-d1e2f3a4b5c6"
+        "X-Tenant-ID": portalTenantId(),
+        // Brand is per-tenant; left as a placeholder the operator replaces.
+        "X-Brand-ID": "<brand-id>"
       },
       body: {
         email: "admin@acme.com",
@@ -4268,7 +4299,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 2a: Create Party Profile (POST /v1/parties)",
       method: "POST",
       path: "/v1/parties",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         party_type: "INDIVIDUAL",
         pii_token: "f2220099-0000-4000-8000-000000000099",
@@ -4280,7 +4311,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 2b: Create Customer Profile (POST /v1/customers)",
       method: "POST",
       path: "/v1/customers",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         party_id: "party-5678",
         customer_type: "RETAIL",
@@ -4291,7 +4322,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 2c: Create Billing Account (POST /v1/accounts)",
       method: "POST",
       path: "/v1/accounts",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         customer_id: "cust-1234",
         account_number: "ACC-54321",
@@ -4307,7 +4338,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Send Campaign Push Alert (POST /v1/campaigns/send)",
       method: "POST",
       path: "/v1/campaigns/send",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         campaign_name: "Summer Unlimited Upgrade",
         target_group: "high_data_users",
@@ -4320,7 +4351,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 4: Place Product Order (POST /v1/orders)",
       method: "POST",
       path: "/v1/orders",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         customer_id: "cust-1234",
         account_id: "acc-1234",
@@ -4335,7 +4366,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 5a: Provision eSIM Profile (POST /v1/provisioning)",
       method: "POST",
       path: "/v1/provisioning",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         order_id: "order-1234",
         customer_id: "cust-1234",
@@ -4349,7 +4380,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 5b: Register SIM (POST /v1/sims)",
       method: "POST",
       path: "/v1/sims",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         iccid: "8904903200000888990",
         imsi: "310410123456789",
@@ -4360,7 +4391,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 5c: Activate SIM Profile (PATCH /v1/sims/{id})",
       method: "PATCH",
       path: "/v1/sims/8904903200000888990",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         action: "ACTIVATE"
       }
@@ -4371,7 +4402,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Register IoT Device Fleet (POST /v1/iot/devices)",
       method: "POST",
       path: "/v1/iot/devices",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         device_imei: "354920009988221",
         model: "SensNode-v2",
@@ -4384,7 +4415,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Reserve MSISDN Phone Number (POST /v1/numbers/reserve)",
       method: "POST",
       path: "/v1/numbers/reserve",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         msisdn: "+12125550199",
         reservation_timeout_seconds: 600
@@ -4396,7 +4427,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 7a: Create Jurisdiction Policy (POST /v1/jurisdiction-policies)",
       method: "POST",
       path: "/v1/jurisdiction-policies",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         jurisdiction_code: "US-NY",
         tax_rate: 0.0875,
@@ -4407,7 +4438,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 7b: Request Tax Decision (POST /v1/tax-decisions)",
       method: "POST",
       path: "/v1/tax-decisions",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         amount_minor_units: 5000,
         tax_category: "TELECOM",
@@ -4421,7 +4452,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 6a: Start KYC Verification (POST /v1/kyc/cases)",
       method: "POST",
       path: "/v1/kyc/cases",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         customer_id: "cust-1234",
         document_type: "PASSPORT",
@@ -4432,7 +4463,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 6b: Submit KYC Documentation (PATCH /v1/kyc/cases/{id}/submit)",
       method: "PATCH",
       path: "/v1/kyc/cases/kyc-case-9988/submit",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         verification_status: "SUBMITTED"
       }
@@ -4443,7 +4474,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Step 10: Verify Audit/Evidence Chain (GET /v1/evidence/verify)",
       method: "GET",
       path: "/v1/evidence/verify",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: null
     },
     {
@@ -4452,7 +4483,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       path: "/v1/evidence",
       headers: {},
       body: {
-        subject_id: "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+        subject_id: "<subject-id>", // sample payload - replace before sending
         action: "BILL_CYCLE_COMPLETE",
         payload_hash: "8f7d9a1b6c0e3a5f4d2c8b7a69f0e1d2c3b4a5d6e7f8",
         signed_by: "billing-invoice-service"
@@ -4464,7 +4495,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Get AI Governance Status (GET /v1/ai/controls)",
       method: "GET",
       path: "/v1/ai/controls",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: null
     }
   ],
@@ -4473,7 +4504,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "Generate Revenue Report (GET /v1/reports/revenue)",
       method: "GET",
       path: "/v1/reports/revenue",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: null
     }
   ],
@@ -4497,7 +4528,7 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       label: "List Active Webhook Subscriptions (GET /v1/developer/keys)",
       method: "GET",
       path: "/v1/developer/keys",
-      headers: { "X-Tenant-ID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d" },
+      headers: { "X-Tenant-ID": portalTenantId() },
       body: null
     }
   ]
