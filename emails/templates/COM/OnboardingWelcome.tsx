@@ -8,6 +8,7 @@ export interface OnboardingWelcomeData {
   recipient_first_name?: string;
   tenant_display_name: string;
   plan_name_display: string;
+  [key: string]: any;
 }
 
 export interface OnboardingWelcomeEmailProps {

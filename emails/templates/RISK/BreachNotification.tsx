@@ -9,6 +9,7 @@ export interface BreachNotificationData {
   user_masked_email: string;
   affected_data_categories: string;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface BreachNotificationEmailProps {

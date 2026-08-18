@@ -8,6 +8,7 @@ export interface IdentityInformationRequiredData {
   recipient_first_name?: string;
   customer_masked_account_reference?: string;
   brand_display_name?: string;
+  [key: string]: any;
 }
 
 export interface IdentityInformationRequiredEmailProps {

@@ -8,6 +8,7 @@ export interface BatchReceivedData {
   recipient_first_name?: string;
   integration_display_name?: string;
   environment_name?: string;
+  [key: string]: any;
 }
 
 export interface BatchReceivedEmailProps {
@@ -28,7 +29,7 @@ export const BatchReceivedEmail: React.FC<BatchReceivedEmailProps> = ({ payload 
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Data batch {{batch.id}} received"
+      subject={`Data batch ${data.batch_id || 'BATCH-4019'} received`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, We have received batch.`}
       primaryCtaText="Track batch"

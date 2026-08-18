@@ -8,6 +8,7 @@ export interface NexaRecommendationReadyData {
   recipient_first_name?: string;
   nexa_reference?: string;
   nexa_governance_summary?: string;
+  [key: string]: any;
 }
 
 export interface NexaRecommendationReadyEmailProps {

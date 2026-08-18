@@ -237,6 +237,87 @@ import NexaActionFailedEmail from '../../emails/templates/NEXA/NexaActionFailed'
 import NexaPolicyViolationBlockedEmail from '../../emails/templates/NEXA/NexaPolicyViolationBlocked';
 
 
+// ── TEN ──
+import TenantProvisionedEmail from '@/emails/templates/TEN/TenantProvisioned';
+import OnboardingKickoffEmail from '@/emails/templates/TEN/OnboardingKickoff';
+import OnboardingTaskAssignedEmail from '@/emails/templates/TEN/OnboardingTaskAssigned';
+import OnboardingTaskOverdueEmail from '@/emails/templates/TEN/OnboardingTaskOverdue';
+import LegalEntityInformationRequiredEmail from '@/emails/templates/TEN/LegalEntityInformationRequired';
+import BillingProfileVerifiedEmail from '@/emails/templates/TEN/BillingProfileVerified';
+import JurisdictionPackSelectedEmail from '@/emails/templates/TEN/JurisdictionPackSelected';
+import JurisdictionPackChangedEmail from '@/emails/templates/TEN/JurisdictionPackChanged';
+import DataResidencyConfirmedEmail from '@/emails/templates/TEN/DataResidencyConfirmed';
+import BrandKitReceivedEmail from '@/emails/templates/TEN/BrandKitReceived';
+import SenderDomainVerificationRequiredEmail from '@/emails/templates/TEN/SenderDomainVerificationRequired';
+import SenderDomainVerifiedEmail from '@/emails/templates/TEN/SenderDomainVerified';
+import TestTenantReadyEmail from '@/emails/templates/TEN/TestTenantReady';
+import ProductionReadinessIssuesEmail from '@/emails/templates/TEN/ProductionReadinessIssues';
+import GoliveApprovedEmail from '@/emails/templates/TEN/GoliveApproved';
+import GoliveScheduledEmail from '@/emails/templates/TEN/GoliveScheduled';
+import GoliveCompletedEmail from '@/emails/templates/TEN/GoliveCompleted';
+// ── ORD ──
+import OrderReceivedEmail from '@/emails/templates/ORD/OrderReceived';
+import OrderPendingValidationEmail from '@/emails/templates/ORD/OrderPendingValidation';
+import OrderApprovedEmail from '@/emails/templates/ORD/OrderApproved';
+import OrderRequiresActionEmail from '@/emails/templates/ORD/OrderRequiresAction';
+import OrderCanceledEmail from '@/emails/templates/ORD/OrderCanceled';
+import OrderCompletedEmail from '@/emails/templates/ORD/OrderCompleted';
+import ServiceActivationScheduledEmail from '@/emails/templates/ORD/ServiceActivationScheduled';
+import ServiceActivationStartedEmail from '@/emails/templates/ORD/ServiceActivationStarted';
+import ServiceActivationSuccessfulEmail from '@/emails/templates/ORD/ServiceActivationSuccessful';
+import ServiceActivationFailedEmail from '@/emails/templates/ORD/ServiceActivationFailed';
+import ProvisioningDelayedEmail from '@/emails/templates/ORD/ProvisioningDelayed';
+import PhysicalSimDispatchedEmail from '@/emails/templates/ORD/PhysicalSimDispatched';
+import PhysicalSimDeliveryUpdateEmail from '@/emails/templates/ORD/PhysicalSimDeliveryUpdate';
+import EsimReadyEmail from '@/emails/templates/ORD/EsimReady';
+import EsimInstallationReminderEmail from '@/emails/templates/ORD/EsimInstallationReminder';
+import EsimInstalledEmail from '@/emails/templates/ORD/EsimInstalled';
+import EsimActivationFailedEmail from '@/emails/templates/ORD/EsimActivationFailed';
+import SimSwapRequestedEmail from '@/emails/templates/ORD/SimSwapRequested';
+import SimSwapApprovedEmail from '@/emails/templates/ORD/SimSwapApproved';
+import SimSwapCompletedEmail from '@/emails/templates/ORD/SimSwapCompleted';
+import NumberPortRequestReceivedEmail from '@/emails/templates/ORD/NumberPortRequestReceived';
+import NumberPortScheduledEmail from '@/emails/templates/ORD/NumberPortScheduled';
+import NumberPortCompletedEmail from '@/emails/templates/ORD/NumberPortCompleted';
+import NumberPortFailedEmail from '@/emails/templates/ORD/NumberPortFailed';
+
+// ── USG ──
+import UsageThreshold50PercentEmail from '@/emails/templates/USG/UsageThreshold50Percent';
+import UsageThreshold75PercentEmail from '@/emails/templates/USG/UsageThreshold75Percent';
+import UsageThreshold90PercentEmail from '@/emails/templates/USG/UsageThreshold90Percent';
+import UsageThreshold100PercentEmail from '@/emails/templates/USG/UsageThreshold100Percent';
+import OutofbundleChargingStartedEmail from '@/emails/templates/USG/OutofbundleChargingStarted';
+import UsageAnomalyDetectedEmail from '@/emails/templates/USG/UsageAnomalyDetected';
+import RoamingUsageStartedEmail from '@/emails/templates/USG/RoamingUsageStarted';
+import HighRoamingUsageEmail from '@/emails/templates/USG/HighRoamingUsage';
+import RealTimeChargingFallbackActivatedEmail from '@/emails/templates/USG/RealTimeChargingFallbackActivated';
+import PrepaidBalanceLowEmail from '@/emails/templates/USG/PrepaidBalanceLow';
+import PrepaidBalanceDepletedEmail from '@/emails/templates/USG/PrepaidBalanceDepleted';
+import AllowanceResetEmail from '@/emails/templates/USG/AllowanceReset';
+import TopupSuccessfulEmail from '@/emails/templates/USG/TopupSuccessful';
+import TopupFailedEmail from '@/emails/templates/USG/TopupFailed';
+import BundleRenewedEmail from '@/emails/templates/USG/BundleRenewed';
+import BundleRenewalFailedEmail from '@/emails/templates/USG/BundleRenewalFailed';
+// ── SUP ──
+import SupportCaseCreatedEmail from '@/emails/templates/SUP/SupportCaseCreated';
+import SupportCaseAssignedEmail from '@/emails/templates/SUP/SupportCaseAssigned';
+import SupportCaseUpdatedEmail from '@/emails/templates/SUP/SupportCaseUpdated';
+import CustomerActionRequiredEmail from '@/emails/templates/SUP/CustomerActionRequired';
+import SupportCaseEscalatedEmail from '@/emails/templates/SUP/SupportCaseEscalated';
+import SupportCaseResolvedEmail from '@/emails/templates/SUP/SupportCaseResolved';
+import SupportCaseClosedEmail from '@/emails/templates/SUP/SupportCaseClosed';
+import SupportSatisfactionRequestEmail from '@/emails/templates/SUP/SupportSatisfactionRequest';
+import PlannedMaintenanceNoticeEmail from '@/emails/templates/SUP/PlannedMaintenanceNotice';
+import MaintenanceReminderEmail from '@/emails/templates/SUP/MaintenanceReminder';
+import MaintenanceStartedEmail from '@/emails/templates/SUP/MaintenanceStarted';
+import MaintenanceCompletedEmail from '@/emails/templates/SUP/MaintenanceCompleted';
+import IncidentDetectedEmail from '@/emails/templates/SUP/IncidentDetected';
+import IncidentUpdateEmail from '@/emails/templates/SUP/IncidentUpdate';
+import IncidentResolvedEmail from '@/emails/templates/SUP/IncidentResolved';
+import PostincidentReportReadyEmail from '@/emails/templates/SUP/PostincidentReportReady';
+import SlaBreachNotificationEmail from '@/emails/templates/SUP/SlaBreachNotification';
+import SupportEntitlementExpiringEmail from '@/emails/templates/SUP/SupportEntitlementExpiring';
+
 // Default fallback
 import { Text } from '@react-email/components';
 
@@ -244,6 +325,87 @@ function getPreviewEmailComponent(templateId: string, payload: CanonicalEmailPay
   let element: React.ReactElement | null = null;
 
   switch (templateId) {
+    // ── USG ──
+    case 'ZNX-EM-USG-001': element = React.createElement(UsageThreshold50PercentEmail, { payload }); break;
+    case 'ZNX-EM-USG-002': element = React.createElement(UsageThreshold75PercentEmail, { payload }); break;
+    case 'ZNX-EM-USG-003': element = React.createElement(UsageThreshold90PercentEmail, { payload }); break;
+    case 'ZNX-EM-USG-004': element = React.createElement(UsageThreshold100PercentEmail, { payload }); break;
+    case 'ZNX-EM-USG-005': element = React.createElement(OutofbundleChargingStartedEmail, { payload }); break;
+    case 'ZNX-EM-USG-006': element = React.createElement(UsageAnomalyDetectedEmail, { payload }); break;
+    case 'ZNX-EM-USG-007': element = React.createElement(RoamingUsageStartedEmail, { payload }); break;
+    case 'ZNX-EM-USG-008': element = React.createElement(HighRoamingUsageEmail, { payload }); break;
+    case 'ZNX-EM-USG-009': element = React.createElement(RealTimeChargingFallbackActivatedEmail, { payload }); break;
+    case 'ZNX-EM-USG-010': element = React.createElement(PrepaidBalanceLowEmail, { payload }); break;
+    case 'ZNX-EM-USG-011': element = React.createElement(PrepaidBalanceDepletedEmail, { payload }); break;
+    case 'ZNX-EM-USG-012': element = React.createElement(AllowanceResetEmail, { payload }); break;
+    case 'ZNX-EM-USG-013': element = React.createElement(TopupSuccessfulEmail, { payload }); break;
+    case 'ZNX-EM-USG-014': element = React.createElement(TopupFailedEmail, { payload }); break;
+    case 'ZNX-EM-USG-015': element = React.createElement(BundleRenewedEmail, { payload }); break;
+    case 'ZNX-EM-USG-016': element = React.createElement(BundleRenewalFailedEmail, { payload }); break;
+    // ── SUP ──
+    case 'ZNX-EM-SUP-001': element = React.createElement(SupportCaseCreatedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-002': element = React.createElement(SupportCaseAssignedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-003': element = React.createElement(SupportCaseUpdatedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-004': element = React.createElement(CustomerActionRequiredEmail, { payload }); break;
+    case 'ZNX-EM-SUP-005': element = React.createElement(SupportCaseEscalatedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-006': element = React.createElement(SupportCaseResolvedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-007': element = React.createElement(SupportCaseClosedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-008': element = React.createElement(SupportSatisfactionRequestEmail, { payload }); break;
+    case 'ZNX-EM-SUP-009': element = React.createElement(PlannedMaintenanceNoticeEmail, { payload }); break;
+    case 'ZNX-EM-SUP-010': element = React.createElement(MaintenanceReminderEmail, { payload }); break;
+    case 'ZNX-EM-SUP-011': element = React.createElement(MaintenanceStartedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-012': element = React.createElement(MaintenanceCompletedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-013': element = React.createElement(IncidentDetectedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-014': element = React.createElement(IncidentUpdateEmail, { payload }); break;
+    case 'ZNX-EM-SUP-015': element = React.createElement(IncidentResolvedEmail, { payload }); break;
+    case 'ZNX-EM-SUP-016': element = React.createElement(PostincidentReportReadyEmail, { payload }); break;
+    case 'ZNX-EM-SUP-017': element = React.createElement(SlaBreachNotificationEmail, { payload }); break;
+    case 'ZNX-EM-SUP-018': element = React.createElement(SupportEntitlementExpiringEmail, { payload }); break;
+
+    // ── TEN ──
+    case 'ZNX-EM-TEN-001': element = React.createElement(TenantProvisionedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-002': element = React.createElement(OnboardingKickoffEmail, { payload }); break;
+    case 'ZNX-EM-TEN-003': element = React.createElement(OnboardingTaskAssignedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-004': element = React.createElement(OnboardingTaskOverdueEmail, { payload }); break;
+    case 'ZNX-EM-TEN-005': element = React.createElement(LegalEntityInformationRequiredEmail, { payload }); break;
+    case 'ZNX-EM-TEN-006': element = React.createElement(BillingProfileVerifiedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-007': element = React.createElement(JurisdictionPackSelectedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-008': element = React.createElement(JurisdictionPackChangedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-009': element = React.createElement(DataResidencyConfirmedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-010': element = React.createElement(BrandKitReceivedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-011': element = React.createElement(SenderDomainVerificationRequiredEmail, { payload }); break;
+    case 'ZNX-EM-TEN-012': element = React.createElement(SenderDomainVerifiedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-013': element = React.createElement(TestTenantReadyEmail, { payload }); break;
+    case 'ZNX-EM-TEN-015': element = React.createElement(ProductionReadinessIssuesEmail, { payload }); break;
+    case 'ZNX-EM-TEN-016': element = React.createElement(GoliveApprovedEmail, { payload }); break;
+    case 'ZNX-EM-TEN-017': element = React.createElement(GoliveScheduledEmail, { payload }); break;
+    case 'ZNX-EM-TEN-018': element = React.createElement(GoliveCompletedEmail, { payload }); break;
+    // ── ORD ──
+    case 'ZNX-EM-ORD-001': element = React.createElement(OrderReceivedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-002': element = React.createElement(OrderPendingValidationEmail, { payload }); break;
+    case 'ZNX-EM-ORD-003': element = React.createElement(OrderApprovedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-004': element = React.createElement(OrderRequiresActionEmail, { payload }); break;
+    case 'ZNX-EM-ORD-005': element = React.createElement(OrderCanceledEmail, { payload }); break;
+    case 'ZNX-EM-ORD-006': element = React.createElement(OrderCompletedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-007': element = React.createElement(ServiceActivationScheduledEmail, { payload }); break;
+    case 'ZNX-EM-ORD-008': element = React.createElement(ServiceActivationStartedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-009': element = React.createElement(ServiceActivationSuccessfulEmail, { payload }); break;
+    case 'ZNX-EM-ORD-010': element = React.createElement(ServiceActivationFailedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-011': element = React.createElement(ProvisioningDelayedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-012': element = React.createElement(PhysicalSimDispatchedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-013': element = React.createElement(PhysicalSimDeliveryUpdateEmail, { payload }); break;
+    case 'ZNX-EM-ORD-014': element = React.createElement(EsimReadyEmail, { payload }); break;
+    case 'ZNX-EM-ORD-015': element = React.createElement(EsimInstallationReminderEmail, { payload }); break;
+    case 'ZNX-EM-ORD-016': element = React.createElement(EsimInstalledEmail, { payload }); break;
+    case 'ZNX-EM-ORD-017': element = React.createElement(EsimActivationFailedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-018': element = React.createElement(SimSwapRequestedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-019': element = React.createElement(SimSwapApprovedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-020': element = React.createElement(SimSwapCompletedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-021': element = React.createElement(NumberPortRequestReceivedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-022': element = React.createElement(NumberPortScheduledEmail, { payload }); break;
+    case 'ZNX-EM-ORD-023': element = React.createElement(NumberPortCompletedEmail, { payload }); break;
+    case 'ZNX-EM-ORD-024': element = React.createElement(NumberPortFailedEmail, { payload }); break;
+
     // ── COM ──
     case 'ZNX-EM-COM-001': element = React.createElement(DemoRequestReceivedEmail, { payload }); break;
     case 'ZNX-EM-COM-002': element = React.createElement(DemoBookedEmail, { payload }); break;
@@ -473,76 +635,79 @@ function getPreviewEmailComponent(templateId: string, payload: CanonicalEmailPay
   return element;
 }
 
+import { validateEventPayload, generateSyntheticPayload } from '@/lib/communications/eventContract';
+import { resolveDeliveryPolicy, DeliveryPolicy } from '@/lib/communications/deliveryPolicy';
+
+export interface RenderPreviewResult {
+  success: boolean;
+  html?: string;
+  plainText?: string;
+  payload?: CanonicalEmailPayload;
+  deliveryPolicy?: DeliveryPolicy;
+  validation?: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  error?: string;
+}
+
 export async function renderPreviewEmail(
   templateId: string, 
   brandOverride?: Partial<CanonicalEmailPayload['rendering']['brand']>, 
   senderOverride?: Partial<CanonicalEmailPayload['rendering']['sender']>, 
-  supportOverride?: Partial<CanonicalEmailPayload['rendering']['support']>
-) {
-  // Safe defaults mimicking CanonicalLayout defaults
-  const brand: CanonicalEmailPayload['rendering']['brand'] = {
-    display_name: 'ZoikoNex',
-    logo_url: 'https://cdn.zoikonex.com/logo-light.png',
-    primary_color: '#0052FF',
-    ...brandOverride
-  };
-  
-  const sender: CanonicalEmailPayload['rendering']['sender'] = {
-    from_name: 'ZoikoNex',
-    reply_to: 'no-reply@zoikonex.com',
-    ...senderOverride
-  };
-  
-  const support: CanonicalEmailPayload['rendering']['support'] = {
-    url: 'https://support.zoikonex.com',
-    ...supportOverride
-  };
+  supportOverride?: Partial<CanonicalEmailPayload['rendering']['support']>,
+  customPayload?: Partial<CanonicalEmailPayload>
+): Promise<RenderPreviewResult> {
+  const familyMatch = templateId.match(/ZNX-EM-([A-Z]+)-/);
+  const family = familyMatch ? familyMatch[1] : 'COM';
 
-  const payload: CanonicalEmailPayload = {
-    identity: {
-      tenant_id: 't-123',
-      operator_id: 'op-123',
-      brand_id: 'b-123',
-      environment_name: 'preview',
-      recipient_role: 'subscriber',
-      recipient_locale: 'en-US',
-      recipient_time_zone: 'UTC'
-    },
-    traceability: {
-      event_type: 'preview_generated',
-      event_version: '1.0',
-      event_id: 'evt-123',
-      correlation_id: 'corr-123',
-      message_reference: 'msg-123',
-      template_id: templateId,
-      template_version: '1.0'
-    },
-    rendering: { brand, sender, support },
-    governance: {
-      message_classification: 'P3 Operational Notice',
-      message_legal_basis: 'Contract',
-      message_preference_category: 'System',
-      message_sensitivity: 'Normal'
-    },
-    localizedValues: {
-      jurisdiction_code: 'US',
-      language_code: 'en-US',
-      currency_code: 'USD',
-      date_local: 'Jul 24, 2026',
-      date_utc: '2026-07-24T12:00:00Z'
-    },
-    eventData: {
-      tenant_display_name: 'Acme Corp',
-      environment_name: 'Production',
-      event_occurred_at_local: 'Jul 24, 2026 12:00 PM'
+  const payload = generateSyntheticPayload(templateId, family, {
+    ...customPayload,
+    rendering: {
+      brand: {
+        display_name: 'ZoikoNex',
+        logo_url: 'https://cdn.zoikonex.com/logo-light.png',
+        primary_color: '#0052FF',
+        ...brandOverride,
+        ...customPayload?.rendering?.brand
+      },
+      sender: {
+        from_name: 'ZoikoNex Notifications',
+        reply_to: 'no-reply@zoikonex.com',
+        ...senderOverride,
+        ...customPayload?.rendering?.sender
+      },
+      support: {
+        url: 'https://support.zoikonex.com',
+        ...supportOverride,
+        ...customPayload?.rendering?.support
+      }
     }
-  };
+  });
 
   const element = getPreviewEmailComponent(templateId, payload);
   if (!element) {
-    return { success: false, error: 'Template not found' };
+    return { success: false, error: `Template ${templateId} not mapped in renderPreviewEmail` };
   }
 
+  // Section 08: Generate both HTML and Plain-Text Multipart alternative
   const html = await render(element);
-  return { success: true, html, payload };
+  const plainText = await render(element, { plainText: true });
+
+  // Section 05: Mandatory contract validation
+  const validation = validateEventPayload(payload);
+
+  // Section 03: Delivery policy resolution
+  const deliveryPolicy = resolveDeliveryPolicy(payload.governance.message_classification, templateId);
+
+  return { 
+    success: true, 
+    html, 
+    plainText, 
+    payload, 
+    deliveryPolicy, 
+    validation 
+  };
 }
+

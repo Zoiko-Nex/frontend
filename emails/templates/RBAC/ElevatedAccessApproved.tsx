@@ -8,6 +8,7 @@ export interface ElevatedAccessApprovedData {
   recipient_first_name?: string;
   user_display_name?: string;
   access_scope_summary?: string;
+  [key: string]: any;
 }
 
 export interface ElevatedAccessApprovedEmailProps {

@@ -10,6 +10,7 @@ export interface RefundProcessedData {
   refund_amount_formatted: string;
   refund_method_display: string;
   refund_eta_display: string;
+  [key: string]: any;
 }
 
 export interface RefundProcessedEmailProps {

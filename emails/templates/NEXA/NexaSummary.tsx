@@ -9,6 +9,7 @@ export interface NexaSummaryData {
   summary_period_display: string;
   summary_headline_display: string;
   key_metric_display: string;
+  [key: string]: any;
 }
 
 export interface NexaSummaryEmailProps {

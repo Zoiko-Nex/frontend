@@ -8,6 +8,7 @@ export interface InvoiceIssuedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface InvoiceIssuedEmailProps {
@@ -28,7 +29,7 @@ export const InvoiceIssuedEmail: React.FC<InvoiceIssuedEmailProps> = ({ payload 
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Your invoice {{invoice.number}} is ready"
+      subject={`Your invoice ${data.invoice_number || 'INV-2026-08892'} is ready`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This has been issued: invoice.`}
       primaryCtaText="View invoice"

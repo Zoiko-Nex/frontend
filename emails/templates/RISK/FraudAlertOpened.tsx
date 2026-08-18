@@ -8,6 +8,7 @@ export interface FraudAlertOpenedData {
   recipient_first_name?: string;
   case_id?: string;
   case_severity?: string;
+  [key: string]: any;
 }
 
 export interface FraudAlertOpenedEmailProps {

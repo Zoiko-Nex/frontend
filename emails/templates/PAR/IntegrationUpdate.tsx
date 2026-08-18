@@ -10,6 +10,7 @@ export interface IntegrationUpdateData {
   update_type_display: string;
   change_summary_display: string;
   effective_date_display: string;
+  [key: string]: any;
 }
 
 export interface IntegrationUpdateEmailProps {

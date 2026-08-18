@@ -10,6 +10,7 @@ export interface SlaBreachData {
   breach_threshold_display: string;
   current_value_display: string;
   partner_organisation_display: string;
+  [key: string]: any;
 }
 
 export interface SlaBreachEmailProps {

@@ -9,6 +9,7 @@ export interface PrivacyNoticeData {
   change_summary_display: string;
   effective_date_display: string;
   policy_version_display: string;
+  [key: string]: any;
 }
 
 export interface PrivacyNoticeEmailProps {

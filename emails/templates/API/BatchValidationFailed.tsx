@@ -8,6 +8,7 @@ export interface BatchValidationFailedData {
   recipient_first_name?: string;
   integration_display_name?: string;
   environment_name?: string;
+  [key: string]: any;
 }
 
 export interface BatchValidationFailedEmailProps {
@@ -28,7 +29,7 @@ export const BatchValidationFailedEmail: React.FC<BatchValidationFailedEmailProp
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Action required: Batch {{batch.id}} failed validation"
+      subject={`Action required: Batch ${data.batch_id || 'BATCH-4019'} failed validation`}
       preheader="Review the details, impact and required next step without delay."
       openingText={`Hello ${firstName}, This did not complete successfully: batch validation.`}
       primaryCtaText="Review errors"

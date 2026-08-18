@@ -8,6 +8,7 @@ export interface BatchProcessedData {
   recipient_first_name?: string;
   integration_display_name?: string;
   environment_name?: string;
+  [key: string]: any;
 }
 
 export interface BatchProcessedEmailProps {
@@ -28,7 +29,7 @@ export const BatchProcessedEmail: React.FC<BatchProcessedEmailProps> = ({ payloa
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Batch {{batch.id}} processed"
+      subject={`Batch ${data.batch_id || 'BATCH-4019'} processed`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This email relates to batch processed.`}
       primaryCtaText="View results"

@@ -10,6 +10,7 @@ export interface SubscriptionRenewedData {
   plan_name_display: string;
   renewal_amount_formatted: string;
   next_renewal_date_display: string;
+  [key: string]: any;
 }
 
 export interface SubscriptionRenewedEmailProps {

@@ -8,6 +8,7 @@ export interface ConsentRecordedData {
   recipient_first_name?: string;
   compliance_jurisdiction?: string;
   compliance_effective_date?: string;
+  [key: string]: any;
 }
 
 export interface ConsentRecordedEmailProps {

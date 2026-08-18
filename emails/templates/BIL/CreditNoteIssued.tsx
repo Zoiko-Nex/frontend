@@ -8,6 +8,7 @@ export interface CreditNoteIssuedData {
   recipient_first_name?: string;
   billing_document_reference?: string;
   billing_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface CreditNoteIssuedEmailProps {
@@ -28,7 +29,7 @@ export const CreditNoteIssuedEmail: React.FC<CreditNoteIssuedEmailProps> = ({ pa
   return (
     <CanonicalLayout
       payload={payload}
-      subject="Credit note {{credit_note.number}} has been issued"
+      subject={`Credit note ${data.credit_note_number || 'CR-2026-0041'} has been issued`}
       preheader="Confirmation, key details and the next available action."
       openingText={`Hello ${firstName}, This has been issued: credit note.`}
       primaryCtaText="View credit note"

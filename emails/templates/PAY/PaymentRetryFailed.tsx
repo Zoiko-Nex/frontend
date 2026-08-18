@@ -8,6 +8,7 @@ export interface PaymentRetryFailedData {
   recipient_first_name?: string;
   payment_reference?: string;
   payment_amount_formatted?: string;
+  [key: string]: any;
 }
 
 export interface PaymentRetryFailedEmailProps {

@@ -8,6 +8,7 @@ export interface ProductRetiredData {
   recipient_first_name?: string;
   product_display_name?: string;
   product_effective_date?: string;
+  [key: string]: any;
 }
 
 export interface ProductRetiredEmailProps {

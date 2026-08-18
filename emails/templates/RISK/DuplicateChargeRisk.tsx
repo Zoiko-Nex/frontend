@@ -8,6 +8,7 @@ export interface DuplicateChargeRiskData {
   recipient_first_name?: string;
   case_id?: string;
   case_severity?: string;
+  [key: string]: any;
 }
 
 export interface DuplicateChargeRiskEmailProps {

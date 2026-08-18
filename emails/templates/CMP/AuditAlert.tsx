@@ -10,6 +10,7 @@ export interface AuditAlertData {
   actor_masked_display: string;
   affected_resource_display: string;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface AuditAlertEmailProps {

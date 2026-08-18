@@ -9,6 +9,7 @@ export interface AccountSuspensionData {
   user_masked_email: string;
   suspension_reason_display: string;
   tenant_display_name: string;
+  [key: string]: any;
 }
 
 export interface AccountSuspensionEmailProps {
