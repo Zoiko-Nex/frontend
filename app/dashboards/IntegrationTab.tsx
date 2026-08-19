@@ -1036,6 +1036,31 @@ function OperationsSection({ connector }: { connector: Connector }) {
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to certify operation"),
   });
 
+  /**
+   * Removes an operation from the allow-list.
+   *
+   * The allow-list is what stops an app invoking an arbitrary provider URL, so
+   * an operation nobody calls any more is standing permission with no user.
+   * Deleting a CERTIFIED one revokes production access immediately, which is
+   * why that case is confirmed separately rather than sharing the plain path.
+   */
+  const removeOp = useMutation({
+    mutationFn: (id: string) => api.del("integration", `/v1/operations/${id}`),
+    onSuccess: () => {
+      toast.success("Operation removed from the allow-list");
+      qc.invalidateQueries({ queryKey: ["integration", "operations", connector.connector_id] });
+    },
+    onError: (e) => toast.error(errMessage(e, "Could not remove the operation")),
+  });
+
+  const confirmRemoveOp = (op: Operation) => {
+    const certified = op.certification_status === "CERTIFIED";
+    const msg = certified
+      ? `Remove "${op.operation_name}"? It is CERTIFIED — production callers lose access to it immediately.`
+      : `Remove "${op.operation_name}" from the allow-list?`;
+    if (window.confirm(msg)) removeOp.mutate(op.operation_id);
+  };
+
   const ops = q.data?.operations ?? [];
 
   return (
@@ -1135,6 +1160,14 @@ function OperationsSection({ connector }: { connector: Connector }) {
                         Certify Production
                       </button>
                     )}
+                    <button
+                      onClick={() => confirmRemoveOp(op)}
+                      disabled={removeOp.isPending}
+                      title="Revokes the allow-list entry — callers can no longer invoke this operation"
+                      className="ml-1.5 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-[11px] rounded-md transition cursor-pointer disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
                   </td>
                 </tr>
               ))
@@ -1331,6 +1364,25 @@ function WebhooksTab() {
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Secret rotation failed"),
   });
 
+  /**
+   * Pause is the reversible option Delete is not.
+   *
+   * A partner whose endpoint is failing needs deliveries stopped now; deleting
+   * the subscription also loses the URL, the event filter and the signing
+   * secret, so the operator has to re-register — and re-share a new secret —
+   * once the partner recovers. PATCH sets status instead, so resuming is one
+   * click and nothing about the subscription changes.
+   */
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch("integration", `/v1/hub/${id}`, { status }),
+    onSuccess: (_r, v) => {
+      toast.success(v.status === "ACTIVE" ? "Deliveries resumed" : "Deliveries paused");
+      qc.invalidateQueries({ queryKey: ["integration", "webhooks"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Could not change the status"),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => api.del("integration", `/v1/hub/${id}`),
     onSuccess: () => {
@@ -1442,7 +1494,25 @@ function WebhooksTab() {
                           {rotate.isPending ? "Rotating…" : "Rotate secret"}
                         </button>
                         <button
+                          onClick={() =>
+                            setStatus.mutate({
+                              id: s.subscription_id,
+                              status: s.status === "ACTIVE" ? "PAUSED" : "ACTIVE",
+                            })
+                          }
+                          disabled={setStatus.isPending}
+                          title={
+                            s.status === "ACTIVE"
+                              ? "Stop deliveries without losing the URL, filter or secret"
+                              : "Resume deliveries"
+                          }
+                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-bold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
+                        >
+                          {s.status === "ACTIVE" ? "Pause" : "Resume"}
+                        </button>
+                        <button
                           onClick={() => remove.mutate(s.subscription_id)}
+                          title="Removes the URL, event filter and signing secret — pause instead if this is temporary"
                           className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition cursor-pointer"
                         >
                           Delete
@@ -1828,6 +1898,23 @@ function ConnectionsTab() {
     region: "",
   });
 
+  /**
+   * SSRF pre-flight on the endpoint URL.
+   *
+   * The egress validator rejects targets that resolve to internal ranges —
+   * link-local, loopback, cloud metadata. Running it before the connection is
+   * saved turns "the connector mysteriously fails in production" into a
+   * refusal at the point the URL is typed, with the reason attached. A 403
+   * from this route is the expected answer for a bad target, not an error.
+   */
+  const [egress, setEgress] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const validateEgress = useMutation({
+    mutationFn: () => api.post<{ valid?: boolean; allowed?: boolean }>("integration", "/v1/egress/validate", { target_url: form.endpoint_url.trim() }),
+    onSuccess: () => setEgress({ ok: true, message: "Target is reachable and outside every blocked range." }),
+    onError: (e) => setEgress({ ok: false, message: errMessage(e, "This target was rejected by the egress policy.") }),
+  });
+
   const create = useMutation({
     mutationFn: () => api.post("integration", "/v1/connections", form),
     onSuccess: () => {
@@ -1965,8 +2052,33 @@ function ConnectionsTab() {
             </select>
           </Field>
           <Field label="Endpoint URL">
-            <input className={inputMonoClass} value={form.endpoint_url} onChange={(e) => setForm({ ...form, endpoint_url: e.target.value })} placeholder="https://…" />
+            <div className="flex gap-2">
+              <input
+                className={inputMonoClass}
+                value={form.endpoint_url}
+                onChange={(e) => { setForm({ ...form, endpoint_url: e.target.value }); setEgress(null); }}
+                placeholder="https://…"
+              />
+              <button
+                onClick={() => validateEgress.mutate()}
+                disabled={!form.endpoint_url.trim() || validateEgress.isPending}
+                className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-bold transition cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {validateEgress.isPending ? "Checking…" : "Check"}
+              </button>
+            </div>
           </Field>
+          {egress && (
+            <p
+              className={`text-[11px] rounded-md px-3 py-2 leading-relaxed ${
+                egress.ok
+                  ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                  : "text-rose-700 bg-rose-50 border border-rose-200"
+              }`}
+            >
+              {egress.message}
+            </p>
+          )}
           <Field label="Region">
             <input className={inputClass} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="eu-west-2" />
           </Field>
@@ -2059,6 +2171,26 @@ function TelecomTab() {
     queryFn: () => api.get<{ portability_requests?: any[] }>("integration", "/v1/telecom/portability/requests"),
   });
   const gateways = gatewaysQ.data?.gateways ?? [];
+
+  /**
+   * Live bind state for one gateway.
+   *
+   * The card shows the gateway's configured status, which is what it is meant
+   * to be doing. This is what the link is actually doing right now — an SMPP
+   * gateway can read ACTIVE and have no bound session, which is precisely the
+   * failure that goes unnoticed. The service 404s when a gateway has never
+   * bound, and that is reported as never-bound rather than as an error.
+   */
+  const [sessionsFor, setSessionsFor] = useState<any | null>(null);
+  const sessionsQ = useQuery({
+    queryKey: ["integration", "gateway-sessions", sessionsFor?.gateway_id],
+    enabled: !!sessionsFor,
+    retry: false,
+    queryFn: () =>
+      api.get<Record<string, unknown>>("integration", `/v1/telecom/gateways/${sessionsFor.gateway_id}/sessions`),
+  });
+  const neverBound = (sessionsQ.error as { status?: number } | null)?.status === 404;
+
   const batches = roamingQ.data?.batches ?? [];
   const esimProfiles = esimQ.data?.esim_profiles ?? [];
   const portRequests = portQ.data?.portability_requests ?? [];
@@ -2083,10 +2215,50 @@ function TelecomTab() {
               {gw.rsp_spec_version && <div className="text-[10px] text-indigo-700 font-bold bg-indigo-50 rounded px-2 py-0.5 inline-block w-fit">{gw.rsp_spec_version}</div>}
               {gw.smpp_throughput_tps && <div className="text-[11px] text-slate-500">{gw.smpp_throughput_tps} TPS · window {gw.smpp_window_size}</div>}
               {gw.nrtrde_enabled && <div className="text-[11px] text-emerald-700 font-semibold">NRTRDE enabled</div>}
+              <button
+                onClick={() => setSessionsFor(gw)}
+                className="mt-1 px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer w-fit"
+              >
+                Session state
+              </button>
             </div>
           ))}
         </div>
       </div>
+
+      {sessionsFor && (
+        <Modal
+          title={`Session state · ${sessionsFor.gateway_name}`}
+          subtitle="What the link is doing now, as opposed to what it is configured to do."
+          width="w-[560px]"
+          onClose={() => setSessionsFor(null)}
+          footer={
+            <button
+              onClick={() => setSessionsFor(null)}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+          }
+        >
+          {sessionsQ.isLoading && <p className="text-xs text-slate-400">Reading…</p>}
+          {neverBound && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-relaxed">
+              This gateway has never bound. Its configured status reads{" "}
+              <span className="font-mono font-bold">{sessionsFor.status}</span>, but no session has ever been
+              established — a gateway can look ACTIVE and be carrying nothing.
+            </p>
+          )}
+          {sessionsQ.error && !neverBound && (
+            <p className="text-xs text-rose-600">{errMessage(sessionsQ.error, "Could not read session state")}</p>
+          )}
+          {sessionsQ.data && (
+            <pre className="text-[10px] text-slate-600 font-mono bg-slate-50 border border-slate-200 rounded-md p-3 overflow-x-auto">
+              {JSON.stringify(sessionsQ.data, null, 2)}
+            </pre>
+          )}
+        </Modal>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
         <h2 className="text-base font-bold text-slate-900">TAP3 / NRTRDE Roaming Batches <span className="text-xs font-normal text-slate-500 ml-1">INT-TEL-005/006</span></h2>
@@ -2320,18 +2492,73 @@ function B2BTab() {
 /* ───────── §23 mTLS Security Profiles Tab ───────── */
 
 function MTLSTab() {
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["integration", "mtls", "profiles"],
     queryFn: () => api.get<{ mtls_profiles?: any[] }>("integration", "/v1/security/mtls-profiles"),
   });
   const profiles = q.data?.mtls_profiles ?? [];
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+
+  /**
+   * Creates the profile only. The certificate itself is not uploaded here and
+   * never passes through the browser — certs live in Vault (INT-SEC-007), and
+   * a private key pasted into a web form is a key you have to treat as
+   * compromised. The profile is the record the cert is later bound to.
+   */
+  const create = useMutation({
+    mutationFn: () => api.post("integration", "/v1/security/mtls-profiles", { profile_name: profileName.trim() }),
+    onSuccess: () => {
+      toast.success("Profile created — bind a certificate in Vault to activate it");
+      setCreateOpen(false);
+      setProfileName("");
+      qc.invalidateQueries({ queryKey: ["integration", "mtls", "profiles"] });
+    },
+    onError: (e) => toast.error(errMessage(e, "Could not create the profile")),
+  });
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">mTLS Security Profiles</h2>
-        <p className="text-xs text-slate-500 mt-0.5">ADR-013 / INT-SEC-005/006 — Mutual TLS for HIGH-risk connections. Zero-downtime rotation. TLS 1.0/1.1 PROHIBITED (BCP 195).</p>
+      <div className="flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">mTLS Security Profiles</h2>
+          <p className="text-xs text-slate-500 mt-0.5">ADR-013 / INT-SEC-005/006 — Mutual TLS for HIGH-risk connections. Zero-downtime rotation. TLS 1.0/1.1 PROHIBITED (BCP 195).</p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer shrink-0"
+        >
+          + Profile
+        </button>
       </div>
+
+      {createOpen && (
+        <Modal
+          title="Create an mTLS profile"
+          subtitle="The profile record only. The certificate is bound in Vault and never passes through this form."
+          onClose={() => setCreateOpen(false)}
+          footer={
+            <ModalActions
+              onCancel={() => setCreateOpen(false)}
+              onConfirm={() => create.mutate()}
+              confirmLabel="Create profile"
+              pendingLabel="Creating…"
+              pending={create.isPending}
+              disabled={!profileName.trim()}
+            />
+          }
+        >
+          <Field label="Profile name">
+            <input className={inputClass} value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="acme-partner-prod" />
+          </Field>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Certificates and private keys are stored in Vault (INT-SEC-007). Nothing here uploads one — a key pasted
+            into a browser form has to be treated as compromised from that moment.
+          </p>
+        </Modal>
+      )}
       <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-900 text-xs">
         TLS 1.3 preferred · TLS 1.2 permitted · <strong className="text-rose-600">TLS 1.0/1.1 PROHIBITED</strong> (INT-SEC-004 / BCP 195). Certs in Vault (INT-SEC-007). Alerts 30d before expiry (INT-SEC-009).
       </div>
