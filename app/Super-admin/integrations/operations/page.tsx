@@ -41,6 +41,17 @@ interface IntegrationEvent {
   rawPayload: any;
   /** Present only for dead-lettered events — the only ones that can be reprocessed. */
   dlqId?: string;
+  /** Present only for webhook deliveries — the only ones with an attempt history. */
+  deliveryId?: string;
+}
+
+interface DeliveryAttempt {
+  attempt_id?: string;
+  attempt_number?: number;
+  response_status?: number;
+  outcome_class?: string;
+  error_detail?: string;
+  attempted_at?: string;
 }
 
 // ─── Backend record shapes ────────────────────────────────────────────────────
@@ -130,6 +141,7 @@ function mapDelivery(d: WebhookDelivery): IntegrationEvent {
     errorDetail: d.outcome_class && d.outcome_class !== 'SUCCESS' ? d.outcome_class : undefined,
     rawPayload: parsePayload(d.payload_json),
     dlqId: d.dlq_id,
+    deliveryId: d.delivery_id,
   };
 }
 
@@ -175,6 +187,7 @@ export default function IntegrationOperationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedEvent, setSelectedEvent] = useState<IntegrationEvent | null>(null);
+  const [isWritingOff, setIsWritingOff] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -238,6 +251,70 @@ export default function IntegrationOperationsPage() {
       setIsReplaying(false);
     }
   };
+
+  /**
+   * The other terminal option for a dead-lettered event.
+   *
+   * Reprocess says "try again"; write-off says "this will never succeed, stop
+   * counting it as an outstanding failure". A poison message — malformed
+   * payload, a partner that no longer exists — is retried forever otherwise,
+   * and the DLQ stops being a list anyone reads.
+   *
+   * Guarded behind a confirmation because it is not reversible: written off is
+   * a terminal state, and the event is not delivered by some other route
+   * afterwards. Only DLQ records have the route; quarantine and plain failed
+   * deliveries do not, so the button is hidden for them rather than firing a
+   * call that 404s.
+   */
+  const handleWriteOff = async (correlationId: string) => {
+    const target = events.find((e) => e.correlationId === correlationId);
+    if (!target?.dlqId) {
+      showToast('Only dead-lettered events can be written off.');
+      return;
+    }
+    if (!window.confirm('Write off this event? It will not be delivered, and this cannot be undone.')) return;
+    setIsWritingOff(true);
+    try {
+      await platformApi.post('integration', `/v1/dlq/${target.dlqId}/write-off`, {});
+      showToast(`Written off [${correlationId}].`);
+      setSelectedEvent(null);
+      await qc.invalidateQueries({ queryKey: ['superadmin', 'integration-events'] });
+    } catch (e) {
+      showToast(errMessage(e, 'Write-off failed.'));
+    } finally {
+      setIsWritingOff(false);
+    }
+  };
+
+  /**
+   * Per-delivery attempt history. The list row carries only a count; this is
+   * the record of what each attempt actually got back, which is the difference
+   * between "the partner is down" and "we are sending them something they
+   * reject". Fetched only when a delivery is selected — there is no value in
+   * pulling attempt history for every row on screen.
+   */
+  const attemptsQ = useQuery({
+    queryKey: ['superadmin', 'delivery-attempts', selectedEvent?.deliveryId],
+    enabled: !!selectedEvent?.deliveryId,
+    retry: false,
+    queryFn: async () =>
+      (await platformApi.get<{ attempts?: DeliveryAttempt[] }>(
+        'integration',
+        `/v1/webhooks/deliveries/${selectedEvent!.deliveryId}/attempts`,
+      )).attempts ?? [],
+  });
+
+  /**
+   * The full DLQ record. The unified list flattens three stores into one shape,
+   * so fields unique to a DLQ record — connector, retry policy, the original
+   * headers — are dropped on the way in. Fetched on selection to show them.
+   */
+  const dlqDetailQ = useQuery({
+    queryKey: ['superadmin', 'dlq-detail', selectedEvent?.dlqId],
+    enabled: !!selectedEvent?.dlqId,
+    retry: false,
+    queryFn: () => platformApi.get<Record<string, unknown>>('integration', `/v1/dlq/${selectedEvent!.dlqId}`),
+  });
 
   const filteredEvents = events.filter(e => {
     const matchesSearch = 
@@ -474,6 +551,64 @@ export default function IntegrationOperationsPage() {
                 </pre>
               </div>
 
+              {/* Attempt history — webhook deliveries only */}
+              {selectedEvent.deliveryId && (
+                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Attempt history
+                  </div>
+                  {attemptsQ.isLoading && <p className="text-xs text-slate-500">Loading attempts…</p>}
+                  {attemptsQ.error && (
+                    <p className="text-xs text-rose-400">{errMessage(attemptsQ.error, 'Attempt history unavailable.')}</p>
+                  )}
+                  {attemptsQ.data && attemptsQ.data.length === 0 && (
+                    <p className="text-xs text-slate-500">No attempts recorded yet.</p>
+                  )}
+                  {attemptsQ.data && attemptsQ.data.length > 0 && (
+                    <ol className="flex flex-col gap-2">
+                      {attemptsQ.data.map((a, i) => (
+                        <li
+                          key={a.attempt_id ?? i}
+                          className="flex items-start gap-3 text-xs border-b border-slate-800/60 last:border-0 pb-2 last:pb-0"
+                        >
+                          <span className="font-mono text-slate-500 shrink-0 w-6">#{a.attempt_number ?? i + 1}</span>
+                          <span
+                            className={`font-mono font-bold shrink-0 w-12 ${
+                              a.response_status && a.response_status < 400 ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
+                          >
+                            {a.response_status ?? '—'}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="text-slate-300">{a.outcome_class ?? '—'}</span>
+                            {a.error_detail && (
+                              <span className="block text-slate-500 font-mono text-[10px] mt-0.5 break-all">
+                                {a.error_detail}
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-slate-600 text-[10px] shrink-0">
+                            {a.attempted_at ? new Date(a.attempted_at).toLocaleTimeString() : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              )}
+
+              {/* Full DLQ record — fields the unified list drops */}
+              {selectedEvent.dlqId && dlqDetailQ.data && (
+                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Full DLQ record
+                  </div>
+                  <pre className="text-[10px] text-slate-400 font-mono overflow-x-auto max-h-48">
+                    {JSON.stringify(dlqDetailQ.data, null, 2)}
+                  </pre>
+                </div>
+              )}
+
               {/* Operator Replay Action Button (INT-REL-005) */}
               {(selectedEvent.status === 'DLQ' || selectedEvent.status === 'QUARANTINE' || selectedEvent.status === 'FAILED') && (
                 <button
@@ -484,6 +619,24 @@ export default function IntegrationOperationsPage() {
                   <RotateCcw className={`w-4 h-4 ${isReplaying ? 'animate-spin' : ''}`} />
                   {isReplaying ? 'Executing Replay...' : 'Execute Safe Operator Replay (INT-REL-005)'}
                 </button>
+              )}
+
+              {/* Write-off — the terminal alternative, DLQ records only */}
+              {selectedEvent.dlqId && (
+                <div>
+                  <button
+                    disabled={isWritingOff}
+                    onClick={() => handleWriteOff(selectedEvent.correlationId)}
+                    className="w-full py-3 bg-transparent hover:bg-rose-950/40 text-rose-400 border border-rose-500/30 font-bold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <AlertOctagon className="w-4 h-4" />
+                    {isWritingOff ? 'Writing off…' : 'Write Off — Will Not Be Delivered'}
+                  </button>
+                  <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                    Use when the event can never succeed — a malformed payload, or a partner that no longer exists.
+                    Terminal and not reversible; the event is not delivered by any other route afterwards.
+                  </p>
+                </div>
               )}
             </div>
           </div>

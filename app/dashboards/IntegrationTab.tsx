@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
 import { getSession } from "@/lib/admin/session";
 import { errMessage } from "@/lib/admin/envelope";
+import { Field, Modal, ModalActions, inputClass, inputMonoClass } from "@/components/admin/primitives";
 
 /* ───────── Types mirroring integration-ecosystem domain models ───────── */
 
@@ -1804,19 +1805,78 @@ function ReconciliationTab() {
 /* ───────── §36 Connections Registry Tab ───────── */
 
 function ConnectionsTab() {
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["integration", "connections"],
     queryFn: () => api.get<{ connections?: any[]; count?: number }>("integration", "/v1/connections"),
   });
   const connections = q.data?.connections ?? [];
 
+  const connectorsQ = useQuery({
+    queryKey: ["integration", "connectors"],
+    queryFn: () => api.get<{ connectors?: Connector[] }>("integration", "/v1/connectors"),
+  });
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [inspect, setInspect] = useState<any | null>(null);
+  const [form, setForm] = useState({
+    connector_id: "",
+    connection_name: "",
+    environment: "SANDBOX",
+    connection_mode: "OUTBOUND",
+    endpoint_url: "",
+    region: "",
+  });
+
+  const create = useMutation({
+    mutationFn: () => api.post("integration", "/v1/connections", form),
+    onSuccess: () => {
+      toast.success("Connection registered");
+      setCreateOpen(false);
+      setForm({ connector_id: "", connection_name: "", environment: "SANDBOX", connection_mode: "OUTBOUND", endpoint_url: "", region: "" });
+      qc.invalidateQueries({ queryKey: ["integration", "connections"] });
+    },
+    onError: (e) => toast.error(errMessage(e, "Could not register the connection")),
+  });
+
+  /**
+   * A 404 here is information, not an error: the service distinguishes "this
+   * connection has never been probed" from "it is healthy", and collapsing the
+   * two is how a dead integration reads as green. Shown as never-probed rather
+   * than as a failure.
+   */
+  const healthQ = useQuery({
+    queryKey: ["integration", "connection-health", inspect?.connection_id],
+    enabled: !!inspect,
+    retry: false,
+    queryFn: () => api.get<Record<string, unknown>>("integration", `/v1/connections/${inspect.connection_id}/health`),
+  });
+
+  const interfacesQ = useQuery({
+    queryKey: ["integration", "connection-interfaces", inspect?.connection_id],
+    enabled: !!inspect,
+    retry: false,
+    queryFn: async () =>
+      (await api.get<{ interfaces?: any[] }>("integration", `/v1/connections/${inspect.connection_id}/interfaces`)).interfaces ?? [],
+  });
+
+  const neverProbed = (healthQ.error as { status?: number } | null)?.status === 404;
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">Connection Registry</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          §36 — Each connection is independently disableable (INT-ARC-003). Emergency kill switch ≤15 min (NFR-INT-05).
-        </p>
+      <div className="flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Connection Registry</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            §36 — Each connection is independently disableable (INT-ARC-003). Emergency kill switch ≤15 min (NFR-INT-05).
+          </p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+        >
+          + Connection
+        </button>
       </div>
       <div className="overflow-x-auto border border-slate-200 rounded-xl">
         <table className="w-full text-left text-xs">
@@ -1848,13 +1908,133 @@ function ConnectionsTab() {
                 <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                 <td className="px-4 py-3 font-mono text-slate-600 text-[11px] truncate max-w-[180px]">{c.endpoint_url}</td>
                 <td className="px-4 py-3 text-right">
-                  <KillSwitchButton connectionId={c.connection_id} name={c.connection_name} status={c.status} />
+                  <div className="flex gap-1.5 justify-end items-center">
+                    <button
+                      onClick={() => setInspect(c)}
+                      className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                    >
+                      Inspect
+                    </button>
+                    <KillSwitchButton connectionId={c.connection_id} name={c.connection_name} status={c.status} />
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {createOpen && (
+        <Modal
+          title="Register a connection"
+          subtitle="A connection binds one connector to one environment. It starts enabled and is independently disableable."
+          onClose={() => setCreateOpen(false)}
+          footer={
+            <ModalActions
+              onCancel={() => setCreateOpen(false)}
+              onConfirm={() => create.mutate()}
+              confirmLabel="Register"
+              pendingLabel="Registering…"
+              pending={create.isPending}
+              disabled={!form.connector_id || !form.connection_name.trim()}
+            />
+          }
+        >
+          <Field label="Connector">
+            <select className={inputClass} value={form.connector_id} onChange={(e) => setForm({ ...form, connector_id: e.target.value })}>
+              <option value="">— select a connector —</option>
+              {(connectorsQ.data?.connectors ?? []).map((c) => (
+                <option key={c.connector_id} value={c.connector_id}>{c.connector_name || c.connector_id}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Connection name">
+            <input className={inputClass} value={form.connection_name} onChange={(e) => setForm({ ...form, connection_name: e.target.value })} />
+          </Field>
+          <Field label="Environment">
+            <select className={inputClass} value={form.environment} onChange={(e) => setForm({ ...form, environment: e.target.value })}>
+              <option value="SANDBOX">SANDBOX</option>
+              <option value="PRODUCTION">PRODUCTION</option>
+            </select>
+          </Field>
+          <Field label="Mode">
+            <select className={inputClass} value={form.connection_mode} onChange={(e) => setForm({ ...form, connection_mode: e.target.value })}>
+              <option value="OUTBOUND">OUTBOUND</option>
+              <option value="INBOUND">INBOUND</option>
+              <option value="BIDIRECTIONAL">BIDIRECTIONAL</option>
+            </select>
+          </Field>
+          <Field label="Endpoint URL">
+            <input className={inputMonoClass} value={form.endpoint_url} onChange={(e) => setForm({ ...form, endpoint_url: e.target.value })} placeholder="https://…" />
+          </Field>
+          <Field label="Region">
+            <input className={inputClass} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="eu-west-2" />
+          </Field>
+        </Modal>
+      )}
+
+      {inspect && (
+        <Modal
+          title={`Connection · ${inspect.connection_name}`}
+          subtitle="Last health probe and the interfaces this connection exposes."
+          width="w-[640px]"
+          onClose={() => setInspect(null)}
+          footer={
+            <button
+              onClick={() => setInspect(null)}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Health</div>
+              {healthQ.isLoading && <p className="text-xs text-slate-400">Reading…</p>}
+              {neverProbed && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-relaxed">
+                  Never health-probed. That is not the same as healthy — nothing has checked this connection, so its
+                  state is unknown rather than good.
+                </p>
+              )}
+              {healthQ.error && !neverProbed && (
+                <p className="text-xs text-rose-600">{errMessage(healthQ.error, "Could not read health")}</p>
+              )}
+              {healthQ.data && (
+                <pre className="text-[10px] text-slate-600 font-mono bg-slate-50 border border-slate-200 rounded-md p-3 overflow-x-auto">
+                  {JSON.stringify(healthQ.data, null, 2)}
+                </pre>
+              )}
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Interfaces</div>
+              {interfacesQ.isLoading && <p className="text-xs text-slate-400">Loading…</p>}
+              {interfacesQ.error && (
+                <p className="text-xs text-rose-600">{errMessage(interfacesQ.error, "Could not list interfaces")}</p>
+              )}
+              {interfacesQ.data?.length === 0 && (
+                <p className="text-xs text-slate-500">No interfaces registered against this connection.</p>
+              )}
+              {!!interfacesQ.data?.length && (
+                <div className="border border-slate-200 rounded-md overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <tbody className="divide-y divide-slate-100">
+                      {interfacesQ.data.map((i: any, idx: number) => (
+                        <tr key={i.interface_id ?? idx}>
+                          <td className="px-3 py-2 font-bold text-slate-800">{i.interface_name ?? i.name ?? "—"}</td>
+                          <td className="px-3 py-2 font-mono text-slate-500 text-[10px]">{i.direction ?? i.interface_type ?? "—"}</td>
+                          <td className="px-3 py-2 text-right"><StatusBadge status={i.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
