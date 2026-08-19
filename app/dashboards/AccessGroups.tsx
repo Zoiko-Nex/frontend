@@ -53,6 +53,13 @@ interface TenantUser {
   status?: string;
 }
 
+interface OwnSession {
+  session_id: string;
+  device_fingerprint?: string;
+  expires_at?: string;
+  is_current?: boolean;
+}
+
 /** The service returns group ids under either key depending on the handler. */
 const gid = (g: Group) => g.group_id ?? g.id ?? "";
 
@@ -61,6 +68,9 @@ export default function AccessGroups() {
   const [createOpen, setCreateOpen] = useState(false);
   const [permsFor, setPermsFor] = useState<Group | null>(null);
   const [membersFor, setMembersFor] = useState<Group | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [directFor, setDirectFor] = useState<TenantUser | null>(null);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
 
   const fail = (fallback: string) => (e: unknown) => toast.error(errMessage(e, fallback));
 
@@ -117,7 +127,20 @@ export default function AccessGroups() {
 
   // ─── Forms ──────────────────────────────────────────────────────────────────
 
+  // GET /v1/sessions resolves from the token's own subject (claims.Sub), not
+  // from a path parameter — it lists YOUR sessions, not an arbitrary user's.
+  // Labelled accordingly; an operator who reads it as "all tenant sessions"
+  // would draw the wrong conclusion from an empty-looking list.
+  const sessionsQ = useQuery({
+    queryKey: ["identity", "sessions"],
+    enabled: sessionsOpen,
+    queryFn: async () =>
+      (await api.get<{ sessions?: OwnSession[] }>("identity", "/v1/sessions")).sessions ?? [],
+  });
+
   const [form, setForm] = useState({ name: "", description: "" });
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", brand_id: "" });
+  const [directRules, setDirectRules] = useState<PolicyRule[]>([]);
   const [draftRules, setDraftRules] = useState<PolicyRule[]>([]);
   const [addUserId, setAddUserId] = useState("");
 
@@ -165,6 +188,48 @@ export default function AccessGroups() {
     onError: fail("Could not remove the member"),
   });
 
+  // An invite does NOT create a user. identity-tenancy issues a pending invite
+  // and emails a tokenised link; the account exists only once the invitee
+  // accepts and sets a password (POST /v1/invites/accept, which is theirs to
+  // call from the emailed link, not an action available here). So the success
+  // message says "invited", and the user will not appear in the list below
+  // until they have accepted.
+  const inviteUser = useMutation({
+    mutationFn: () =>
+      api.post("identity", "/v1/users/invite", {
+        email: inviteForm.email.trim(),
+        full_name: inviteForm.full_name.trim(),
+        // Optional — the service falls back to the caller's brand claim. Sent
+        // only when supplied, because an empty string is not the same as absent.
+        ...(inviteForm.brand_id.trim() ? { brand_id: inviteForm.brand_id.trim() } : {}),
+      }),
+    onSuccess: () => {
+      toast.success("Invite sent — the user appears here once they accept");
+      setInviteOpen(false);
+      setInviteForm({ email: "", full_name: "", brand_id: "" });
+      qc.invalidateQueries({ queryKey: ["identity", "users"] });
+    },
+    onError: fail("Could not send the invite"),
+  });
+
+  // Rules bound straight to a user, rather than through a role or a group.
+  // Use sparingly: a direct grant is invisible on both the role screen and
+  // this one's group table, so it is the hardest kind to audit later.
+  const bindDirect = useMutation({
+    mutationFn: () =>
+      api.post("identity", "/v1/policies", {
+        subject_id: directFor!.id ?? directFor!.user_id,
+        subject_type: "USER",
+        rules: directRules,
+      }),
+    onSuccess: () => {
+      toast.success("Direct rules bound to the user");
+      setDirectFor(null);
+      setDirectRules([]);
+    },
+    onError: fail("Could not bind the rules"),
+  });
+
   // ─── Derived ────────────────────────────────────────────────────────────────
 
   const counts = countsQ.data ?? {};
@@ -185,12 +250,26 @@ export default function AccessGroups() {
             deny overrides allow.
           </p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
-        >
-          + Create Group
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setSessionsOpen(true)}
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            My Sessions
+          </button>
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            + Invite User
+          </button>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            + Create Group
+          </button>
+        </div>
       </div>
 
       <div className="w-full grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -256,6 +335,60 @@ export default function AccessGroups() {
                           Permissions
                         </button>
                       </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
+      {/* ─── Tenant users ─────────────────────────────────────────────────── */}
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans']">Tenant users</h3>
+          <p className="text-slate-500 text-[11px] mt-0.5">
+            Invited users appear here only after they accept. Direct rules bypass roles and groups — use a group first.
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">USER</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">EMAIL</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">STATUS</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono'] text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              <TableState
+                colSpan={4}
+                loading={usersQ.isLoading}
+                error={usersQ.error}
+                empty={users.length === 0}
+                loadingLabel="Loading users…"
+                emptyLabel="No users in this tenant yet."
+              />
+              {users.map((u) => {
+                const id = u.id ?? u.user_id ?? "";
+                return (
+                  <tr key={id} className="hover:bg-slate-50/40 transition">
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-slate-800 text-xs">{u.full_name || "—"}</div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{shortId(id)}</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-600">{u.email || "—"}</td>
+                    <td className="px-6 py-4"><StatusPill status={u.status} /></td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => { setDirectRules([]); setDirectFor(u); }}
+                        className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                      >
+                        Direct rules
+                      </button>
                     </td>
                   </tr>
                 );
@@ -417,6 +550,137 @@ export default function AccessGroups() {
           </div>
         </Modal>
       )}
+
+      {/* ─── Invite a user ────────────────────────────────────────────────── */}
+      {inviteOpen && (
+        <Modal
+          title="Invite a user"
+          subtitle="An invite creates nothing yet. The account exists once the invitee opens the emailed link and sets a password."
+          onClose={() => setInviteOpen(false)}
+          footer={
+            <ModalActions
+              onCancel={() => setInviteOpen(false)}
+              onConfirm={() => inviteUser.mutate()}
+              confirmLabel="Send invite"
+              pendingLabel="Sending…"
+              pending={inviteUser.isPending}
+              disabled={!inviteForm.email.trim() || !inviteForm.full_name.trim()}
+            />
+          }
+        >
+          <Field label="Email">
+            <input
+              className={inputClass}
+              type="email"
+              value={inviteForm.email}
+              onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              placeholder="person@operator.com"
+            />
+          </Field>
+          <Field label="Full name">
+            <input
+              className={inputClass}
+              value={inviteForm.full_name}
+              onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
+            />
+          </Field>
+          <Field label="Brand id (optional)">
+            <input
+              className={inputClass}
+              value={inviteForm.brand_id}
+              onChange={(e) => setInviteForm({ ...inviteForm, brand_id: e.target.value })}
+              placeholder="Defaults to your own brand"
+            />
+          </Field>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            The invited user starts with no permissions at all. Add them to a group, or bind direct rules, once they
+            have accepted.
+          </p>
+        </Modal>
+      )}
+
+      {/* ─── Direct rules on a user ───────────────────────────────────────── */}
+      {directFor && (
+        <Modal
+          title={`Direct rules · ${directFor.email ?? shortId(directFor.id ?? directFor.user_id ?? "")}`}
+          subtitle="Bound straight to the user, bypassing roles and groups. Deny overrides allow."
+          width="w-[640px]"
+          onClose={() => { setDirectFor(null); setDirectRules([]); }}
+          footer={
+            <ModalActions
+              onCancel={() => { setDirectFor(null); setDirectRules([]); }}
+              onConfirm={() => bindDirect.mutate()}
+              confirmLabel="Bind rules"
+              pendingLabel="Binding…"
+              pending={bindDirect.isPending}
+              disabled={directRules.length === 0}
+            />
+          }
+        >
+          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-3 leading-relaxed">
+            A direct grant appears on no role and in no group, so the next person auditing this user&apos;s access will
+            not see where it came from. Prefer a group unless this genuinely applies to one person only.
+          </p>
+          <PermissionPicker rules={directRules} onChange={setDirectRules} />
+        </Modal>
+      )}
+
+      {/* ─── Own sessions ─────────────────────────────────────────────────── */}
+      {sessionsOpen && (
+        <Modal
+          title="My active sessions"
+          subtitle="Your own sessions, resolved from your token — not a tenant-wide session list."
+          width="w-[560px]"
+          onClose={() => setSessionsOpen(false)}
+          footer={
+            <button
+              onClick={() => setSessionsOpen(false)}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+          }
+        >
+          <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-2.5 font-semibold font-['IBM_Plex_Mono']">SESSION</th>
+                  <th className="px-4 py-2.5 font-semibold font-['IBM_Plex_Mono']">DEVICE</th>
+                  <th className="px-4 py-2.5 font-semibold font-['IBM_Plex_Mono']">EXPIRES</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableState
+                  colSpan={3}
+                  loading={sessionsQ.isLoading}
+                  error={sessionsQ.error}
+                  empty={(sessionsQ.data ?? []).length === 0}
+                  loadingLabel="Loading sessions…"
+                  emptyLabel="No active sessions."
+                />
+                {(sessionsQ.data ?? []).map((sn) => (
+                  <tr key={sn.session_id} className="hover:bg-slate-50/40 transition">
+                    <td className="px-4 py-3">
+                      <div className="font-mono text-[11px] text-slate-700">{shortId(sn.session_id)}</div>
+                      {sn.is_current && (
+                        <div className="mt-1"><StatusPill status="CURRENT" /></div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[10px] text-slate-500 truncate max-w-[180px]">
+                      {sn.device_fingerprint || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500">
+                      {sn.expires_at ? new Date(sn.expires_at).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 }

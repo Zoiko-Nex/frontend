@@ -100,6 +100,7 @@ export default function TaxJurisdiction() {
   const [exemptionOpen, setExemptionOpen] = useState(false);
   const [revokeFor, setRevokeFor] = useState<Exemption | null>(null);
   const [supersedeFor, setSupersedeFor] = useState<Policy | null>(null);
+  const [editFor, setEditFor] = useState<Policy | null>(null);
   /** The result of the most recent determination, shown inline rather than in a toast. */
   const [lastDecision, setLastDecision] = useState<TaxDecision | null>(null);
   /** Which jurisdiction the active-policy lookup is asking about. */
@@ -177,6 +178,32 @@ export default function TaxJurisdiction() {
   });
   const [policyMapError, setPolicyMapError] = useState<string | null>(null);
 
+  /**
+   * PUT /v1/jurisdiction-policies/{id} takes only these four fields —
+   * jurisdiction_code and country_code are NOT updatable, because a policy that
+   * changes which jurisdiction it applies to is a different policy. Editing is
+   * therefore limited to a DRAFT one; an ACTIVE policy is superseded, never
+   * amended, or the tax already calculated under it stops being reproducible.
+   */
+  const [editForm, setEditForm] = useState({
+    provider_name: "",
+    policy_version: "",
+    currency_code: "",
+    tax_category_map: "{}",
+  });
+  const [editMapError, setEditMapError] = useState<string | null>(null);
+
+  const openEdit = (p: Policy) => {
+    setEditForm({
+      provider_name: p.provider_name ?? "",
+      policy_version: p.policy_version ?? "",
+      currency_code: p.currency_code ?? "GBP",
+      tax_category_map: JSON.stringify(p.tax_category_map ?? {}, null, 2),
+    });
+    setEditMapError(null);
+    setEditFor(p);
+  };
+
   const [exemptionForm, setExemptionForm] = useState({
     customer_id: "",
     jurisdiction_code: "GB",
@@ -248,6 +275,29 @@ export default function TaxJurisdiction() {
       qc.invalidateQueries({ queryKey: ["tax", "policies"] });
     },
     onError: fail("Could not create the policy"),
+  });
+
+  const updatePolicy = useMutation({
+    mutationFn: () => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(editForm.tax_category_map);
+      } catch (err) {
+        throw new Error(`tax_category_map is not valid JSON: ${(err as Error).message}`);
+      }
+      return api.put("tax", `/v1/jurisdiction-policies/${editFor!.policy_id}`, {
+        provider_name: editForm.provider_name,
+        policy_version: editForm.policy_version,
+        currency_code: editForm.currency_code,
+        tax_category_map: parsed,
+      });
+    },
+    onSuccess: () => { toast.success("Policy updated"); setEditFor(null); qc.invalidateQueries({ queryKey: ["tax", "policies"] }); },
+    onError: (e) => {
+      const msg = errMessage(e, "Could not update the policy");
+      setEditMapError(msg.includes("JSON") ? msg : null);
+      toast.error(msg);
+    },
   });
 
   const activatePolicy = useMutation({
@@ -606,6 +656,14 @@ export default function TaxJurisdiction() {
                       <div className="flex gap-1.5 justify-end">
                         {p.status !== "ACTIVE" && p.status !== "SUPERSEDED" && (
                           <button
+                            onClick={() => openEdit(p)}
+                            className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {p.status !== "ACTIVE" && p.status !== "SUPERSEDED" && (
+                          <button
                             onClick={() => activatePolicy.mutate(p.policy_id)}
                             disabled={activatePolicy.isPending}
                             className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded text-[10px] font-bold transition cursor-pointer disabled:opacity-50"
@@ -890,6 +948,49 @@ export default function TaxJurisdiction() {
             />
           </Field>
           {policyMapError && <p className="text-[11px] text-rose-600 -mt-2">Invalid JSON: {policyMapError}</p>}
+        </Modal>
+      )}
+
+      {/* ─── Edit policy ────────────────────────────────────────────────────── */}
+      {editFor && (
+        <Modal
+          title="Edit jurisdiction policy"
+          subtitle="Draft only. An active policy is superseded, never amended — otherwise tax already calculated under it stops being reproducible."
+          width="w-[640px]"
+          onClose={() => setEditFor(null)}
+          footer={
+            <ModalActions
+              onCancel={() => setEditFor(null)}
+              onConfirm={() => updatePolicy.mutate()}
+              confirmLabel="Save policy"
+              pendingLabel="Saving…"
+              pending={updatePolicy.isPending}
+              disabled={!editForm.policy_version.trim()}
+            />
+          }
+        >
+          <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-3 py-2 mb-1 leading-relaxed">
+            Jurisdiction <span className="font-mono text-slate-700">{editFor.jurisdiction_code}</span> and country{" "}
+            <span className="font-mono text-slate-700">{editFor.country_code}</span> are fixed. A policy that changes
+            which jurisdiction it applies to is a different policy — create one instead.
+          </p>
+          <Field label="Provider name">
+            <input className={inputClass} value={editForm.provider_name} onChange={(e) => setEditForm({ ...editForm, provider_name: e.target.value })} />
+          </Field>
+          <Field label="Policy version">
+            <input className={inputClass} value={editForm.policy_version} onChange={(e) => setEditForm({ ...editForm, policy_version: e.target.value })} />
+          </Field>
+          <Field label="Currency code">
+            <input className={inputClass} value={editForm.currency_code} onChange={(e) => setEditForm({ ...editForm, currency_code: e.target.value.toUpperCase() })} />
+          </Field>
+          <Field label="Tax category map (JSON)">
+            <textarea
+              className={`${inputMonoClass} h-40`}
+              value={editForm.tax_category_map}
+              onChange={(e) => { setEditForm({ ...editForm, tax_category_map: e.target.value }); setEditMapError(null); }}
+            />
+          </Field>
+          {editMapError && <p className="text-[11px] text-rose-600">{editMapError}</p>}
         </Modal>
       )}
 

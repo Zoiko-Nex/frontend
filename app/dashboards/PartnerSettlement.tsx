@@ -161,6 +161,33 @@ export default function PartnerSettlement() {
       ),
   });
 
+  /**
+   * Exposure to ONE partner, totalled by the service.
+   *
+   * sum-by-type answers "what do we owe in total, broken down by kind";
+   * this answers "what do we owe THIS partner" — the question asked before a
+   * settlement run is approved or a partner is suspended. partner_id is
+   * required: the service casts it to uuid and 400s on an empty value rather
+   * than quietly totalling everybody.
+   */
+  const [partnerSumId, setPartnerSumId] = useState("");
+  const [partnerSumCurrency, setPartnerSumCurrency] = useState("");
+  const [partnerSumFor, setPartnerSumFor] = useState<{ id: string; currency: string } | null>(null);
+
+  const partnerSumQ = useQuery({
+    queryKey: ["partner", "sum-by-partner", partnerSumFor?.id, partnerSumFor?.currency],
+    enabled: !!partnerSumFor,
+    retry: false,
+    queryFn: () => {
+      const qs = new URLSearchParams({ partner_id: partnerSumFor!.id });
+      if (partnerSumFor!.currency) qs.set("currency_code", partnerSumFor!.currency);
+      return api.get<{ partner_id?: string; total_minor_units?: number; currency_code?: string }>(
+        "partner",
+        `/v1/partner-cost-lines/sum-by-partner?${qs}`,
+      );
+    },
+  });
+
   const disputeDashQ = useQuery({
     queryKey: ["partner", "disputes", "dashboard"],
     queryFn: () => api.get<{ status_counts?: Record<string, number> }>("partner", "/v1/settlement-disputes/dashboard"),
@@ -523,6 +550,59 @@ export default function PartnerSettlement() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {tab === "costs" && (
+        <div className="self-stretch bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div className="text-slate-800 text-sm font-bold mb-1">Exposure to one partner</div>
+          <p className="text-[11px] text-slate-500 mb-3">
+            The total owed to a single partner across every cost line. Ask this before approving a settlement run.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[240px]">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Partner id</label>
+              <input
+                className={inputMonoClass}
+                value={partnerSumId}
+                onChange={(e) => setPartnerSumId(e.target.value)}
+                placeholder="uuid"
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Currency</label>
+              <input
+                className={inputMonoClass}
+                value={partnerSumCurrency}
+                onChange={(e) => setPartnerSumCurrency(e.target.value.toUpperCase())}
+                placeholder="all"
+              />
+            </div>
+            <button
+              onClick={() => setPartnerSumFor({ id: partnerSumId.trim(), currency: partnerSumCurrency.trim() })}
+              disabled={!partnerSumId.trim()}
+              className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Total
+            </button>
+          </div>
+          {partnerSumFor && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              {partnerSumQ.isLoading && <div className="text-xs text-slate-400">Totalling…</div>}
+              {partnerSumQ.error && (
+                <div className="text-xs text-rose-600">{errMessage(partnerSumQ.error, "Could not total this partner")}</div>
+              )}
+              {partnerSumQ.data && (
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">
+                    Total owed{partnerSumFor.currency ? ` · ${partnerSumFor.currency}` : " · all currencies"}
+                  </div>
+                  <div className="font-mono font-bold text-slate-800 text-lg">
+                    {formatMoney(partnerSumQ.data.total_minor_units ?? 0, partnerSumQ.data.currency_code)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       {tab === "costs" && (
