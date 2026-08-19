@@ -63,8 +63,8 @@ export async function submitDemoRequest(data: DemoRequestFormInput) {
       rendering: {
         brand: {
           display_name: 'ZoikoNex',
-          logo_url: 'https://react.email/static/logo-v.png', // ZoikoNex default logo
-          primary_color: '#0f172a', // Slate 900
+          logo_url: '/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png',
+          primary_color: '#0052FF',
         },
         sender: {
           from_name: 'ZoikoNex Sales',

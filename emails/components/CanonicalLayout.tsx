@@ -44,15 +44,22 @@ export const CanonicalLayout: React.FC<CanonicalLayoutProps> = ({
       <Preview>{preheader}</Preview>
       <Body style={main}>
         <Container style={container}>
+          {/* Top Brand Accent Stripe */}
+          <Section style={{ height: '4px', backgroundColor: brandColor, width: '100%', marginBottom: '24px' }} />
+
           {/* 1. Brand Context & Sender Identity */}
           <Section style={header}>
-            {rendering.brand.logo_url && (
+            {rendering.brand.logo_url ? (
               <Img
                 src={rendering.brand.logo_url}
                 alt={rendering.brand.display_name}
-                height="40"
+                height="38"
                 style={logo}
               />
+            ) : (
+              <Text style={{ ...brandBadge, color: brandColor }}>
+                {rendering.brand.display_name}
+              </Text>
             )}
           </Section>
 
@@ -114,10 +121,23 @@ const container = {
 
 const header = {
   padding: '0 48px',
+  marginBottom: '16px',
 };
 
 const logo = {
-  margin: '0 auto',
+  margin: '0',
+  display: 'block',
+  maxWidth: '220px',
+  maxHeight: '44px',
+  objectFit: 'contain' as const,
+};
+
+const brandBadge = {
+  fontSize: '20px',
+  fontWeight: '800',
+  letterSpacing: '-0.5px',
+  margin: '0',
+  textTransform: 'uppercase' as const,
 };
 
 const content = {

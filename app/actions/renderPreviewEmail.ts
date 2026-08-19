@@ -1,5 +1,7 @@
 "use server";
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
 import { render } from '@react-email/render';
 import { CanonicalEmailPayload } from '../../emails/types/CanonicalEmail';
 // ── COM ──
@@ -652,6 +654,26 @@ export interface RenderPreviewResult {
   error?: string;
 }
 
+function resolveLogoDataUri(url: string | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  try {
+    const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+    const fullPath = path.join(process.cwd(), 'public', cleanPath);
+    if (fs.existsSync(fullPath)) {
+      const fileBuffer = fs.readFileSync(fullPath);
+      const ext = path.extname(fullPath).toLowerCase();
+      const mimeType = ext === '.svg' ? 'image/svg+xml' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+      return `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+    }
+  } catch (err) {
+    console.error('Failed to convert logo to data URI:', err);
+  }
+  return url;
+}
+
 export async function renderPreviewEmail(
   templateId: string, 
   brandOverride?: Partial<CanonicalEmailPayload['rendering']['brand']>, 
@@ -662,15 +684,18 @@ export async function renderPreviewEmail(
   const familyMatch = templateId.match(/ZNX-EM-([A-Z]+)-/);
   const family = familyMatch ? familyMatch[1] : 'COM';
 
+  const rawLogoUrl = customPayload?.rendering?.brand?.logo_url || brandOverride?.logo_url || '/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png';
+  const embeddedLogoUrl = resolveLogoDataUri(rawLogoUrl);
+
   const payload = generateSyntheticPayload(templateId, family, {
     ...customPayload,
     rendering: {
       brand: {
-        display_name: 'ZoikoNex',
-        logo_url: 'https://cdn.zoikonex.com/logo-light.png',
+        display_name: 'ZoikoNex Telecom',
         primary_color: '#0052FF',
         ...brandOverride,
-        ...customPayload?.rendering?.brand
+        ...customPayload?.rendering?.brand,
+        logo_url: embeddedLogoUrl
       },
       sender: {
         from_name: 'ZoikoNex Notifications',
@@ -686,13 +711,22 @@ export async function renderPreviewEmail(
     }
   });
 
+  // Guarantee payload.rendering.brand.logo_url is the data URI
+  payload.rendering.brand.logo_url = embeddedLogoUrl;
+
   const element = getPreviewEmailComponent(templateId, payload);
   if (!element) {
     return { success: false, error: `Template ${templateId} not mapped in renderPreviewEmail` };
   }
 
   // Section 08: Generate both HTML and Plain-Text Multipart alternative
-  const html = await render(element);
+  let html = await render(element);
+
+  // Guarantee any remaining relative image references are replaced with inline base64
+  html = html.replace(/src="(\/image\/[^"]+|\/zoikonex-logo\.png)"/g, (match, p1) => {
+    const dataUri = resolveLogoDataUri(p1);
+    return `src="${dataUri}"`;
+  });
   const plainText = await render(element, { plainText: true });
 
   // Section 05: Mandatory contract validation

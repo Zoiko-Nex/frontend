@@ -332,7 +332,7 @@ const BRAND_PERSONAS: Record<string, BrandPersona> = {
     name: 'ZoikoNex Core (Platform)',
     brand: {
       display_name: 'ZoikoNex Telecom',
-      logo_url: 'https://react.email/static/logo-v.png',
+      logo_url: '/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png',
       primary_color: '#0052FF',
     },
     sender: {
@@ -347,7 +347,7 @@ const BRAND_PERSONAS: Record<string, BrandPersona> = {
     name: 'Apex Mobile (MVNO White-label)',
     brand: {
       display_name: 'Apex Mobile',
-      logo_url: 'https://react.email/static/logo-v.png',
+      logo_url: '/image/brands/apex-mobile.svg',
       primary_color: '#4F46E5',
     },
     sender: {
@@ -362,7 +362,7 @@ const BRAND_PERSONAS: Record<string, BrandPersona> = {
     name: 'Sovereign Carrier (Tier-1 Telco)',
     brand: {
       display_name: 'Sovereign National Network',
-      logo_url: 'https://react.email/static/logo-v.png',
+      logo_url: '/image/brands/sovereign.svg',
       primary_color: '#0D9488',
     },
     sender: {
@@ -377,7 +377,7 @@ const BRAND_PERSONAS: Record<string, BrandPersona> = {
     name: 'Voyage Connect (Travel eSIM)',
     brand: {
       display_name: 'Voyage Connect',
-      logo_url: 'https://react.email/static/logo-v.png',
+      logo_url: '/image/brands/voyage-connect.svg',
       primary_color: '#EA580C',
     },
     sender: {
@@ -396,6 +396,12 @@ export default function EmailPreviewPage() {
   const [activeTab, setActiveTab] = useState<'html' | 'text' | 'contract' | 'simulate'>('html');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedFamilyFilter, setSelectedFamilyFilter] = useState<string>('ALL');
+  
+  // Viewport & Environment Preview Controls (Section 04 & Section 08)
+  const [viewportMode, setViewportMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [isDarkModePreview, setIsDarkModePreview] = useState<boolean>(false);
+  const [selectedLocale, setSelectedLocale] = useState<string>('en-US');
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   const [renderedHtml, setRenderedHtml] = useState<string>('');
   const [renderedPlainText, setRenderedPlainText] = useState<string>('');
@@ -410,12 +416,30 @@ export default function EmailPreviewPage() {
 
   const loadTemplatePreview = (templateId: string, customData?: any) => {
     startTransition(async () => {
+      // Localized values mapping based on selected locale
+      const localeMap: Record<string, { currency: string; amount: string; jurisdiction: string }> = {
+        'en-US': { currency: 'USD', amount: '$149.50', jurisdiction: 'US-DELAWARE' },
+        'en-GB': { currency: 'GBP', amount: '£125.00', jurisdiction: 'GB-EAW' },
+        'de-DE': { currency: 'EUR', amount: '145,00 €', jurisdiction: 'EU-GERMANY' },
+        'ja-JP': { currency: 'JPY', amount: '¥22,500', jurisdiction: 'JP-TOKYO' },
+        'ar-SA': { currency: 'SAR', amount: '560.00 ر.س', jurisdiction: 'SA-RIYADH' },
+      };
+      const locInfo = localeMap[selectedLocale] || localeMap['en-US'];
+
       const result = await renderPreviewEmail(
         templateId, 
         persona.brand, 
         persona.sender, 
         persona.support,
-        customData
+        {
+          localizedValues: {
+            language_code: selectedLocale.split('-')[0],
+            currency_code: locInfo.currency,
+            amount_formatted: locInfo.amount,
+            jurisdiction_code: locInfo.jurisdiction,
+          },
+          ...customData
+        }
       );
       if (result.success) {
         setRenderedHtml(result.html || '');
@@ -432,7 +456,23 @@ export default function EmailPreviewPage() {
 
   useEffect(() => {
     loadTemplatePreview(selectedTemplateId);
-  }, [selectedTemplateId, selectedPersona]);
+  }, [selectedTemplateId, selectedPersona, selectedLocale]);
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopyStatus(`${label} copied!`);
+    setTimeout(() => setCopyStatus(null), 2500);
+  };
+
+  const handleDownloadHtml = () => {
+    const blob = new Blob([renderedHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTemplateId}-${selectedPersona}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleSimulateSubmit = () => {
     try {
@@ -534,7 +574,7 @@ export default function EmailPreviewPage() {
 
       {/* Main Workspace */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
-        {/* Top Header with Brand Persona & Policy Badges */}
+        {/* Top Header with Brand Persona, Locale & Policy Badges */}
         <header className="bg-slate-900 border-b border-slate-800 px-6 py-3 shrink-0 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded">
@@ -562,23 +602,40 @@ export default function EmailPreviewPage() {
             </div>
           )}
 
-          {/* Brand Switcher */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-400 font-medium shrink-0">Brand Identity:</label>
-            <select
-              value={selectedPersona}
-              onChange={(e) => setSelectedPersona(e.target.value)}
-              className="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2.5 py-1 focus:outline-none focus:border-blue-500"
-            >
-              {Object.entries(BRAND_PERSONAS).map(([key, p]) => (
-                <option key={key} value={key}>{p.name}</option>
-              ))}
-            </select>
+          {/* Persona & Locale Selectors */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-slate-400 font-medium shrink-0">Brand:</label>
+              <select
+                value={selectedPersona}
+                onChange={(e) => setSelectedPersona(e.target.value)}
+                className="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2.5 py-1 focus:outline-none focus:border-blue-500"
+              >
+                {Object.entries(BRAND_PERSONAS).map(([key, p]) => (
+                  <option key={key} value={key}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-slate-400 font-medium shrink-0">Locale:</label>
+              <select
+                value={selectedLocale}
+                onChange={(e) => setSelectedLocale(e.target.value)}
+                className="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2.5 py-1 focus:outline-none focus:border-blue-500 font-mono"
+              >
+                <option value="en-US">🇺🇸 en-US ($)</option>
+                <option value="en-GB">🇬🇧 en-GB (£)</option>
+                <option value="de-DE">🇩🇪 de-DE (€)</option>
+                <option value="ja-JP">🇯🇵 ja-JP (¥)</option>
+                <option value="ar-SA">🇸🇦 ar-SA (SAR)</option>
+              </select>
+            </div>
           </div>
         </header>
 
-        {/* Action / Mode Tabs */}
-        <div className="bg-slate-900/60 border-b border-slate-800 px-6 flex items-center justify-between">
+        {/* Action / Mode Tabs & Viewport Switcher */}
+        <div className="bg-slate-900/60 border-b border-slate-800 px-6 flex flex-wrap items-center justify-between gap-3">
           <nav className="flex space-x-1">
             <button
               onClick={() => setActiveTab('html')}
@@ -622,7 +679,78 @@ export default function EmailPreviewPage() {
             </button>
           </nav>
 
-          <div className="flex items-center gap-2">
+          {/* Viewport, Dark Mode & Copy Controls */}
+          <div className="flex items-center gap-3 py-1.5">
+            {activeTab === 'html' && (
+              <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-xs">
+                <button
+                  onClick={() => setViewportMode('desktop')}
+                  className={`px-2.5 py-1 rounded transition-all ${
+                    viewportMode === 'desktop' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Desktop Viewport (720px)"
+                >
+                  🖥️ Desktop
+                </button>
+                <button
+                  onClick={() => setViewportMode('tablet')}
+                  className={`px-2.5 py-1 rounded transition-all ${
+                    viewportMode === 'tablet' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Tablet Viewport (560px)"
+                >
+                  💻 Tablet
+                </button>
+                <button
+                  onClick={() => setViewportMode('mobile')}
+                  className={`px-2.5 py-1 rounded transition-all ${
+                    viewportMode === 'mobile' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Mobile Viewport (375px)"
+                >
+                  📱 Mobile
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'html' && (
+              <button
+                onClick={() => setIsDarkModePreview(!isDarkModePreview)}
+                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+                  isDarkModePreview 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+                title="Toggle Dark Email Client Frame"
+              >
+                {isDarkModePreview ? '🌙 Dark Frame' : '☀️ Light Frame'}
+              </button>
+            )}
+
+            {/* Export & Copy */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => handleCopy(activeTab === 'text' ? renderedPlainText : renderedHtml, activeTab === 'text' ? 'Plain Text' : 'HTML')}
+                className="text-xs bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                📋 Copy
+              </button>
+              {activeTab === 'html' && (
+                <button
+                  onClick={handleDownloadHtml}
+                  className="text-xs bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  ⬇️ Export
+                </button>
+              )}
+            </div>
+
+            {copyStatus && (
+              <span className="text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded animate-fade-in">
+                {copyStatus}
+              </span>
+            )}
+
             {isPending && (
               <span className="text-[11px] text-blue-400 animate-pulse font-mono">
                 Rendering...
@@ -639,13 +767,33 @@ export default function EmailPreviewPage() {
         </div>
 
         {/* Tab Content Display */}
-        <div className="flex-1 p-6 overflow-y-auto flex justify-center bg-slate-950">
+        <div className={`flex-1 p-6 overflow-y-auto flex justify-center transition-colors duration-300 ${
+          isDarkModePreview ? 'bg-slate-900/90' : 'bg-slate-950'
+        }`}>
           {/* TAB 1: HTML Live Render */}
           {activeTab === 'html' && (
-            <div className="w-[720px] max-w-full h-full min-h-[750px] bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-800 flex flex-col">
+            <div className={`transition-all duration-300 ease-in-out h-full min-h-[750px] rounded-xl shadow-2xl overflow-hidden border flex flex-col ${
+              viewportMode === 'mobile'
+                ? 'w-[375px] max-w-[375px]'
+                : viewportMode === 'tablet'
+                ? 'w-[560px] max-w-[560px]'
+                : 'w-[720px] max-w-[720px]'
+            } ${
+              isDarkModePreview
+                ? 'bg-slate-900 border-slate-700 shadow-slate-900/50'
+                : 'bg-white border-slate-800'
+            }`}>
+              <div className="bg-slate-900/90 border-b border-slate-800 px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                <span className="font-mono">
+                  Viewport: {viewportMode === 'mobile' ? '375px (Mobile Phone)' : viewportMode === 'tablet' ? '560px (Tablet / Small Window)' : '720px (Desktop Client)'}
+                </span>
+                <span className="text-slate-500">
+                  {selectedLocale} • {isDarkModePreview ? 'Dark Client Sim' : 'Light Client Sim'}
+                </span>
+              </div>
               <iframe
                 srcDoc={renderedHtml}
-                className="w-full flex-1 border-0"
+                className="w-full flex-1 border-0 bg-white"
                 title="ZoikoNex Email Live Visual Preview"
               />
             </div>
