@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 50" width="260" height="50">
+  <rect width="260" height="50" rx="8" fill="#EA580C" fill-opacity="0.08"/>
+  <circle cx="28" cy="25" r="14" fill="#EA580C"/>
+  <path d="M20 25 Q28 16 36 25 Q28 34 20 25" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+  <circle cx="28" cy="25" r="3.5" fill="#FFFFFF"/>
+  <text x="52" y="32" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="17" font-weight="800" fill="#7C2D12" letter-spacing="0.5">VOYAGE</text>
+  <text x="135" y="32" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="17" font-weight="400" fill="#EA580C" letter-spacing="0.5">CONNECT</text>
+</svg>

@@ -127,7 +127,7 @@ export function generateSyntheticPayload(
     rendering: {
       brand: {
         display_name: 'ZoikoNex Telecom',
-        logo_url: 'https://react.email/static/logo-v.png',
+        logo_url: '/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png',
         primary_color: '#0052FF',
       },
       sender: {

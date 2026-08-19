@@ -26,6 +26,8 @@ import FraudRisk from "./FraudRisk";
 import DunningDisputes from "./DunningDisputes";
 import RegulatoryExports from "./RegulatoryExports";
 import AccessGroups from "./AccessGroups";
+import CustomerLifecycleKyc from "./CustomerLifecycleKyc";
+import EvidenceLedger from "./EvidenceLedger";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -63,10 +65,6 @@ const SERVICE_DOMAIN: Record<string, string> = {
 // to everyone (Services is gated per-card instead, via SERVICE_DOMAIN).
 const TAB_DOMAIN: Record<string, string> = {
   Trust: "evidence",
-  // The "Billing" tab is the tenant's own commercial contract with Zoiko
-  // (pathway, usage band, renewal) -- NOT the billing-invoice service. That
-  // lives on BillingManagement below. The two are gated on the same domain
-  // because both are billing-facing.
   Billing: "billing",
   Integration: "integration",
   Settings: "identity",
@@ -85,6 +83,8 @@ const TAB_DOMAIN: Record<string, string> = {
   DunningDisputes: "dunning",
   RegulatoryExports: "reporting",
   AccessGroups: "identity",
+  CustomerLifecycleKyc: "kyc",
+  EvidenceLedger: "evidence",
 };
 
 /**
@@ -1569,15 +1569,23 @@ export default function DashboardsPage() {
     {
       section: "COMMERCIAL LIFECYCLE", items: [
         { label: "Catalog Management", tabKey: "CatalogManagement", iconPath: "/image/dashboard/services.svg" },
-        { label: "Subscriber KYC", tabKey: "CustomerManagement", iconPath: "/image/dashboard/user-profile.svg" },
+        { label: "Customer & Accounts", tabKey: "CustomerManagement", iconPath: "/image/dashboard/user-profile.svg" },
+        { label: "KYC Compliance", tabKey: "CustomerLifecycleKyc", iconPath: "/image/dashboard/shield-check.svg" },
         { label: "Orders & Sagas", tabKey: "OrderManagement", iconPath: "/image/dashboard/checkbox-list.svg" },
       ]
     },
     {
-      section: "REVENUE", items: [
+      section: "MONETIZATION & CHARGING", items: [
+        { label: "Rating & Charging", tabKey: "RatingCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
+        { label: "Usage & Mediation", tabKey: "UsageMediation", iconPath: "/image/dashboard/activity-pulse.svg" },
         { label: "Billing & Invoice", tabKey: "BillingManagement", iconPath: "/image/dashboard/billing-document.svg" },
         { label: "Payments", tabKey: "PaymentsManagement", iconPath: "/image/dashboard/credit-card.svg" },
-        { label: "Tax & Jurisdiction", tabKey: "TaxJurisdiction", iconPath: "/image/dashboard/document.svg" },
+        { label: "Partner Settlement", tabKey: "PartnerSettlement", iconPath: "/image/dashboard/user-profile.svg" },
+        { label: "Dunning & Disputes", tabKey: "DunningDisputes", iconPath: "/image/dashboard/credit-card.svg" },
+      ]
+    },
+    {
+      section: "REVENUE & ASSURANCE", items: [
         { label: "Finance Ledger", tabKey: "FinanceLedger", iconPath: "/image/dashboard/bar-chart.svg" },
         { label: "Usage & Charging", tabKey: "UsageCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
         { label: "Partner & Settlement", tabKey: "PartnerSettlement", iconPath: "/image/dashboard/bar-chart.svg" },
@@ -1588,6 +1596,8 @@ export default function DashboardsPage() {
       section: "ASSURE", items: [
         { label: "Revenue Assurance", tabKey: "RevenueAssurance", iconPath: "/image/dashboard/shield.svg" },
         { label: "Fraud & Risk", tabKey: "FraudRisk", iconPath: "/image/dashboard/shield.svg" },
+        { label: "Customer Lifecycle & KYC", tabKey: "CustomerLifecycleKyc", iconPath: "/image/dashboard/user-profile.svg" },
+        { label: "Evidence Ledger", tabKey: "EvidenceLedger", iconPath: "/image/dashboard/document.svg" },
         { label: "Regulatory Exports", tabKey: "RegulatoryExports", iconPath: "/image/dashboard/document.svg" },
       ]
     },
@@ -2159,8 +2169,8 @@ export default function DashboardsPage() {
                         desc: "Wholesale, interconnect, revenue share, and partner billing.",
                         icon: "/image/dashboard/user-profile.svg",
                         tabKey: "PartnerSettlement",
-                        badge: "Provisioning",
-                        badgeStyle: "bg-indigo-50 text-indigo-700 border-indigo-200"
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
                       {
                         id: "cust-lifecycle",
@@ -2228,7 +2238,7 @@ export default function DashboardsPage() {
                         category: "Compliance & Trust",
                         desc: "Identity verification, sanction screening & onboarding checks.",
                         icon: "/image/dashboard/shield-check.svg",
-                        tabKey: "Trust",
+                        tabKey: "CustomerLifecycleKyc",
                         badge: "Active",
                         badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
                       },
@@ -2238,7 +2248,7 @@ export default function DashboardsPage() {
                         category: "Compliance & Trust",
                         desc: "Immutable evidence of charging, billing & governance events.",
                         icon: "/image/dashboard/document.svg",
-                        tabKey: "Trust",
+                        tabKey: "EvidenceLedger",
                         badge: "Protected",
                         badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
                       },
@@ -3689,12 +3699,25 @@ export default function DashboardsPage() {
               <LockedPanel label="Access Groups" />
             ))}
 
+            {/* Customer Lifecycle & KYC Tab */}
+            {currentTab === "CustomerLifecycleKyc" && (canAccess(TAB_DOMAIN.CustomerLifecycleKyc) ? (
+              <CustomerLifecycleKyc />
+            ) : (
+              <LockedPanel label="Customer Lifecycle & KYC" />
+            ))}
+
+            {/* Evidence Ledger Tab */}
+            {currentTab === "EvidenceLedger" && (canAccess(TAB_DOMAIN.EvidenceLedger) ? (
+              <EvidenceLedger />
+            ) : (
+              <LockedPanel label="Cryptographic Evidence Ledger" />
+            ))}
+
             {/* Reporting & Regulatory Tab */}
             {currentTab === "RegulatoryExports" && (canAccess(TAB_DOMAIN.RegulatoryExports) ? (
               <RegulatoryExports />
             ) : (
-              <LockedPanel label="Reporting & Regulatory" />
-            ))}
+              <LockedPanel label="Reporting & Regulatory" />            ))}
 
 
             {/* Live Integration Logs Terminal */}

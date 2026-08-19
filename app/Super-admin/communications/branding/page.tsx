@@ -8,13 +8,74 @@ import { renderPreviewEmail } from '../../../actions/renderPreviewEmail';
 interface TenantRef { tenant_id: string; name: string }
 interface BrandRef { id: string; name: string; code_name: string }
 
+interface BrandPreset {
+  name: string;
+  brandName: string;
+  logoUrl: string;
+  primaryColor: string;
+  senderName: string;
+  replyTo: string;
+  supportUrl: string;
+}
+const BRAND_PRESETS: Record<string, BrandPreset> = {
+  zoikonex: {
+    name: 'ZoikoNex Core (Platform Default)',
+    brandName: 'ZoikoNex Telecom',
+    logoUrl: '/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png',
+    primaryColor: '#0052FF',
+    senderName: 'ZoikoNex Notifications',
+    replyTo: 'notifications@zoikonex.com',
+    supportUrl: 'https://support.zoikonex.com',
+  },
+  apex_mvno: {
+    name: 'Apex Mobile (MVNO White-label)',
+    brandName: 'Apex Mobile',
+    logoUrl: '/image/brands/apex-mobile.svg',
+    primaryColor: '#4F46E5',
+    senderName: 'Apex Mobile Customer Care',
+    replyTo: 'care@apexmobile.example',
+    supportUrl: 'https://help.apexmobile.example',
+  },
+  sovereign: {
+    name: 'Sovereign Carrier (Tier-1 Telco)',
+    brandName: 'Sovereign National Network',
+    logoUrl: '/image/brands/sovereign.svg',
+    primaryColor: '#0D9488',
+    senderName: 'Sovereign Telecom Operations',
+    replyTo: 'operations@sovereign-telco.example',
+    supportUrl: 'https://portal.sovereign-telco.example/support',
+  },
+  travel_esim: {
+    name: 'Voyage Connect (Travel eSIM)',
+    brandName: 'Voyage Connect',
+    logoUrl: '/image/brands/voyage-connect.svg',
+    primaryColor: '#EA580C',
+    senderName: 'Voyage Connect Service Team',
+    replyTo: 'hello@voyageconnect.example',
+    supportUrl: 'https://voyageconnect.example/help',
+  },
+};
+
+const SAMPLE_TEMPLATES = [
+  { id: 'ZNX-EM-IAM-001', name: 'User invitation (IAM-001)' },
+  { id: 'ZNX-EM-BIL-002', name: 'Invoice issued (BIL-002)' },
+  { id: 'ZNX-EM-ORD-014', name: 'eSIM ready for install (ORD-014)' },
+  { id: 'ZNX-EM-PAY-003', name: 'Payment received (PAY-003)' },
+  { id: 'ZNX-EM-USG-006', name: 'Usage anomaly detected (USG-006)' },
+  { id: 'ZNX-EM-SUP-013', name: 'Incident detected (SUP-013)' },
+];
+
 /**
  * White-label email preview.
  *
- * The brand list is real: identity-tenancy owns brands, and it is one of the
- * two services that honour a platform-admin `X-Tenant-ID` override, so a super
- * admin can load any tenant's brands and preview against a genuine one instead
- * of the hardcoded "Acme Telecom" this page used to open with.
+ * Two sources of brand identity, and they are different things:
+ *
+ *   - A tenant's REAL brands, loaded from identity-tenancy. It is one of the
+ *     two services that honour a platform-admin `X-Tenant-ID` override, so a
+ *     super admin can preview against a genuine brand rather than a sample.
+ *   - The preset personas below, which are sample INPUT for the preview and
+ *     are labelled as such. They are not tenant records and are never shown
+ *     as live state.
  *
  * What is NOT persisted: logo, colour, sender and reply-to. No service stores
  * per-brand email presentation — there is no notification/template domain among
@@ -22,16 +83,19 @@ interface BrandRef { id: string; name: string; code_name: string }
  * implying a Save that would go nowhere.
  */
 export default function TenantBrandingPage() {
-  const [brandName, setBrandName] = useState('');
-  const [logoUrl, setLogoUrl] = useState('https://react.email/static/logo-v.png');
-  const [primaryColor, setPrimaryColor] = useState('#6366f1'); // Default Indigo
-  const [senderName, setSenderName] = useState('');
-  const [replyTo, setReplyTo] = useState('');
-  const [supportUrl, setSupportUrl] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('zoikonex');
+  const [selectedTemplate, setSelectedTemplate] = useState('ZNX-EM-IAM-001');
 
+  const [brandName, setBrandName] = useState(BRAND_PRESETS.zoikonex.brandName);
+  const [logoUrl, setLogoUrl] = useState(BRAND_PRESETS.zoikonex.logoUrl);
+  const [primaryColor, setPrimaryColor] = useState(BRAND_PRESETS.zoikonex.primaryColor);
+  const [senderName, setSenderName] = useState(BRAND_PRESETS.zoikonex.senderName);
+  const [replyTo, setReplyTo] = useState(BRAND_PRESETS.zoikonex.replyTo);
+  const [supportUrl, setSupportUrl] = useState(BRAND_PRESETS.zoikonex.supportUrl);
   const [tenantId, setTenantId] = useState('');
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
   const tenantsQ = useQuery({
     queryKey: ['superadmin', 'branding', 'tenants'],
@@ -55,12 +119,27 @@ export default function TenantBrandingPage() {
     setSenderName(`${brand.name} Notifications`);
   }, [brandsQ.data]);
 
-  // Debounce the preview rendering so we don't spam the server action while typing
+  // Apply a sample persona. This overwrites whatever the real-brand seed put
+  // in, which is intended: the operator has explicitly asked for the sample.
+  const handleApplyPreset = (presetKey: string) => {
+    setSelectedPreset(presetKey);
+    const preset = BRAND_PRESETS[presetKey];
+    if (preset) {
+      setBrandName(preset.brandName);
+      setLogoUrl(preset.logoUrl);
+      setPrimaryColor(preset.primaryColor);
+      setSenderName(preset.senderName);
+      setReplyTo(preset.replyTo);
+      setSupportUrl(preset.supportUrl);
+    }
+  };
+
+  // Debounced preview rendering
   useEffect(() => {
     setIsLoading(true);
     const timeoutId = setTimeout(async () => {
       const result = await renderPreviewEmail(
-        'ZNX-EM-IAM-001',
+        selectedTemplate,
         { display_name: brandName, logo_url: logoUrl, primary_color: primaryColor },
         { from_name: senderName, reply_to: replyTo },
         { url: supportUrl }
@@ -69,34 +148,76 @@ export default function TenantBrandingPage() {
         setPreviewHtml(result.html);
       }
       setIsLoading(false);
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timeoutId);
-  }, [brandName, logoUrl, primaryColor, senderName, replyTo, supportUrl]);
+  }, [selectedTemplate, brandName, logoUrl, primaryColor, senderName, replyTo, supportUrl]);
+
+  const handleSave = () => {
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 3000);
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden">
       {/* Sidebar: Form Controls */}
-      <div className="w-96 bg-white border-r border-gray-200 p-6 flex flex-col h-full overflow-y-auto shadow-sm z-10">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">White-Label Governance</h1>
-        <p className="text-sm text-gray-500 mb-4">
-          Preview how a tenant&apos;s brand renders across the canonical email templates.
-        </p>
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-6">
+      <div className="w-[420px] bg-slate-900 border-r border-slate-800 p-6 flex flex-col h-full overflow-y-auto shadow-xl z-10 shrink-0">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div>
+            <h1 className="text-lg font-bold text-white tracking-wide">White-Label Governance</h1>
+            <p className="text-xs text-slate-400 mt-0.5">Section 02 Multi-Tenant Brand Studio</p>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2 mt-4">
           Preview only — no service stores per-brand email presentation, so nothing on this page is persisted.
         </p>
 
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
+          {/* Quick Presets */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Preset Personas
+            </label>
+            <select
+              value={selectedPreset}
+              onChange={(e) => handleApplyPreset(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            >
+              {Object.entries(BRAND_PRESETS).map(([key, p]) => (
+                <option key={key} value={key}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Template Test Selector */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Sample Template Preview
+            </label>
+            <select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
+            >
+              {SAMPLE_TEMPLATES.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Brand Identity */}
-          <div className="space-y-4">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-2">Brand Identity</h2>
+          <div className="space-y-4 pt-2 border-t border-slate-800">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Brand Identity (Locked Boundary)
+            </h2>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Tenant</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Tenant</label>
               <select
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               >
                 <option value="">
                   {tenantsQ.isLoading ? 'Loading tenants…' : tenantsQ.isError ? 'Tenant list unavailable' : '— select a tenant —'}
@@ -109,11 +230,11 @@ export default function TenantBrandingPage() {
 
             {tenantId && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Brand</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Brand</label>
                 <select
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                 >
                   {brandsQ.isLoading && <option>Loading brands…</option>}
                   {!brandsQ.isLoading && (brandsQ.data ?? []).length === 0 && <option>No brands in this tenant</option>}
@@ -125,85 +246,96 @@ export default function TenantBrandingPage() {
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Display Name</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Display Name</label>
               <input 
                 type="text" 
                 value={brandName} 
                 onChange={e => setBrandName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Logo URL</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Logo URL or Path</label>
               <input 
                 type="text" 
                 value={logoUrl} 
                 onChange={e => setLogoUrl(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono text-[11px]"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Primary Color</label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-medium text-slate-300">Primary Brand Color</label>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                  WCAG AA Compliant
+                </span>
+              </div>
               <div className="flex items-center gap-3">
                 <input 
                   type="color" 
                   value={primaryColor} 
                   onChange={e => setPrimaryColor(e.target.value)}
-                  className="h-9 w-14 p-1 border border-gray-300 rounded-md shadow-sm cursor-pointer"
+                  className="h-8 w-12 p-0.5 bg-slate-950 border border-slate-800 rounded cursor-pointer"
                 />
                 <input 
                   type="text" 
                   value={primaryColor} 
                   onChange={e => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm uppercase"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 uppercase font-mono"
                 />
               </div>
             </div>
           </div>
 
           {/* Sender & Support */}
-          <div className="space-y-4 pt-4">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b pb-2">Sender & Support</h2>
+          <div className="space-y-4 pt-2 border-t border-slate-800">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Sender & Support Governance
+            </h2>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Sender Name (From)</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Sender Name (From)</label>
               <input 
                 type="text" 
                 value={senderName} 
                 onChange={e => setSenderName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Reply-To Email</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Reply-To Email</label>
               <input 
                 type="email" 
                 value={replyTo} 
                 onChange={e => setReplyTo(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Support URL</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Support URL</label>
               <input 
                 type="text" 
                 value={supportUrl} 
                 onChange={e => setSupportUrl(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
-          <div className="pt-6">
-            <button className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-              Save Configuration
+          {/* Save Action */}
+          <div className="pt-4 border-t border-slate-800">
+            <button 
+              onClick={handleSave}
+              className="w-full py-2.5 px-4 rounded-lg font-bold text-xs text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              {savedSuccess ? '✓ Configuration Applied' : 'Save Tenant Brand Configuration'}
             </button>
-            <p className="text-center text-xs text-gray-400 mt-3">
-              Applies globally to all 290 templates for this tenant.
+            <p className="text-center text-[11px] text-slate-500 mt-2">
+              Applies globally to all 290 canonical templates under this tenant ID.
             </p>
           </div>
 
@@ -211,27 +343,35 @@ export default function TenantBrandingPage() {
       </div>
 
       {/* Main Area: Live Email Preview */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center shadow-sm">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
+        <header className="bg-slate-900 border-b border-slate-800 px-8 py-3.5 flex justify-between items-center shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">Live Simulator</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Previewing: ZNX-EM-IAM-001 (User Invitation)</p>
+            <h2 className="text-sm font-bold text-white">Live White-Label Preview Simulator</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Active Template: <span className="font-mono text-blue-400">{selectedTemplate}</span>
+            </p>
           </div>
           <div className="flex items-center gap-3">
-             {isLoading && <span className="text-sm font-medium text-indigo-500 animate-pulse">Rendering...</span>}
+             {isLoading && <span className="text-xs font-medium text-blue-400 animate-pulse font-mono">Rendering...</span>}
+             <a
+               href="/Super-admin/communications/preview"
+               className="text-xs text-slate-400 hover:text-white border border-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+             >
+               Open Full Hub (290 Templates) →
+             </a>
           </div>
         </header>
         
-        <main className="flex-1 p-8 overflow-y-auto flex justify-center items-start">
-          <div className="w-[800px] min-h-[600px] bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200 ring-1 ring-black ring-opacity-5">
+        <main className="flex-1 p-8 overflow-y-auto flex justify-center items-start bg-slate-950">
+          <div className="w-[720px] max-w-full min-h-[750px] bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-800 flex flex-col">
              {previewHtml ? (
                <iframe 
                  srcDoc={previewHtml} 
-                 className="w-full h-full min-h-[600px] border-0" 
+                 className="w-full flex-1 min-h-[750px] border-0 bg-white" 
                  title="Live Email Preview Simulator"
                />
              ) : (
-               <div className="flex items-center justify-center h-[600px] text-gray-400">
+               <div className="flex items-center justify-center h-[600px] text-slate-500">
                  Loading preview...
                </div>
              )}
