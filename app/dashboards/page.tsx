@@ -1615,9 +1615,14 @@ export default function DashboardsPage() {
       ]
     },
     {
+      // Merging PR #88 brought a second navigation tree alongside this one, and
+      // the two overlapped: "Rating & Charging" and "Usage & Mediation" pointed
+      // at tabKeys with no render branch, so both were menu items that did
+      // nothing when clicked; Partner Settlement, Dunning & Disputes and KYC each
+      // appeared twice under different labels. One entry per screen now, in the
+      // section that owns it.
       section: "MONETIZATION & CHARGING", items: [
-        { label: "Rating & Charging", tabKey: "RatingCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
-        { label: "Usage & Mediation", tabKey: "UsageMediation", iconPath: "/image/dashboard/activity-pulse.svg" },
+        { label: "Usage & Charging", tabKey: "UsageCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
         { label: "Billing & Invoice", tabKey: "BillingManagement", iconPath: "/image/dashboard/billing-document.svg" },
         { label: "Payments", tabKey: "PaymentsManagement", iconPath: "/image/dashboard/credit-card.svg" },
         { label: "Partner Settlement", tabKey: "PartnerSettlement", iconPath: "/image/dashboard/user-profile.svg" },
@@ -1627,16 +1632,12 @@ export default function DashboardsPage() {
     {
       section: "REVENUE & ASSURANCE", items: [
         { label: "Finance Ledger", tabKey: "FinanceLedger", iconPath: "/image/dashboard/bar-chart.svg" },
-        { label: "Usage & Charging", tabKey: "UsageCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
-        { label: "Partner & Settlement", tabKey: "PartnerSettlement", iconPath: "/image/dashboard/bar-chart.svg" },
-        { label: "Dunning & Disputes", tabKey: "DunningDisputes", iconPath: "/image/dashboard/credit-card.svg" },
+        { label: "Revenue Assurance", tabKey: "RevenueAssurance", iconPath: "/image/dashboard/shield.svg" },
+        { label: "Fraud & Risk", tabKey: "FraudRisk", iconPath: "/image/dashboard/shield.svg" },
       ]
     },
     {
       section: "ASSURE", items: [
-        { label: "Revenue Assurance", tabKey: "RevenueAssurance", iconPath: "/image/dashboard/shield.svg" },
-        { label: "Fraud & Risk", tabKey: "FraudRisk", iconPath: "/image/dashboard/shield.svg" },
-        { label: "Customer Lifecycle & KYC", tabKey: "CustomerLifecycleKyc", iconPath: "/image/dashboard/user-profile.svg" },
         { label: "Evidence Ledger", tabKey: "EvidenceLedger", iconPath: "/image/dashboard/document.svg" },
         { label: "Regulatory Exports", tabKey: "RegulatoryExports", iconPath: "/image/dashboard/document.svg" },
       ]
