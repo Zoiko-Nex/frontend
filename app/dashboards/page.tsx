@@ -730,7 +730,11 @@ export default function DashboardsPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const [sessionData, setSessionData] = useState<{ email?: string; tenantId?: string }>({});
-  const [onlineCount, setOnlineCount] = useState(18);
+  // Starts at null, not 18. The old default asserted a fully healthy estate on
+  // first paint, before a single probe had returned — so the reassuring number
+  // was showing precisely when nothing was known yet.
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
+  const [serviceTotal, setServiceTotal] = useState<number | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [meLoaded, setMeLoaded] = useState(false);
@@ -1429,44 +1433,74 @@ export default function DashboardsPage() {
       "api-gateway": "integration-ecosystem"
     };
 
+    /**
+     * Probe every service's own /health, and report what each one answers.
+     *
+     * This previously made ONE authenticated call to identity-tenancy and, if it
+     * came back 200, set onlineCount to a literal 18 and stamped ACTIVE + HEALTHY
+     * on all eighteen cards. So a single reachable service was rendered as the
+     * whole estate being healthy: seventeen could be down and the dashboard still
+     * read 18/18. On an operations screen that is worse than showing nothing,
+     * because it actively answers the question "is anything wrong" with a no.
+     *
+     * Every one of the 19 services registers GET /health, so each card's status
+     * now comes from its own service. Several cards are different views onto the
+     * same service (rt-charging and rating-engine are both 8085; esim, IoT and
+     * numbering are all 8083), so ports are de-duplicated before probing — 18
+     * cards resolve to 13 distinct services and therefore 13 requests, not 18.
+     *
+     * /health is unauthenticated, so an expired session shows infrastructure
+     * state rather than turning the whole board red.
+     */
     const checkBackendServices = async () => {
-      try {
-        const healthRes = await fetch("/api/proxy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            port: 8080,
-            method: "GET",
-            path: "/v1/me",
-            headers: { "X-Tenant-ID": sessionData.tenantId }
-          })
-        });
-        if (healthRes.ok) {
-          const payload = await healthRes.json();
-          if (payload.ok) {
-            setOnlineCount(18);
+      const ports = Array.from(new Set(Object.values(SERVICE_ID_TO_PORT)));
 
-            setServices((prev) =>
-              prev.map((s) => {
-                let nextBadges = [...s.badges];
-                if (!nextBadges.includes("INTEGRATED")) nextBadges.push("INTEGRATED");
-                if (!nextBadges.includes("ACTIVE")) nextBadges.push("ACTIVE");
-                if (!nextBadges.includes("HEALTHY")) nextBadges.push("HEALTHY");
-                nextBadges = nextBadges.filter(b => b !== "AVAILABLE" && b !== "PROVISIONING");
-                
-                return {
-                  ...s,
-                  active: true,
-                  badges: Array.from(new Set(nextBadges))
-                };
-              })
-            );
-          }
+      const probe = async (port: number): Promise<boolean> => {
+        try {
+          const res = await fetch("/api/proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ port, method: "GET", path: "/health" }),
+          });
+          if (!res.ok) return false;
+          const payload = await res.json();
+          return payload?.ok === true;
+        } catch {
+          return false;
         }
-      } catch (err) {
-        console.warn("Backend endpoints sync bypassed:", err);
-      }
+      };
 
+      const results = await Promise.all(ports.map(async (port) => [port, await probe(port)] as const));
+      const healthByPort = new Map<number, boolean>(results);
+
+      // Counted over distinct services, not cards — otherwise one service backing
+      // three cards would be counted three times and inflate the total.
+      const healthy = Array.from(healthByPort.values()).filter(Boolean).length;
+      setOnlineCount(healthy);
+      setServiceTotal(healthByPort.size);
+
+      setServices((prev) =>
+        prev.map((svc) => {
+          const port = SERVICE_ID_TO_PORT[svc.id];
+          // A card with no port mapping has nothing to probe. Left untouched
+          // rather than defaulted to healthy.
+          if (port === undefined) return svc;
+
+          const up = healthByPort.get(port) === true;
+          const carried = svc.badges.filter(
+            (b) => b !== "ACTIVE" && b !== "HEALTHY" && b !== "AVAILABLE" &&
+                   b !== "PROVISIONING" && b !== "UNREACHABLE",
+          );
+          return {
+            ...svc,
+            active: up,
+            badges: up ? ["ACTIVE", "HEALTHY", ...carried] : ["UNREACHABLE", ...carried],
+          };
+        }),
+      );
+    };
+
+    const fetchLogs = async () => {
       try {
         const logsRes = await fetch("/api/logs");
         if (logsRes.ok) {
@@ -1478,8 +1512,14 @@ export default function DashboardsPage() {
       }
     };
 
-    checkBackendServices();
-    const intervalId = setInterval(checkBackendServices, 4000);
+    const tick = () => { void checkBackendServices(); void fetchLogs(); };
+
+    tick();
+    // 4s meant 18 proxied requests every 4 seconds against every open dashboard.
+    // Health does not change that fast, and the old interval predates this doing
+    // any real probing. 15s with 13 de-duplicated probes is a fifth of the
+    // traffic and still well inside the window an operator would notice.
+    const intervalId = setInterval(tick, 15000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -1662,7 +1702,9 @@ export default function DashboardsPage() {
                     </div>
                     <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
                       <span className="text-slate-300 text-xs">Services</span>
-                      <span className="text-white text-xs font-medium">{onlineCount}/18 online</span>
+                      <span className="text-white text-xs font-medium">
+                        {onlineCount === null || serviceTotal === null ? "checking…" : `${onlineCount}/${serviceTotal} online`}
+                      </span>
                     </div>
                   </div>
                   <div className="p-3 border-t border-white/10">
@@ -1986,7 +2028,9 @@ export default function DashboardsPage() {
                       {!locked && (item.tabKey === "Services" || item.badge) && (
                         <div className="flex-1 min-w-6 inline-flex flex-col justify-start items-end">
                           <div className={`px-1.5 py-px rounded-[20px] flex flex-col justify-start items-start ${currentTab === item.tabKey ? "bg-white/20 text-white backdrop-blur-sm" : "bg-slate-200 text-slate-500"}`}>
-                            <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">{item.tabKey === "Services" ? `${onlineCount}/18` : item.badge}</div>
+                            <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">{item.tabKey === "Services"
+                                ? (onlineCount === null || serviceTotal === null ? "…" : `${onlineCount}/${serviceTotal}`)
+                                : item.badge}</div>
                           </div>
                         </div>
                       )}
@@ -2071,7 +2115,9 @@ export default function DashboardsPage() {
                       <div className="self-stretch justify-center text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">ACTIVE SERVICES</div>
                     </div>
                     <div className="self-stretch flex flex-col justify-start items-start">
-                      <div className="self-stretch justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">{onlineCount} / 18</div>
+                      <div className="self-stretch justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">
+                        {onlineCount === null || serviceTotal === null ? "—" : `${onlineCount} / ${serviceTotal}`}
+                      </div>
                     </div>
                   </div>
                   <div className="flex-1 px-4 py-3.5 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-1.5">
@@ -2368,11 +2414,21 @@ export default function DashboardsPage() {
                     </div>
                     {currentConsole === "tenant-admin" && (
                       <div className="mt-2 inline-flex items-center gap-2 bg-indigo-50/50 border border-indigo-100/50 rounded-lg px-2.5 py-1 select-none">
-                        <span className={`inline-block size-2 rounded-full ${onlineCount > 0 ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
+                        <span className={`inline-block size-2 rounded-full ${
+                          onlineCount === null
+                            ? "bg-slate-300"
+                            : serviceTotal !== null && onlineCount === serviceTotal
+                              ? "bg-emerald-500 animate-pulse"
+                              : onlineCount === 0
+                                ? "bg-rose-500"
+                                : "bg-amber-500"
+                        }`}></span>
                         <span className="text-slate-600 text-[11px] font-semibold font-['IBM_Plex_Mono']">
-                          {onlineCount === 18
-                            ? "All 18 TM Forum-aligned Microservices Connected"
-                            : `${onlineCount}/18 Microservices Connected`
+                          {onlineCount === null || serviceTotal === null
+                            ? "Checking service health…"
+                            : onlineCount === serviceTotal
+                              ? `All ${serviceTotal} services responding`
+                              : `${onlineCount}/${serviceTotal} services responding`
                           }
                         </span>
                       </div>
@@ -3803,6 +3859,14 @@ export default function DashboardsPage() {
                 {/* Endpoint Template Selector */}
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select API Endpoint Template</label>
+                  {(endpointTemplates[selectedService.id]?.length ?? 0) === 0 && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mb-2 leading-relaxed">
+                      No templates for this card. It is a view onto{" "}
+                      <span className="font-mono">port {selectedServicePort[selectedService.id]}</span> rather than a
+                      service of its own, and the domain it is named after has no endpoints on the platform. The health
+                      check below is real; anything else needs a path you supply.
+                    </p>
+                  )}
                   <select
                     value={selectedEndpoint}
                     onChange={(e) => {
@@ -4142,6 +4206,35 @@ export default function DashboardsPage() {
 }
 
 // Config mappings for BSS cockpit API client
+/**
+ * Card id to the port of the service actually behind it.
+ *
+ * Several cards are views onto one service — rt-charging and rating-engine are
+ * both rating-charging (8085); esim, IoT and numbering are all
+ * order-management-provisioning (8083). The health probe de-duplicates on this,
+ * so those cards share one service's status instead of being counted separately.
+ */
+const SERVICE_ID_TO_PORT: Record<string, number> = {
+  "prod-catalog": 8082,
+  "rt-charging": 8085,
+  "rating-engine": 8085,
+  "billing-invoice": 8092,
+  "payments-collections": 8096,
+  "partner-settlement": 8086,
+  "cust-lifecycle": 8081,
+  "notifications-campaigns": 8097,
+  "esim-sim-mgmt": 8083,
+  "iot-connectivity": 8083,
+  "number-inventory": 8083,
+  "taxation-regulatory": 8089,
+  "compliance-kyc": 8091,
+  "evidence-ledger": 8093,
+  "ai-gov-controls": 8098,
+  "analytics-reporting": 8098,
+  "mediation-usage": 8094,
+  "api-gateway": 8097,
+};
+
 const selectedServicePort: Record<string, number> = {
   "prod-catalog": 8082,
   "rt-charging": 8085,
@@ -4223,29 +4316,32 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
   ],
   "rt-charging": [
     {
-      label: "Prepaid: Initiate Balance Reservation (POST /v1/charging/reservations)",
+      label: "Prepaid: Reserve Balance (POST /v1/prepaid/reserve)",
       method: "POST",
-      path: "/v1/charging/reservations",
+      path: "/v1/prepaid/reserve",
       headers: { "X-Tenant-ID": portalTenantId() },
       body: {
-        session_id: "charge-session-9988",
         subscriber_id: "sub-0987",
-        requested_units: 500,
-        service_identifier: "DATA_LTE"
+        idempotency_key: "reserve-demo-0001",
+        currency_code: "GBP",
+        amount: 500
       }
     }
   ],
   "rating-engine": [
     {
-      label: "Prepaid: Process Usage CDR (POST /v1/rating/calculate)",
+      label: "Postpaid: Rate a Usage Record (POST /v1/postpaid/rate)",
       method: "POST",
-      path: "/v1/rating/calculate",
+      path: "/v1/postpaid/rate",
       headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         subscriber_id: "sub-0987",
-        volume: 1024,
-        unit_type: "OCTETS",
-        usage_type: "ROAMING"
+        account_id: "acc-1234",
+        currency_code: "GBP",
+        usage_type: "DATA",
+        quantity: "1024",
+        quantity_unit: "BYTES",
+        usage_occurred_at: "2026-08-20T10:00:00Z"
       }
     }
   ],
@@ -4263,14 +4359,17 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       }
     },
     {
-      label: "Trigger Billing Cycle Run (POST /v1/billing/runs)",
+      label: "Open a Bill Cycle (POST /v1/bill-cycles)",
       method: "POST",
-      path: "/v1/billing/runs",
+      path: "/v1/bill-cycles",
       headers: { "X-Tenant-ID": portalTenantId() },
       body: {
-        bill_cycle_id: "cycle-2026-06",
         account_id: "acc-1234",
-        force_run: true
+        customer_id: "cust-5678",
+        cycle_type: "MONTHLY",
+        jurisdiction_code: "GB",
+        cycle_start_at: "2026-08-01T00:00:00Z",
+        cycle_end_at: "2026-08-31T23:59:59Z"
       }
     }
   ],
@@ -4290,32 +4389,41 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
   ],
   "partner-settlement": [
     {
-      label: "Calculate Interconnect Revenue Share (POST /v1/settlements)",
+      label: "Open a Settlement Run (POST /v1/settlement-runs)",
       method: "POST",
-      path: "/v1/settlements",
+      path: "/v1/settlement-runs",
       headers: { "X-Tenant-ID": portalTenantId() },
       body: {
-        partner_id: "partner-helios-net",
-        traffic_period: "2026-06",
-        total_minutes: 45000,
-        settlement_rate: 0.02
+        partner_id: "00000000-0000-0000-0000-000000000001",
+        partner_name: "Helios Net",
+        currency_code: "GBP",
+        period_start: "2026-08-01T00:00:00Z",
+        period_end: "2026-08-31T23:59:59Z",
+        created_by: "console"
       }
     }
   ],
   "cust-lifecycle": [
     {
-      label: "Step 1: Authenticate / User Login (POST /v1/sessions)",
+      // This card is customer-account (8081). POST /v1/sessions lives on
+      // identity-tenancy (8080), so the original template was pointed at a
+      // service that does not serve it — a 404 that read as the login being
+      // broken. Replaced with this service's own create-customer route.
+      label: "Create a Customer (POST /v1/customers)",
       method: "POST",
-      path: "/v1/sessions",
+      path: "/v1/customers",
       headers: {
         "X-Tenant-ID": portalTenantId(),
         // Brand is per-tenant; left as a placeholder the operator replaces.
         "X-Brand-ID": "<brand-id>"
       },
+      // party_id and customer_type are the two the handler rejects without.
+      // A customer is created against an existing party, so run the party
+      // template below first and paste its id here.
       body: {
-        email: "admin@acme.com",
-        password: "SecurePassword123",
-        device_fingerprint: "browser-chrome-windows-12345"
+        party_id: "<party-id from POST /v1/parties>",
+        customer_type: "INDIVIDUAL",
+        segment: "CONSUMER"
       }
     },
     {
@@ -4356,19 +4464,11 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       }
     }
   ],
-  "notifications-campaigns": [
-    {
-      label: "Send Campaign Push Alert (POST /v1/campaigns/send)",
-      method: "POST",
-      path: "/v1/campaigns/send",
-      headers: { "X-Tenant-ID": portalTenantId() },
-      body: {
-        campaign_name: "Summer Unlimited Upgrade",
-        target_group: "high_data_users",
-        message_template: "Upgrade to unlimited 5G data today for only $10 extra!"
-      }
-    }
-  ],
+  // No campaigns/notifications service exists among the 19 — this card is an
+  // alias onto integration-ecosystem. The template posted to /v1/campaigns/send,
+  // which nothing registers. Left empty so the picker offers only the health
+  // check and a custom request, rather than a call that always 404s.
+  "notifications-campaigns": [],
   "esim-sim-mgmt": [
     {
       label: "Step 4: Place Product Order (POST /v1/orders)",
@@ -4420,31 +4520,15 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       }
     }
   ],
-  "iot-connectivity": [
-    {
-      label: "Register IoT Device Fleet (POST /v1/iot/devices)",
-      method: "POST",
-      path: "/v1/iot/devices",
-      headers: { "X-Tenant-ID": portalTenantId() },
-      body: {
-        device_imei: "354920009988221",
-        model: "SensNode-v2",
-        activation_profile: "IOT_LIGHT"
-      }
-    }
-  ],
-  "number-inventory": [
-    {
-      label: "Reserve MSISDN Phone Number (POST /v1/numbers/reserve)",
-      method: "POST",
-      path: "/v1/numbers/reserve",
-      headers: { "X-Tenant-ID": portalTenantId() },
-      body: {
-        msisdn: "+12125550199",
-        reservation_timeout_seconds: 600
-      }
-    }
-  ],
+  // No IoT service exists among the 19 — this card is an alias onto
+  // order-management-provisioning. /v1/iot/devices is registered nowhere. The
+  // nearest real capability is SIM provisioning, which the eSIM card above
+  // already covers, so nothing is duplicated here.
+  "iot-connectivity": [],
+  // No numbering/inventory service exists among the 19 — another
+  // order-management-provisioning alias. Nothing registers /v1/numbers/reserve,
+  // and there is no MSISDN reservation route to point at instead.
+  "number-inventory": [],
   "taxation-regulatory": [
     {
       label: "Step 7a: Create Jurisdiction Policy (POST /v1/jurisdiction-policies)",
@@ -4483,9 +4567,11 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       }
     },
     {
-      label: "Step 6b: Submit KYC Documentation (PATCH /v1/kyc/cases/{id}/submit)",
+      // There is no /submit sub-route, and the id was hardcoded to a seed case.
+      // A KYC case is advanced with PATCH on the case itself.
+      label: "Step 6b: Advance a KYC Case (PATCH /v1/kyc/cases/{id})",
       method: "PATCH",
-      path: "/v1/kyc/cases/kyc-case-9988/submit",
+      path: "/v1/kyc/cases/<case-id from POST /v1/kyc/cases>",
       headers: { "X-Tenant-ID": portalTenantId() },
       body: {
         verification_status: "SUBMITTED"
@@ -4513,44 +4599,70 @@ const endpointTemplates: Record<string, EndpointTemplate[]> = {
       }
     }
   ],
-  "ai-gov-controls": [
-    {
-      label: "Get AI Governance Status (GET /v1/ai/controls)",
-      method: "GET",
-      path: "/v1/ai/controls",
-      headers: { "X-Tenant-ID": portalTenantId() },
-      body: null
-    }
-  ],
+  // No AI-governance service exists among the 19 — this card is an alias onto
+  // reporting-regulatory, and /v1/ai/controls is registered nowhere. AI
+  // boundaries are enforced inside fraud-risk and revenue-assurance (rules
+  // score and flag; a human makes every terminal call), not exposed as a
+  // control-plane endpoint, so there is nothing to point this at.
+  "ai-gov-controls": [],
   "analytics-reporting": [
     {
-      label: "Generate Revenue Report (GET /v1/reports/revenue)",
+      // /v1/reports/revenue does not exist. What reporting-regulatory actually
+      // serves is the signed regulatory export register, which is the real
+      // reporting surface on this port.
+      label: "List Regulatory Exports (GET /v1/exports)",
       method: "GET",
-      path: "/v1/reports/revenue",
-      headers: { "X-Tenant-ID": portalTenantId() },
+      path: "/v1/exports?limit=20",
+      headers: {
+        "X-Tenant-ID": portalTenantId(),
+        // reporting-regulatory is the one tenant-brand-idem service: it needs a
+        // brand on every call, not just a tenant.
+        "X-Brand-ID": "<brand-id>"
+      },
       body: null
     }
   ],
   "mediation-usage": [
     {
-      label: "Mediate Ingested CDR record (POST /v1/usage/cdrs)",
+      label: "Ingest a Usage Batch (POST /v1/usage/ingest)",
       method: "POST",
-      path: "/v1/usage/cdrs",
-      headers: {},
+      path: "/v1/usage/ingest",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      // The service takes a batch envelope, not a bare CDR: event_id and
+      // network_element identify the submission, and events[] carries the
+      // records. usage_type and unit are closed sets — see dto.RawEvent.
       body: {
-        calling_party: "+12125550199",
-        called_party: "+12125550100",
-        duration_seconds: 120,
-        usage_type: "VOICE",
-        timestamp: "2026-06-29T10:00:00Z"
+        event_id: "00000000-0000-4000-8000-000000000001",
+        network_element: "MSC-LON-01",
+        occurred_at: "2026-08-20T10:00:00Z",
+        events: [
+          {
+            subscriber_id: "sub-0987",
+            usage_type: "VOICE",
+            quantity: 120,
+            unit: "SECONDS",
+            start_at: "2026-08-20T09:58:00Z",
+            end_at: "2026-08-20T10:00:00Z"
+          }
+        ]
       }
     }
   ],
   "api-gateway": [
     {
-      label: "List Active Webhook Subscriptions (GET /v1/developer/keys)",
+      // The label already said "webhook subscriptions" while the path asked for
+      // developer keys, which nothing registers. /v1/hub is the real webhook
+      // subscription register on integration-ecosystem.
+      label: "List Webhook Subscriptions (GET /v1/hub)",
       method: "GET",
-      path: "/v1/developer/keys",
+      path: "/v1/hub",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: null
+    },
+    {
+      label: "List Registered Connectors (GET /v1/connectors)",
+      method: "GET",
+      path: "/v1/connectors",
       headers: { "X-Tenant-ID": portalTenantId() },
       body: null
     }
