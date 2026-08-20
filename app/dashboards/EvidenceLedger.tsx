@@ -42,14 +42,26 @@ interface EvidenceRecord {
   recorded_at: string;
 }
 
+/**
+ * What GET /v1/evidence/{id}/verify actually returns — dto.VerificationResponse
+ * is exactly these four fields.
+ *
+ * This previously declared valid, hash_valid, chain_valid, signature_valid and
+ * failure_reason, none of which the service sends. So `valid` was always
+ * undefined, undefined is falsy, and every verification rendered as
+ * "TAMPER DETECTED" with three sub-checks reading CORRUPTED / BROKEN CHAIN /
+ * INVALID SIG — including when the chain verified perfectly.
+ *
+ * On an evidence ledger that is the most damaging direction for the bug to run:
+ * a clean audit reads as evidence of tampering. The service does verify hash,
+ * link and signature internally, but it reports one composite verdict, so the
+ * UI shows one verdict rather than inventing three.
+ */
 interface VerificationResult {
   evidence_id: string;
   chain_sequence: number;
-  valid: boolean;
-  hash_valid: boolean;
-  chain_valid: boolean;
-  signature_valid: boolean;
-  failure_reason?: string;
+  verified: boolean;
+  verified_at?: string;
 }
 
 export default function EvidenceLedger() {
@@ -58,6 +70,27 @@ export default function EvidenceLedger() {
   const [appendModalOpen, setAppendModalOpen] = useState(false);
   const [verifyId, setVerifyId] = useState("");
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+
+  /**
+   * Integrity comes from the service, not from a constant.
+   *
+   * The tile read "100% SEALED" as a hardcoded string while GET
+   * /v1/evidence/verify-range sat uncalled. An append-only ledger asserting its
+   * own integrity without checking is the one thing an evidence store must
+   * never do: the tile said sealed whether the chain reconciled or not, so it
+   * would have kept saying sealed through an actual tamper.
+   *
+   * from=1 walks the chain from its origin. A 4xx here is not "unknown" — a
+   * range that cannot be verified is reported as unverified, because on this
+   * screen the safe default is to withhold the assurance, not to assume it.
+   */
+  const integrityQ = useQuery({
+    queryKey: ["evidence", "chain-integrity"],
+    retry: false,
+    staleTime: 60_000,
+    queryFn: () =>
+      api.get<VerificationResult>("evidence", "/v1/evidence/verify-range?from=1&to=1000000"),
+  });
 
   // Form
   const [appendForm, setAppendForm] = useState({
@@ -92,7 +125,7 @@ export default function EvidenceLedger() {
     mutationFn: (id: string) => api.get<VerificationResult>("evidence", `/v1/evidence/${id}/verify`),
     onSuccess: (res) => {
       setVerificationResult(res);
-      if (res.valid) {
+      if (res.verified) {
         toast.success("Cryptographic integrity verified: Hash chain and RSA signature are 100% valid!");
       } else {
         toast.error("Integrity validation failed: Record has been tampered with!");
@@ -150,24 +183,46 @@ export default function EvidenceLedger() {
       {/* Summary KPI Tiles */}
       <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryTile
-          label="LEDGER INTEGRITY"
-          value="100% SEALED"
-          hint="SHA-256 Hash Chain"
+          label="CHAIN INTEGRITY"
+          value={
+            integrityQ.isLoading
+              ? "Checking…"
+              : integrityQ.data?.verified
+                ? "Verified"
+                : integrityQ.error
+                  ? "Unverified"
+                  : "FAILED"
+          }
+          hint={
+            integrityQ.isLoading
+              ? "Walking the chain from sequence 1"
+              : integrityQ.data?.verified
+                ? `Reconciled to sequence ${integrityQ.data.chain_sequence}`
+                : integrityQ.error
+                  ? errMessage(integrityQ.error, "The range could not be checked")
+                  : "The chain did not reconcile — investigate"
+          }
         />
         <SummaryTile
           label="SIGNING ALGORITHM"
-          value="RSA-PSS-256"
-          hint="Hardware Key Signing"
+          value="RSA-PSS / SHA-256"
+          hint="As implemented by evidence-ledger"
         />
+        {/*
+          WORM and court-admissibility were asserted as achieved. Neither is
+          established by anything this console can see — WORM is a property of
+          the storage the service is deployed onto, not of the service — so they
+          are stated as the design target they are.
+        */}
         <SummaryTile
-          label="STORAGE CLASS"
+          label="STORAGE TARGET"
           value="WORM"
-          hint="Write-Once Read-Many"
+          hint="Depends on deployment storage, not verified here"
         />
         <SummaryTile
-          label="COMPLIANCE STANDARD"
+          label="GOVERNING ADR"
           value="ZN-ADR-012"
-          hint="Court-Admissible Evidence"
+          hint="Append-only evidence chain"
         />
       </div>
 
@@ -267,32 +322,23 @@ export default function EvidenceLedger() {
           </div>
 
           {verificationResult && (
-            <div className={`p-5 rounded-xl border ${verificationResult.valid ? "bg-emerald-50/50 border-emerald-200" : "bg-rose-50 border-rose-200"} flex flex-col gap-3 font-sans`}>
-              <div className="flex items-center justify-between">
+            <div className={`p-5 rounded-xl border ${verificationResult.verified ? "bg-emerald-50/50 border-emerald-200" : "bg-rose-50 border-rose-200"} flex flex-col gap-3 font-sans`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="font-extrabold text-base text-slate-800">
-                  {verificationResult.valid ? "✅ CRYPTOGRAPHICALLY VALID" : "❌ TAMPER DETECTED"}
+                  {verificationResult.verified ? "Chain verified" : "Verification FAILED — treat as a tamper event"}
                 </span>
                 <span className="font-mono text-xs text-slate-600">Sequence #{verificationResult.chain_sequence}</span>
               </div>
-              <div className="grid grid-cols-3 gap-3 font-mono text-xs mt-2">
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px]">PAYLOAD HASH</span>
-                  <span className={verificationResult.hash_valid ? "text-emerald-600 font-bold" : "text-rose-600 font-bold"}>
-                    {verificationResult.hash_valid ? "MATCHED (SHA-256)" : "CORRUPTED"}
-                  </span>
-                </div>
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px]">CHAIN LINK</span>
-                  <span className={verificationResult.chain_valid ? "text-emerald-600 font-bold" : "text-rose-600 font-bold"}>
-                    {verificationResult.chain_valid ? "INTACT" : "BROKEN CHAIN"}
-                  </span>
-                </div>
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px]">RSA SIGNATURE</span>
-                  <span className={verificationResult.signature_valid ? "text-emerald-600 font-bold" : "text-rose-600 font-bold"}>
-                    {verificationResult.signature_valid ? "AUTHENTIC" : "INVALID SIG"}
-                  </span>
-                </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {verificationResult.verified
+                  ? "The payload hash, the link to the preceding record and the signature all reconcile. The service checks all three and returns a single verdict."
+                  : "One of the payload hash, the chain link or the signature did not reconcile. The service returns a single verdict and does not say which — investigate before relying on any record at or after this sequence."}
+              </p>
+              <div className="flex flex-wrap gap-4 font-mono text-[11px] text-slate-500 pt-2 border-t border-slate-200/70">
+                <span>record {shortId(verificationResult.evidence_id)}</span>
+                {verificationResult.verified_at && (
+                  <span>checked {new Date(verificationResult.verified_at).toLocaleString()}</span>
+                )}
               </div>
             </div>
           )}
