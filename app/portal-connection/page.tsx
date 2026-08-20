@@ -38,9 +38,9 @@ const DOMAINS: Domain[] = [
     name: "Billing & Charging",
     ep: 12,
     base: "/v1/billing",
-    ver: "v2.1",
-    auth: "OAuth2 · billing:write",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Real-time rating engines and convergent billing architectures for global connectivity. OCS, OFCS and convergent charging are exposed as distinct paths.",
     std: ["TMF678", "TMF635", "3GPP TS 32.299"],
     eps: [
@@ -58,9 +58,9 @@ const DOMAINS: Domain[] = [
     name: "Inventory Ops",
     ep: 8,
     base: "/v1/inventory",
-    ver: "v1.4",
-    auth: "OAuth2 · inventory:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Automated resource lifecycle management from allocation to decommissioning across product, service and resource inventories.",
     std: ["TMF637", "TMF638", "TMF639"],
     eps: [
@@ -77,9 +77,9 @@ const DOMAINS: Domain[] = [
     name: "Identity & Security",
     ep: 24,
     base: "/v1/identity",
-    ver: "v3.0",
-    auth: "OAuth2 · iam:admin",
-    rate: "1200 / min",
+    ver: "v1",
+    auth: "OAuth2 · tenant:user:read",
+    rate: "Not enforced",
     ov: "Zero-trust authentication and sovereign identity management across network edges, with RBAC/ABAC, MFA and break-glass controls.",
     std: ["OAuth2", "OIDC", "TMF672"],
     eps: [
@@ -97,9 +97,9 @@ const DOMAINS: Domain[] = [
     name: "Network Orchestration",
     ep: 16,
     base: "/v1/network",
-    ver: "v2.0",
-    auth: "OAuth2 · network:write",
-    rate: "400 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "SDN-integrated provisioning and traffic shaping for dynamic demand shifts, with policy control and carrier integration.",
     std: ["3GPP TS 29.503", "TMF641"],
     eps: [
@@ -116,9 +116,9 @@ const DOMAINS: Domain[] = [
     name: "Customer Management",
     ep: 14,
     base: "/v1/customers",
-    ver: "v2.2",
-    auth: "OAuth2 · customer:write",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Unified profile orchestration with deep loyalty integration and churn analytics. Customer, account (payer) and subscriber are separate entities.",
     std: ["TMF629", "TMF666", "TMF632", "TMF669"],
     eps: [
@@ -136,9 +136,9 @@ const DOMAINS: Domain[] = [
     name: "Revenue Evidence",
     ep: 21,
     base: "/v1/evidence",
-    ver: "v1.8",
-    auth: "OAuth2 · evidence:read",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Immutable ledger tracking for cross-carrier reconciliation and settlement. WORM, append-only and hash-chain verified; writes are restricted to approved services.",
     std: ["WORM", "ISO 27001 A.12.4", "GDPR Art. 30"],
     eps: [
@@ -155,9 +155,9 @@ const DOMAINS: Domain[] = [
     name: "Product Catalog",
     ep: 10,
     base: "/v1/catalog",
-    ver: "v2.0",
-    auth: "OAuth2 · catalog:read",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Versioned plans, bundles, promotions and eligibility with jurisdiction-aware price books and offering qualification.",
     std: ["TMF620", "TMF671"],
     eps: [
@@ -173,9 +173,9 @@ const DOMAINS: Domain[] = [
     name: "Order Management",
     ep: 13,
     base: "/v1/orders",
-    ver: "v2.1",
-    auth: "OAuth2 · order:write",
-    rate: "400 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Order capture, decomposition and orchestration with saga-based service ordering and deterministic rollback.",
     std: ["TMF622", "TMF641"],
     eps: [
@@ -191,9 +191,9 @@ const DOMAINS: Domain[] = [
     name: "Usage & Mediation",
     ep: 11,
     base: "/v1/usage",
-    ver: "v1.6",
-    auth: "OAuth2 · usage:write",
-    rate: "2000 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Carrier-grade ingestion and a stage-based, replayable mediation pipeline with rated-usage visibility and DLQ reprocessing.",
     std: ["TMF635", "3GPP TS 32.297", "GSMA TD.57"],
     eps: [
@@ -209,9 +209,9 @@ const DOMAINS: Domain[] = [
     name: "Payments & Wallets",
     ep: 15,
     base: "/v1/payments",
-    ver: "v2.0",
-    auth: "OAuth2 · payment:write",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Multi-rail collections and wallets with captures, retries, refunds and reconciliation. Amounts are ISO 4217 integer minor units.",
     std: ["TMF676", "ISO 20022"],
     eps: [
@@ -228,9 +228,9 @@ const DOMAINS: Domain[] = [
     name: "Tax & Jurisdiction",
     ep: 9,
     base: "/v1/tax",
-    ver: "v1.5",
-    auth: "OAuth2 · tax:read",
-    rate: "800 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Runtime jurisdiction routing and multi-engine tax calculation driven by versioned, independently deployable jurisdiction packs.",
     std: ["ISO 4217"],
     eps: [
@@ -246,9 +246,9 @@ const DOMAINS: Domain[] = [
     name: "eSIM & SIM Provisioning",
     ep: 17,
     base: "/v1/esim",
-    ver: "v2.3",
-    auth: "OAuth2 · esim:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "GSMA-aligned RSP eSIM lifecycle and SIM provisioning with SM-DP+ integration and operator-safe error mapping.",
     std: ["GSMA SGP.22", "ES2+", "ES9+"],
     eps: [
@@ -264,9 +264,9 @@ const DOMAINS: Domain[] = [
     name: "IoT Connectivity",
     ep: 12,
     base: "/v1/iot",
-    ver: "v1.7",
-    auth: "OAuth2 · iot:write",
-    rate: "1000 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Device fleet orchestration, remote action flows and usage aggregation at device-fleet scale.",
     std: ["GSMA IoT SAFE"],
     eps: [
@@ -282,9 +282,9 @@ const DOMAINS: Domain[] = [
     name: "Numbering & Porting",
     ep: 8,
     base: "/v1/numbering",
-    ver: "v1.3",
-    auth: "OAuth2 · number:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Number inventory, reservation and allocation with MNP port-in/out orchestration and donor/recipient state.",
     std: ["ITU-T E.164"],
     eps: [
@@ -300,9 +300,9 @@ const DOMAINS: Domain[] = [
     name: "Notifications & Messaging",
     ep: 10,
     base: "/v1/messaging",
-    ver: "v1.9",
-    auth: "OAuth2 · messaging:write",
-    rate: "2000 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Transactional and campaign messaging across SMS, email and push, with delivery tracking and customer notifications.",
     std: ["3GPP SMS", "SMTP"],
     eps: [
@@ -318,9 +318,9 @@ const DOMAINS: Domain[] = [
     name: "Analytics & Reporting",
     ep: 14,
     base: "/v1/analytics",
-    ver: "v2.0",
-    auth: "OAuth2 · analytics:read",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "A read-only consumption layer for BI metrics, profitability reporting and scheduled, regulator-ready exports. Never writes to operational systems.",
     std: ["OpenTelemetry"],
     eps: [
@@ -336,9 +336,9 @@ const DOMAINS: Domain[] = [
     name: "Partner & Settlement",
     ep: 9,
     base: "/v1/partners",
-    ver: "v1.4",
-    auth: "OAuth2 · partner:read",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Partner, MVNA/MNO and interconnect settlement with statements, discrepancies and dispute handling.",
     std: ["GSMA TAP3", "NRTRDE"],
     eps: [
@@ -353,9 +353,9 @@ const DOMAINS: Domain[] = [
     name: "Webhooks & Events",
     ep: 7,
     base: "/v1/webhooks",
-    ver: "v1.2",
-    auth: "OAuth2 · webhook:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "OAuth2 · integration:events:publish",
+    rate: "Not enforced",
     ov: "Event subscriptions using the canonical event envelope, with idempotent delivery, retries and replay.",
     std: ["CloudEvents", "OpenAPI 3.0"],
     eps: [
@@ -592,10 +592,33 @@ export default function PortalConnectionPage() {
               {activeDomain.ov}
             </p>
 
+            {/*
+              A domain with nothing live has an aspirational base path too — the
+              namespace is not served, so presenting it as somewhere to send a
+              request is the same mistake the endpoint list made. Said once, at
+              the top, rather than left for the reader to infer from every row
+              being marked Planned.
+            */}
+            {activeDomain.eps.every((e) => e.status === "planned") && (
+              <div className="mt-6 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+                <p className="text-[13px] text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <span className="font-bold">Not yet available.</span> Nothing under{" "}
+                  <code className="font-mono text-[12px]">{activeDomain.base}</code> is served today — this domain
+                  describes intended surface. The endpoints below are listed for planning; none is callable.
+                </p>
+              </div>
+            )}
+
             {/* Base Path Display */}
-            <div className="mt-6 bg-[#082C49] dark:bg-[#061A2C] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between font-mono text-[13px] text-[#EAF2FB] overflow-x-auto shadow-inner">
+            <div className="mt-4 bg-[#082C49] dark:bg-[#061A2C] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between font-mono text-[13px] text-[#EAF2FB] overflow-x-auto shadow-inner">
               <span className="text-[#8AA0B6] text-[10.5px] uppercase tracking-wider font-semibold mr-4">Base</span>
-              <code className="text-[#bff0a0] font-bold tracking-wide flex-1">{activeDomain.base}</code>
+              <code
+                className={`font-bold tracking-wide flex-1 ${
+                  activeDomain.eps.every((e) => e.status === "planned") ? "text-[#8AA0B6]" : "text-[#bff0a0]"
+                }`}
+              >
+                {activeDomain.base}
+              </code>
             </div>
 
             {/* Meta Grid info boxes */}
@@ -605,12 +628,15 @@ export default function PortalConnectionPage() {
                 <span className="text-[13px] font-bold text-[#13243A] dark:text-white block mt-1">{activeDomain.ver}</span>
               </div>
               <div className="bg-slate-50 dark:bg-[#0E2840] border border-[#DCE5EF] dark:border-[#1E3B56] rounded-xl p-3.5">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold block">Auth Scope</span>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold block">Authentication</span>
                 <span className="text-[13px] font-bold text-[#13243A] dark:text-white block mt-1 truncate" title={activeDomain.auth}>{activeDomain.auth}</span>
               </div>
               <div className="bg-slate-50 dark:bg-[#0E2840] border border-[#DCE5EF] dark:border-[#1E3B56] rounded-xl p-3.5">
                 <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold block">Rate Limit</span>
-                <span className="text-[13px] font-bold text-[#13243A] dark:text-white block mt-1">{activeDomain.rate}</span>
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block mt-1">{activeDomain.rate}</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-1 leading-snug">
+                  No throttling is applied to inbound requests today. Do not design against a quota.
+                </span>
               </div>
             </div>
 
