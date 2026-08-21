@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiException } from "@/lib/admin/client";
 import { getSession } from "@/lib/admin/session";
+import { errMessage } from "@/lib/admin/envelope";
+import { Field, Modal, ModalActions, inputClass, inputMonoClass } from "@/components/admin/primitives";
 
 /* ───────── Types mirroring integration-ecosystem domain models ───────── */
 
@@ -163,7 +165,7 @@ function StatusBadge({ status }: { status?: string | null }) {
 /* ───────── Main Integration Component ───────── */
 
 export default function IntegrationTab() {
-  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds">("providers");
+  const [tab, setTab] = useState<"providers" | "webhooks" | "mft" | "quarantine" | "reconciliation" | "connections" | "telecom" | "b2b" | "mtls" | "idds" | "invocations" | "governance">("providers");
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
@@ -277,6 +279,26 @@ export default function IntegrationTab() {
         >
           IDD Registry
         </button>
+        <button
+          onClick={() => setTab("invocations")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "invocations"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Invocations
+        </button>
+        <button
+          onClick={() => setTab("governance")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            tab === "governance"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          Governance
+        </button>
       </div>
 
       {tab === "providers" && <ProvidersTab />}
@@ -289,6 +311,8 @@ export default function IntegrationTab() {
       {tab === "b2b" && <B2BTab />}
       {tab === "mtls" && <MTLSTab />}
       {tab === "idds" && <IDDRegistryTab />}
+      {tab === "invocations" && <InvocationsTab />}
+      {tab === "governance" && <GovernanceTab />}
     </div>
   );
 }
@@ -1012,13 +1036,72 @@ function OperationsSection({ connector }: { connector: Connector }) {
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to certify operation"),
   });
 
+  /**
+   * Removes an operation from the allow-list.
+   *
+   * The allow-list is what stops an app invoking an arbitrary provider URL, so
+   * an operation nobody calls any more is standing permission with no user.
+   * Deleting a CERTIFIED one revokes production access immediately, which is
+   * why that case is confirmed separately rather than sharing the plain path.
+   */
+  const removeOp = useMutation({
+    mutationFn: (id: string) => api.del("integration", `/v1/operations/${id}`),
+    onSuccess: () => {
+      toast.success("Operation removed from the allow-list");
+      qc.invalidateQueries({ queryKey: ["integration", "operations", connector.connector_id] });
+    },
+    onError: (e) => toast.error(errMessage(e, "Could not remove the operation")),
+  });
+
+  const confirmRemoveOp = (op: Operation) => {
+    const certified = op.certification_status === "CERTIFIED";
+    const msg = certified
+      ? `Remove "${op.operation_name}"? It is CERTIFIED — production callers lose access to it immediately.`
+      : `Remove "${op.operation_name}" from the allow-list?`;
+    if (window.confirm(msg)) removeOp.mutate(op.operation_id);
+  };
+
   const ops = q.data?.operations ?? [];
+
+  const suggestions = OPERATION_SUGGESTIONS[connector.connector_type] ?? [];
+  const pathError = pathTemplateError(form.path_template);
+
+  const applySuggestion = (key: string) => {
+    const sug = suggestions.find((x) => x.name === key);
+    if (!sug) return;
+    setForm({ ...form, operation_name: sug.name, http_method: sug.method, path_template: sug.path });
+  };
 
   return (
     <div className="flex flex-col gap-4 text-xs">
       <p className="text-slate-600 leading-relaxed">
-        Operations form a strict allow-list. Apps execute provider actions by operation name (e.g. <code>charge_card</code>) rather than direct URLs.
+        Operations form a strict allow-list. Apps execute provider actions by operation name (e.g. <code>create_payment_intent</code>) rather than direct URLs.
       </p>
+
+      {suggestions.length > 0 && (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col gap-2">
+          <label className="text-xs font-semibold text-slate-700">
+            Start from a common {connector.connector_type.replace(/_/g, " ").toLowerCase()} operation
+          </label>
+          <select
+            className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
+            value=""
+            onChange={(e) => applySuggestion(e.target.value)}
+          >
+            <option value="">— pick one to fill the fields below —</option>
+            {suggestions.map((sg) => (
+              <option key={sg.name} value={sg.name}>
+                {sg.name} · {sg.method} {sg.path} — {sg.note}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Suggestions only. The platform does not hold a registry of what each provider exposes, so check the name,
+            method and path against <span className="font-semibold">{connector.provider_name}</span>&apos;s own API
+            documentation before registering — every field stays editable.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -1026,9 +1109,17 @@ function OperationsSection({ connector }: { connector: Connector }) {
           <input
             className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
             value={form.operation_name}
-            placeholder="charge_card"
+            placeholder="create_payment_intent"
+            list={`op-names-${connector.connector_id}`}
             onChange={(e) => setForm({ ...form, operation_name: e.target.value })}
           />
+          {/* Names already registered on this connector, so a second environment
+              or a corrected entry can reuse the exact spelling rather than
+              risking a near-miss that callers then have to guess at. */}
+          <datalist id={`op-names-${connector.connector_id}`}>
+            {suggestions.map((sg) => <option key={`s-${sg.name}`} value={sg.name} />)}
+            {ops.map((o) => <option key={`o-${o.operation_id}`} value={o.operation_name} />)}
+          </datalist>
         </div>
         <div>
           <label className="text-xs font-semibold text-slate-700 mb-1 block">HTTP Method</label>
@@ -1046,12 +1137,26 @@ function OperationsSection({ connector }: { connector: Connector }) {
 
       <div>
         <label className="text-xs font-semibold text-slate-700 mb-1 block">Path Template</label>
-        <input
-          className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
-          value={form.path_template}
-          placeholder="/v1/payment_intents"
-          onChange={(e) => setForm({ ...form, path_template: e.target.value })}
-        />
+        <div className="flex items-center gap-0 rounded-lg border border-slate-300 focus-within:ring-2 focus-within:ring-[#1d64b8]/20 focus-within:border-[#1d64b8] overflow-hidden bg-white">
+          {/* The base URL is fixed on the connector and the path is joined onto
+              it, so showing it inline removes the main reason people typed a
+              full URL here — which the backend rejects. */}
+          <span className="px-2.5 py-2 text-[11px] font-mono text-slate-400 bg-slate-50 border-r border-slate-200 whitespace-nowrap max-w-[220px] truncate">
+            {connector.base_url || "(no base URL set)"}
+          </span>
+          <input
+            className="flex-1 px-3 py-2 text-xs font-medium text-slate-800 bg-white focus:outline-none"
+            value={form.path_template}
+            placeholder="/v1/payment_intents"
+            onChange={(e) => setForm({ ...form, path_template: e.target.value })}
+          />
+        </div>
+        {pathError && <p className="text-[11px] text-rose-600 mt-1 leading-relaxed">{pathError}</p>}
+        {!pathError && (
+          <p className="text-[11px] text-slate-500 mt-1">
+            Use <code>{"{id}"}</code> for a path parameter. Must start with a slash.
+          </p>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-slate-700 cursor-pointer font-medium">
@@ -1064,7 +1169,7 @@ function OperationsSection({ connector }: { connector: Connector }) {
       </label>
 
       <button
-        disabled={!form.operation_name || !form.path_template}
+        disabled={!form.operation_name.trim() || !form.path_template || !!pathError}
         onClick={() => register.mutate()}
         className="px-4 py-2 bg-[#1d64b8] hover:bg-[#154e93] disabled:opacity-50 text-white font-bold text-xs rounded-lg shadow-sm transition cursor-pointer self-start"
       >
@@ -1111,6 +1216,14 @@ function OperationsSection({ connector }: { connector: Connector }) {
                         Certify Production
                       </button>
                     )}
+                    <button
+                      onClick={() => confirmRemoveOp(op)}
+                      disabled={removeOp.isPending}
+                      title="Revokes the allow-list entry — callers can no longer invoke this operation"
+                      className="ml-1.5 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-[11px] rounded-md transition cursor-pointer disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
                   </td>
                 </tr>
               ))
@@ -1155,6 +1268,20 @@ function ActivationSection({ connector, onChanged }: { connector: Connector; onC
       qc.invalidateQueries({ queryKey: ["integration", "activations", connector.connector_id] });
     },
     onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to record approval"),
+  });
+
+  /**
+   * Qualification is the pre-flight the activation workflow expects before
+   * approvals are collected. It was registered and unreachable, which meant the
+   * gate could only ever be skipped.
+   */
+  const qualify = useMutation({
+    mutationFn: (id: string) => api.post("integration", `/v1/activations/${id}/qualification`, {}),
+    onSuccess: () => {
+      toast.success("Qualification recorded");
+      qc.invalidateQueries({ queryKey: ["integration", "activations"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Qualification failed"),
   });
 
   const activate = useMutation({
@@ -1225,6 +1352,19 @@ function ActivationSection({ connector, onChanged }: { connector: Connector; onC
                   <td className="px-3.5 py-2.5 text-right">
                     {a.state !== "ACTIVATED" && (
                       <div className="flex gap-1.5 justify-end">
+                        {/* Qualification is the pre-flight the workflow expects
+                            before approvals. Offered only while it is still
+                            outstanding, so it reads as a gate rather than a
+                            button that can be pressed forever. */}
+                        {String(a.qualification_status ?? "").toUpperCase() !== "QUALIFIED" && (
+                          <button
+                            onClick={() => qualify.mutate(a.activation_id)}
+                            disabled={qualify.isPending}
+                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[11px] rounded-md border border-amber-200 transition cursor-pointer disabled:opacity-50"
+                          >
+                            {qualify.isPending ? "Qualifying…" : "Run qualification"}
+                          </button>
+                        )}
                         {required.map((role) => (
                           <button
                             key={role}
@@ -1263,6 +1403,40 @@ function WebhooksTab() {
   const q = useQuery({
     queryKey: ["integration", "webhooks"],
     queryFn: () => api.get<{ subscriptions?: WebhookSubscription[] }>("integration", "/v1/hub"),
+  });
+
+  /**
+   * Rotating a signing secret invalidates the old one immediately, and the new
+   * value is returned exactly once. It goes into the same one-time reveal the
+   * create flow already uses rather than a toast that scrolls away.
+   */
+  const rotate = useMutation({
+    mutationFn: (id: string) => api.post<{ signing_secret?: string }>("integration", `/v1/hub/${id}/rotate-secret`, {}),
+    onSuccess: (res) => {
+      if (res?.signing_secret) setSigningSecret(res.signing_secret);
+      toast.success("Signing secret rotated — the previous one no longer validates");
+      qc.invalidateQueries({ queryKey: ["integration", "webhooks"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Secret rotation failed"),
+  });
+
+  /**
+   * Pause is the reversible option Delete is not.
+   *
+   * A partner whose endpoint is failing needs deliveries stopped now; deleting
+   * the subscription also loses the URL, the event filter and the signing
+   * secret, so the operator has to re-register — and re-share a new secret —
+   * once the partner recovers. PATCH sets status instead, so resuming is one
+   * click and nothing about the subscription changes.
+   */
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch("integration", `/v1/hub/${id}`, { status }),
+    onSuccess: (_r, v) => {
+      toast.success(v.status === "ACTIVE" ? "Deliveries resumed" : "Deliveries paused");
+      qc.invalidateQueries({ queryKey: ["integration", "webhooks"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Could not change the status"),
   });
 
   const remove = useMutation({
@@ -1366,12 +1540,40 @@ function WebhooksTab() {
                     <td className="px-4 py-3.5"><StatusBadge status={s.status} /></td>
                     <td className="px-4 py-3.5 text-slate-500">{new Date(s.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3.5 text-right">
-                      <button
-                        onClick={() => remove.mutate(s.subscription_id)}
-                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition cursor-pointer"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => rotate.mutate(s.subscription_id)}
+                          disabled={rotate.isPending}
+                          title="Invalidates the current signing secret immediately"
+                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-bold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
+                        >
+                          {rotate.isPending ? "Rotating…" : "Rotate secret"}
+                        </button>
+                        <button
+                          onClick={() =>
+                            setStatus.mutate({
+                              id: s.subscription_id,
+                              status: s.status === "ACTIVE" ? "PAUSED" : "ACTIVE",
+                            })
+                          }
+                          disabled={setStatus.isPending}
+                          title={
+                            s.status === "ACTIVE"
+                              ? "Stop deliveries without losing the URL, filter or secret"
+                              : "Resume deliveries"
+                          }
+                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-bold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
+                        >
+                          {s.status === "ACTIVE" ? "Pause" : "Resume"}
+                        </button>
+                        <button
+                          onClick={() => remove.mutate(s.subscription_id)}
+                          title="Removes the URL, event filter and signing secret — pause instead if this is temporary"
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs rounded-lg transition cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1586,6 +1788,61 @@ function MFTTab() {
   );
 }
 
+
+/**
+ * Starter operations offered per connector capability.
+ *
+ * These are SUGGESTIONS, not contract. The platform has no registry of what any
+ * given provider exposes — operation_name and path_template are free text on the
+ * backend by design, because the allow-list has to describe whatever the provider
+ * actually offers. Presenting these as authoritative would repeat the mistake of
+ * listing endpoints nobody had verified, so the picker says to check them against
+ * the provider's own documentation, and every field stays editable.
+ *
+ * Kept deliberately short and generic. Where a provider has moved on — Stripe
+ * treats PaymentIntents as the current surface and /v1/charges as legacy — the
+ * current one is offered first.
+ */
+const OPERATION_SUGGESTIONS: Record<string, { name: string; method: string; path: string; note: string }[]> = {
+  PAYMENT_GATEWAY: [
+    { name: "create_payment_intent", method: "POST", path: "/v1/payment_intents", note: "Current surface on most gateways" },
+    { name: "capture_payment", method: "POST", path: "/v1/payment_intents/{id}/capture", note: "Capture an authorised intent" },
+    { name: "refund_payment", method: "POST", path: "/v1/refunds", note: "Full or partial refund" },
+    { name: "get_payment", method: "GET", path: "/v1/payment_intents/{id}", note: "Read one payment" },
+  ],
+  TAX_PROVIDER: [
+    { name: "calculate_tax", method: "POST", path: "/v1/tax/calculate", note: "Quote tax for a transaction" },
+    { name: "commit_tax", method: "POST", path: "/v1/tax/commit", note: "Commit a calculated document" },
+  ],
+  KYC_VENDOR: [
+    { name: "submit_verification", method: "POST", path: "/v1/verifications", note: "Open a verification case" },
+    { name: "get_verification", method: "GET", path: "/v1/verifications/{id}", note: "Poll case outcome" },
+  ],
+  MOBILE_MONEY: [
+    { name: "request_payment", method: "POST", path: "/v1/collections", note: "Collect from a wallet" },
+    { name: "disbursement", method: "POST", path: "/v1/disbursements", note: "Pay out to a wallet" },
+  ],
+  ESIM_RSP: [
+    { name: "download_profile", method: "POST", path: "/v1/profiles/download", note: "ES2+ profile download" },
+    { name: "enable_profile", method: "POST", path: "/v1/profiles/{id}/enable", note: "Enable an installed profile" },
+  ],
+};
+
+/**
+ * Mirrors capability.ValidatePathTemplate so the reason shows next to the field
+ * instead of arriving as a 422 after Register. The backend remains the authority;
+ * this only saves a round trip.
+ */
+function pathTemplateError(tpl: string): string | null {
+  if (!tpl) return null;
+  if (!tpl.startsWith("/")) return "Must start with / — it is joined onto the connector's base URL.";
+  if (tpl.startsWith("//")) return "Protocol-relative paths would change the target host.";
+  if (tpl.includes("://")) return "An absolute URL would redirect the call away from the connector's base URL.";
+  if (tpl.includes("..")) return "Path traversal is rejected.";
+  if (tpl.includes("\\")) return "Backslashes are normalised to slashes by some proxies and are rejected.";
+  return null;
+}
+
 /* ───────── Quarantine Records Sub-Tab ───────── */
 
 function QuarantineTab() {
@@ -1729,19 +1986,95 @@ function ReconciliationTab() {
 /* ───────── §36 Connections Registry Tab ───────── */
 
 function ConnectionsTab() {
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["integration", "connections"],
     queryFn: () => api.get<{ connections?: any[]; count?: number }>("integration", "/v1/connections"),
   });
   const connections = q.data?.connections ?? [];
 
+  const connectorsQ = useQuery({
+    queryKey: ["integration", "connectors"],
+    queryFn: () => api.get<{ connectors?: Connector[] }>("integration", "/v1/connectors"),
+  });
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [inspect, setInspect] = useState<any | null>(null);
+  const [form, setForm] = useState({
+    connector_id: "",
+    connection_name: "",
+    environment: "SANDBOX",
+    connection_mode: "OUTBOUND",
+    endpoint_url: "",
+    region: "",
+  });
+
+  /**
+   * SSRF pre-flight on the endpoint URL.
+   *
+   * The egress validator rejects targets that resolve to internal ranges —
+   * link-local, loopback, cloud metadata. Running it before the connection is
+   * saved turns "the connector mysteriously fails in production" into a
+   * refusal at the point the URL is typed, with the reason attached. A 403
+   * from this route is the expected answer for a bad target, not an error.
+   */
+  const [egress, setEgress] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const validateEgress = useMutation({
+    mutationFn: () => api.post<{ valid?: boolean; allowed?: boolean }>("integration", "/v1/egress/validate", { target_url: form.endpoint_url.trim() }),
+    onSuccess: () => setEgress({ ok: true, message: "Target is reachable and outside every blocked range." }),
+    onError: (e) => setEgress({ ok: false, message: errMessage(e, "This target was rejected by the egress policy.") }),
+  });
+
+  const create = useMutation({
+    mutationFn: () => api.post("integration", "/v1/connections", form),
+    onSuccess: () => {
+      toast.success("Connection registered");
+      setCreateOpen(false);
+      setForm({ connector_id: "", connection_name: "", environment: "SANDBOX", connection_mode: "OUTBOUND", endpoint_url: "", region: "" });
+      qc.invalidateQueries({ queryKey: ["integration", "connections"] });
+    },
+    onError: (e) => toast.error(errMessage(e, "Could not register the connection")),
+  });
+
+  /**
+   * A 404 here is information, not an error: the service distinguishes "this
+   * connection has never been probed" from "it is healthy", and collapsing the
+   * two is how a dead integration reads as green. Shown as never-probed rather
+   * than as a failure.
+   */
+  const healthQ = useQuery({
+    queryKey: ["integration", "connection-health", inspect?.connection_id],
+    enabled: !!inspect,
+    retry: false,
+    queryFn: () => api.get<Record<string, unknown>>("integration", `/v1/connections/${inspect.connection_id}/health`),
+  });
+
+  const interfacesQ = useQuery({
+    queryKey: ["integration", "connection-interfaces", inspect?.connection_id],
+    enabled: !!inspect,
+    retry: false,
+    queryFn: async () =>
+      (await api.get<{ interfaces?: any[] }>("integration", `/v1/connections/${inspect.connection_id}/interfaces`)).interfaces ?? [],
+  });
+
+  const neverProbed = (healthQ.error as { status?: number } | null)?.status === 404;
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">Connection Registry</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          §36 — Each connection is independently disableable (INT-ARC-003). Emergency kill switch ≤15 min (NFR-INT-05).
-        </p>
+      <div className="flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Connection Registry</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            §36 — Each connection is independently disableable (INT-ARC-003). Emergency kill switch ≤15 min (NFR-INT-05).
+          </p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+        >
+          + Connection
+        </button>
       </div>
       <div className="overflow-x-auto border border-slate-200 rounded-xl">
         <table className="w-full text-left text-xs">
@@ -1753,13 +2086,14 @@ function ConnectionsTab() {
               <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Region</th>
               <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
               <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Endpoint</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {q.isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
             ) : connections.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No connections registered.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No connections registered.</td></tr>
             ) : connections.map((c: any) => (
               <tr key={c.connection_id} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
@@ -1771,11 +2105,159 @@ function ConnectionsTab() {
                 <td className="px-4 py-3 font-mono text-slate-600">{c.region}</td>
                 <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                 <td className="px-4 py-3 font-mono text-slate-600 text-[11px] truncate max-w-[180px]">{c.endpoint_url}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex gap-1.5 justify-end items-center">
+                    <button
+                      onClick={() => setInspect(c)}
+                      className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                    >
+                      Inspect
+                    </button>
+                    <KillSwitchButton connectionId={c.connection_id} name={c.connection_name} status={c.status} />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {createOpen && (
+        <Modal
+          title="Register a connection"
+          subtitle="A connection binds one connector to one environment. It starts enabled and is independently disableable."
+          onClose={() => setCreateOpen(false)}
+          footer={
+            <ModalActions
+              onCancel={() => setCreateOpen(false)}
+              onConfirm={() => create.mutate()}
+              confirmLabel="Register"
+              pendingLabel="Registering…"
+              pending={create.isPending}
+              disabled={!form.connector_id || !form.connection_name.trim()}
+            />
+          }
+        >
+          <Field label="Connector">
+            <select className={inputClass} value={form.connector_id} onChange={(e) => setForm({ ...form, connector_id: e.target.value })}>
+              <option value="">— select a connector —</option>
+              {(connectorsQ.data?.connectors ?? []).map((c) => (
+                <option key={c.connector_id} value={c.connector_id}>{c.connector_name || c.connector_id}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Connection name">
+            <input className={inputClass} value={form.connection_name} onChange={(e) => setForm({ ...form, connection_name: e.target.value })} />
+          </Field>
+          <Field label="Environment">
+            <select className={inputClass} value={form.environment} onChange={(e) => setForm({ ...form, environment: e.target.value })}>
+              <option value="SANDBOX">SANDBOX</option>
+              <option value="PRODUCTION">PRODUCTION</option>
+            </select>
+          </Field>
+          <Field label="Mode">
+            <select className={inputClass} value={form.connection_mode} onChange={(e) => setForm({ ...form, connection_mode: e.target.value })}>
+              <option value="OUTBOUND">OUTBOUND</option>
+              <option value="INBOUND">INBOUND</option>
+              <option value="BIDIRECTIONAL">BIDIRECTIONAL</option>
+            </select>
+          </Field>
+          <Field label="Endpoint URL">
+            <div className="flex gap-2">
+              <input
+                className={inputMonoClass}
+                value={form.endpoint_url}
+                onChange={(e) => { setForm({ ...form, endpoint_url: e.target.value }); setEgress(null); }}
+                placeholder="https://…"
+              />
+              <button
+                onClick={() => validateEgress.mutate()}
+                disabled={!form.endpoint_url.trim() || validateEgress.isPending}
+                className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-bold transition cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {validateEgress.isPending ? "Checking…" : "Check"}
+              </button>
+            </div>
+          </Field>
+          {egress && (
+            <p
+              className={`text-[11px] rounded-md px-3 py-2 leading-relaxed ${
+                egress.ok
+                  ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                  : "text-rose-700 bg-rose-50 border border-rose-200"
+              }`}
+            >
+              {egress.message}
+            </p>
+          )}
+          <Field label="Region">
+            <input className={inputClass} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="eu-west-2" />
+          </Field>
+        </Modal>
+      )}
+
+      {inspect && (
+        <Modal
+          title={`Connection · ${inspect.connection_name}`}
+          subtitle="Last health probe and the interfaces this connection exposes."
+          width="w-[640px]"
+          onClose={() => setInspect(null)}
+          footer={
+            <button
+              onClick={() => setInspect(null)}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Health</div>
+              {healthQ.isLoading && <p className="text-xs text-slate-400">Reading…</p>}
+              {neverProbed && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-relaxed">
+                  Never health-probed. That is not the same as healthy — nothing has checked this connection, so its
+                  state is unknown rather than good.
+                </p>
+              )}
+              {healthQ.error && !neverProbed && (
+                <p className="text-xs text-rose-600">{errMessage(healthQ.error, "Could not read health")}</p>
+              )}
+              {healthQ.data && (
+                <pre className="text-[10px] text-slate-600 font-mono bg-slate-50 border border-slate-200 rounded-md p-3 overflow-x-auto">
+                  {JSON.stringify(healthQ.data, null, 2)}
+                </pre>
+              )}
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Interfaces</div>
+              {interfacesQ.isLoading && <p className="text-xs text-slate-400">Loading…</p>}
+              {interfacesQ.error && (
+                <p className="text-xs text-rose-600">{errMessage(interfacesQ.error, "Could not list interfaces")}</p>
+              )}
+              {interfacesQ.data?.length === 0 && (
+                <p className="text-xs text-slate-500">No interfaces registered against this connection.</p>
+              )}
+              {!!interfacesQ.data?.length && (
+                <div className="border border-slate-200 rounded-md overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <tbody className="divide-y divide-slate-100">
+                      {interfacesQ.data.map((i: any, idx: number) => (
+                        <tr key={i.interface_id ?? idx}>
+                          <td className="px-3 py-2 font-bold text-slate-800">{i.interface_name ?? i.name ?? "—"}</td>
+                          <td className="px-3 py-2 font-mono text-slate-500 text-[10px]">{i.direction ?? i.interface_type ?? "—"}</td>
+                          <td className="px-3 py-2 text-right"><StatusBadge status={i.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -1800,6 +2282,26 @@ function TelecomTab() {
     queryFn: () => api.get<{ portability_requests?: any[] }>("integration", "/v1/telecom/portability/requests"),
   });
   const gateways = gatewaysQ.data?.gateways ?? [];
+
+  /**
+   * Live bind state for one gateway.
+   *
+   * The card shows the gateway's configured status, which is what it is meant
+   * to be doing. This is what the link is actually doing right now — an SMPP
+   * gateway can read ACTIVE and have no bound session, which is precisely the
+   * failure that goes unnoticed. The service 404s when a gateway has never
+   * bound, and that is reported as never-bound rather than as an error.
+   */
+  const [sessionsFor, setSessionsFor] = useState<any | null>(null);
+  const sessionsQ = useQuery({
+    queryKey: ["integration", "gateway-sessions", sessionsFor?.gateway_id],
+    enabled: !!sessionsFor,
+    retry: false,
+    queryFn: () =>
+      api.get<Record<string, unknown>>("integration", `/v1/telecom/gateways/${sessionsFor.gateway_id}/sessions`),
+  });
+  const neverBound = (sessionsQ.error as { status?: number } | null)?.status === 404;
+
   const batches = roamingQ.data?.batches ?? [];
   const esimProfiles = esimQ.data?.esim_profiles ?? [];
   const portRequests = portQ.data?.portability_requests ?? [];
@@ -1824,10 +2326,50 @@ function TelecomTab() {
               {gw.rsp_spec_version && <div className="text-[10px] text-indigo-700 font-bold bg-indigo-50 rounded px-2 py-0.5 inline-block w-fit">{gw.rsp_spec_version}</div>}
               {gw.smpp_throughput_tps && <div className="text-[11px] text-slate-500">{gw.smpp_throughput_tps} TPS · window {gw.smpp_window_size}</div>}
               {gw.nrtrde_enabled && <div className="text-[11px] text-emerald-700 font-semibold">NRTRDE enabled</div>}
+              <button
+                onClick={() => setSessionsFor(gw)}
+                className="mt-1 px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer w-fit"
+              >
+                Session state
+              </button>
             </div>
           ))}
         </div>
       </div>
+
+      {sessionsFor && (
+        <Modal
+          title={`Session state · ${sessionsFor.gateway_name}`}
+          subtitle="What the link is doing now, as opposed to what it is configured to do."
+          width="w-[560px]"
+          onClose={() => setSessionsFor(null)}
+          footer={
+            <button
+              onClick={() => setSessionsFor(null)}
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+          }
+        >
+          {sessionsQ.isLoading && <p className="text-xs text-slate-400">Reading…</p>}
+          {neverBound && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-relaxed">
+              This gateway has never bound. Its configured status reads{" "}
+              <span className="font-mono font-bold">{sessionsFor.status}</span>, but no session has ever been
+              established — a gateway can look ACTIVE and be carrying nothing.
+            </p>
+          )}
+          {sessionsQ.error && !neverBound && (
+            <p className="text-xs text-rose-600">{errMessage(sessionsQ.error, "Could not read session state")}</p>
+          )}
+          {sessionsQ.data && (
+            <pre className="text-[10px] text-slate-600 font-mono bg-slate-50 border border-slate-200 rounded-md p-3 overflow-x-auto">
+              {JSON.stringify(sessionsQ.data, null, 2)}
+            </pre>
+          )}
+        </Modal>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
         <h2 className="text-base font-bold text-slate-900">TAP3 / NRTRDE Roaming Batches <span className="text-xs font-normal text-slate-500 ml-1">INT-TEL-005/006</span></h2>
@@ -2061,18 +2603,73 @@ function B2BTab() {
 /* ───────── §23 mTLS Security Profiles Tab ───────── */
 
 function MTLSTab() {
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["integration", "mtls", "profiles"],
     queryFn: () => api.get<{ mtls_profiles?: any[] }>("integration", "/v1/security/mtls-profiles"),
   });
   const profiles = q.data?.mtls_profiles ?? [];
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+
+  /**
+   * Creates the profile only. The certificate itself is not uploaded here and
+   * never passes through the browser — certs live in Vault (INT-SEC-007), and
+   * a private key pasted into a web form is a key you have to treat as
+   * compromised. The profile is the record the cert is later bound to.
+   */
+  const create = useMutation({
+    mutationFn: () => api.post("integration", "/v1/security/mtls-profiles", { profile_name: profileName.trim() }),
+    onSuccess: () => {
+      toast.success("Profile created — bind a certificate in Vault to activate it");
+      setCreateOpen(false);
+      setProfileName("");
+      qc.invalidateQueries({ queryKey: ["integration", "mtls", "profiles"] });
+    },
+    onError: (e) => toast.error(errMessage(e, "Could not create the profile")),
+  });
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">mTLS Security Profiles</h2>
-        <p className="text-xs text-slate-500 mt-0.5">ADR-013 / INT-SEC-005/006 — Mutual TLS for HIGH-risk connections. Zero-downtime rotation. TLS 1.0/1.1 PROHIBITED (BCP 195).</p>
+      <div className="flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">mTLS Security Profiles</h2>
+          <p className="text-xs text-slate-500 mt-0.5">ADR-013 / INT-SEC-005/006 — Mutual TLS for HIGH-risk connections. Zero-downtime rotation. TLS 1.0/1.1 PROHIBITED (BCP 195).</p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer shrink-0"
+        >
+          + Profile
+        </button>
       </div>
+
+      {createOpen && (
+        <Modal
+          title="Create an mTLS profile"
+          subtitle="The profile record only. The certificate is bound in Vault and never passes through this form."
+          onClose={() => setCreateOpen(false)}
+          footer={
+            <ModalActions
+              onCancel={() => setCreateOpen(false)}
+              onConfirm={() => create.mutate()}
+              confirmLabel="Create profile"
+              pendingLabel="Creating…"
+              pending={create.isPending}
+              disabled={!profileName.trim()}
+            />
+          }
+        >
+          <Field label="Profile name">
+            <input className={inputClass} value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="acme-partner-prod" />
+          </Field>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Certificates and private keys are stored in Vault (INT-SEC-007). Nothing here uploads one — a key pasted
+            into a browser form has to be treated as compromised from that moment.
+          </p>
+        </Modal>
+      )}
       <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-900 text-xs">
         TLS 1.3 preferred · TLS 1.2 permitted · <strong className="text-rose-600">TLS 1.0/1.1 PROHIBITED</strong> (INT-SEC-004 / BCP 195). Certs in Vault (INT-SEC-007). Alerts 30d before expiry (INT-SEC-009).
       </div>
@@ -2166,6 +2763,479 @@ function IDDRegistryTab() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Invocations Sub-Tab ─────────
+ *
+ * The outbound call log: every time this platform invoked a connector, what it
+ * asked for and what came back. This is the answer to "did we actually call
+ * them, and what did they say" from our side, where the webhook delivery log
+ * answers it from theirs.
+ *
+ * Governance registries (schema versions, mapping versions, SLA and rate-limit
+ * profiles) used to return hardcoded arrays from the handler; they now read the
+ * tables migrations 000009/000010 created, so they are wired below.
+ *
+ * What is still NOT wired, and why: AS2 exchanges and certificates, eSIM
+ * profiles, roaming batches, portability requests, IDDs and telecom gateway
+ * sessions have no table at all yet — their handlers are annotated as such in
+ * ext_handlers.go. Wiring them would put fabricated data on screen dressed as
+ * live, which is the exact failure this console was cleaned up to remove.
+ */
+function InvocationsTab() {
+  const qc = useQueryClient();
+  const [replayFor, setReplayFor] = useState<any | null>(null);
+  const [invokeForm, setInvokeForm] = useState({ connector_id: "", operation: "", path_params: "{}" });
+  const [invokeOpen, setInvokeOpen] = useState(false);
+
+  const q = useQuery({
+    queryKey: ["integration", "invocations"],
+    refetchInterval: 30_000,
+    queryFn: () => api.get<{ invocations?: any[] }>("integration", "/v1/invocations"),
+  });
+  const invocations = q.data?.invocations ?? [];
+
+  const connectorsQ = useQuery({
+    queryKey: ["integration", "connectors"],
+    queryFn: () => api.get<{ connectors?: Connector[] }>("integration", "/v1/connectors"),
+  });
+
+  /**
+   * A manual invoke is a real outbound call to a real partner, so it is behind
+   * an explicit form rather than a one-click button on a row.
+   */
+  const invoke = useMutation({
+    mutationFn: () => {
+      let pathParams: unknown = {};
+      try {
+        pathParams = JSON.parse(invokeForm.path_params);
+      } catch (err) {
+        throw new Error(`path_params is not valid JSON: ${(err as Error).message}`);
+      }
+      return api.post("integration", `/v1/connectors/${invokeForm.connector_id}/invoke`, {
+        operation: invokeForm.operation,
+        path_params: pathParams,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Invocation sent");
+      setInvokeOpen(false);
+      qc.invalidateQueries({ queryKey: ["integration", "invocations"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Invocation failed"),
+  });
+
+  const succeeded = invocations.filter((i: any) => {
+    const s = String(i.status ?? i.outcome ?? "").toUpperCase();
+    return s === "SUCCESS" || s === "SUCCEEDED" || s === "OK";
+  }).length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5">
+      <div className="flex justify-between items-start gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Outbound Invocations</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Calls this platform made to a partner. The webhook delivery log covers the opposite direction.
+          </p>
+        </div>
+        <button
+          onClick={() => setInvokeOpen(true)}
+          className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+        >
+          Invoke a connector
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invocations</div>
+          <div className="text-lg font-bold text-slate-800 font-mono">{q.isLoading ? "…" : invocations.length}</div>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Succeeded</div>
+          <div className="text-lg font-bold text-emerald-600 font-mono">{q.isLoading ? "…" : succeeded}</div>
+        </div>
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Failed</div>
+          <div className="text-lg font-bold text-rose-600 font-mono">
+            {q.isLoading ? "…" : invocations.length - succeeded}
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Invocation</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Connector</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Operation</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Status</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">Latency</th>
+              <th className="px-4 py-3 font-bold text-slate-500 uppercase text-[10px]">When</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {q.isLoading ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+            ) : q.isError ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-rose-600">{errMessage(q.error, "Could not load invocations.")}</td></tr>
+            ) : invocations.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No outbound invocations recorded.</td></tr>
+            ) : (
+              invocations.map((iv: any, i: number) => {
+                const id = iv.invocation_id ?? iv.id ?? String(i);
+                const status = String(iv.status ?? iv.outcome ?? "—").toUpperCase();
+                const ok = ["SUCCESS", "SUCCEEDED", "OK"].includes(status);
+                return (
+                  <tr key={id} className="hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-mono text-[11px] text-slate-700">{String(id).slice(0, 8)}</td>
+                    <td className="px-4 py-3 font-mono text-[10px] text-slate-500">
+                      {String(iv.connector_id ?? "—").slice(0, 8)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{iv.operation ?? iv.operation_name ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${ok ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                        {status}
+                      </span>
+                      {iv.http_status ? <span className="ml-1.5 text-[10px] text-slate-400 font-mono">HTTP {iv.http_status}</span> : null}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[11px]">{iv.latency_ms != null ? `${iv.latency_ms} ms` : "—"}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500">
+                      {iv.created_at ? new Date(iv.created_at).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {invokeOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[520px] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-200">
+              <h2 className="text-slate-800 text-lg font-bold">Invoke a connector</h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                This makes a real outbound call to the partner. It is not a dry run.
+              </p>
+            </div>
+            <div className="p-6 flex flex-col gap-4 text-xs">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Connector</span>
+                <select
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
+                  value={invokeForm.connector_id}
+                  onChange={(e) => setInvokeForm({ ...invokeForm, connector_id: e.target.value })}
+                >
+                  <option value="">— select —</option>
+                  {(connectorsQ.data?.connectors ?? []).map((c) => (
+                    <option key={c.connector_id} value={c.connector_id}>
+                      {c.connector_name} · {c.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Operation</span>
+                <input
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono outline-none focus:border-sky-500"
+                  value={invokeForm.operation}
+                  onChange={(e) => setInvokeForm({ ...invokeForm, operation: e.target.value })}
+                  placeholder="getBalance"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Path params (JSON)</span>
+                <textarea
+                  className="w-full h-24 bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono outline-none focus:border-sky-500 resize-y"
+                  value={invokeForm.path_params}
+                  onChange={(e) => setInvokeForm({ ...invokeForm, path_params: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setInvokeOpen(false)}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => invoke.mutate()}
+                disabled={invoke.isPending || !invokeForm.connector_id || !invokeForm.operation}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white rounded-lg text-xs font-bold cursor-pointer"
+              >
+                {invoke.isPending ? "Invoking…" : "Invoke"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────── Emergency kill switch ─────────
+ *
+ * INT-ARC-003 / NFR-INT-05: every connection must be independently disableable
+ * within 15 minutes. That guarantee is worth nothing if the only way to invoke
+ * it is a curl command, so it lives on the row.
+ *
+ * Deliberately two-step. This severs live traffic to a partner — the kind of
+ * action where a misclick is an outage — so it asks for a reason first, and the
+ * reason is what gets recorded against the connection.
+ */
+function KillSwitchButton({ connectionId, name, status }: { connectionId: string; name?: string; status?: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const kill = useMutation({
+    mutationFn: () => api.post("integration", `/v1/connections/${connectionId}/kill-switch`, { reason }),
+    onSuccess: () => {
+      toast.success("Kill switch engaged — traffic to this connection is stopped");
+      setOpen(false);
+      setReason("");
+      qc.invalidateQueries({ queryKey: ["integration", "connections"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Kill switch failed"),
+  });
+
+  if (String(status ?? "").toUpperCase() === "DISABLED") {
+    return <span className="text-[10px] text-slate-400">disabled</span>;
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="px-2.5 py-1.5 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 rounded text-[10px] font-bold transition cursor-pointer"
+      >
+        Kill switch
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[460px] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-200">
+              <h2 className="text-slate-800 text-lg font-bold">Engage kill switch</h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Stops all traffic to <strong>{name ?? connectionId}</strong> immediately. Anything in flight to this
+                partner will fail.
+              </p>
+            </div>
+            <div className="p-6 text-xs">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-slate-700 font-semibold">Reason</span>
+                <input
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Partner returning malformed responses since 14:02"
+                />
+                <span className="text-[10px] text-slate-400">Recorded against the connection.</span>
+              </label>
+            </div>
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setOpen(false)}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => kill.mutate()}
+                disabled={kill.isPending || !reason.trim()}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-lg text-xs font-bold cursor-pointer"
+              >
+                {kill.isPending ? "Engaging…" : "Engage kill switch"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ───────── Contract Governance Sub-Tab ─────────
+ *
+ * Schema versions, mapping versions, SLA profiles and rate-limit profiles —
+ * the four registries that decide whether an integration is contract-governed
+ * (P1-10) or just a URL someone configured.
+ *
+ * All four returned hardcoded arrays from the handler until the ExtRepository
+ * was added; they now read the tables migrations 000009/000010 created. Empty
+ * here means genuinely empty, which is itself the finding: an integration
+ * estate with no registered schemas has no compatibility gate.
+ */
+function GovernanceTab() {
+  const schemasQ = useQuery({
+    queryKey: ["integration", "schema-versions"],
+    queryFn: () => api.get<{ schema_versions?: any[] }>("integration", "/v1/schema-versions"),
+  });
+  const mappingsQ = useQuery({
+    queryKey: ["integration", "mapping-versions"],
+    queryFn: () => api.get<{ mapping_versions?: any[] }>("integration", "/v1/mapping-versions"),
+  });
+  const slaQ = useQuery({
+    queryKey: ["integration", "sla-profiles"],
+    queryFn: () => api.get<{ sla_profiles?: any[] }>("integration", "/v1/sla-profiles"),
+  });
+  const rateQ = useQuery({
+    queryKey: ["integration", "rate-limit-profiles"],
+    queryFn: () => api.get<{ rate_limit_profiles?: any[] }>("integration", "/v1/rate-limit-profiles"),
+  });
+
+  const schemas = schemasQ.data?.schema_versions ?? [];
+  const mappings = mappingsQ.data?.mapping_versions ?? [];
+  const slas = slaQ.data?.sla_profiles ?? [];
+  const rates = rateQ.data?.rate_limit_profiles ?? [];
+
+  const cell = "px-4 py-3";
+  const th = "px-4 py-3 font-bold text-slate-500 uppercase text-[10px]";
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <h2 className="text-lg font-bold text-slate-900">Contract Governance</h2>
+        <p className="text-xs text-slate-500 mt-0.5">
+          P1-10 — every external integration needs a versioned contract, a compatibility mode, an SLA and a rate limit.
+          An empty registry here is a finding, not a blank screen.
+        </p>
+      </div>
+
+      {/* Schema versions */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex justify-between items-baseline">
+          <h3 className="text-sm font-bold text-slate-900">Schema versions</h3>
+          <span className="text-[10px] font-mono text-slate-400">{schemas.length} registered</span>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className={th}>Schema</th><th className={th}>Type</th><th className={th}>Version</th>
+                <th className={th}>Compatibility</th><th className={th}>Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {schemasQ.isLoading ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              ) : schemasQ.isError ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-rose-600">{errMessage(schemasQ.error, "Could not load schema versions.")}</td></tr>
+              ) : schemas.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No schemas registered — nothing gates a breaking change.</td></tr>
+              ) : schemas.map((v: any) => (
+                <tr key={v.schema_version_id} className="hover:bg-slate-50/50">
+                  <td className={`${cell} font-bold text-slate-800`}>{v.schema_name}</td>
+                  <td className={`${cell} font-mono`}>{v.schema_type}</td>
+                  <td className={`${cell} font-mono`}>{v.version}</td>
+                  <td className={cell}><StatusBadge status={v.compatibility_mode} /></td>
+                  <td className={cell}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${v.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      {v.is_active ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Mapping versions */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+        <div className="flex justify-between items-baseline">
+          <h3 className="text-sm font-bold text-slate-900">Mapping versions</h3>
+          <span className="text-[10px] font-mono text-slate-400">{mappings.length} registered</span>
+        </div>
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className={th}>Mapping</th><th className={th}>Version</th>
+                <th className={th}>Registered</th><th className={th}>Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {mappingsQ.isLoading ? (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+              ) : mappings.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No canonical mappings registered.</td></tr>
+              ) : mappings.map((m: any) => (
+                <tr key={m.mapping_id} className="hover:bg-slate-50/50">
+                  <td className={`${cell} font-bold text-slate-800`}>{m.mapping_name}</td>
+                  <td className={`${cell} font-mono`}>{m.version}</td>
+                  <td className={cell}>{m.is_registered ? "yes" : "no"}</td>
+                  <td className={cell}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${m.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      {m.is_active ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* SLA + rate limits side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-slate-900">SLA profiles</h3>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr><th className={th}>Profile</th><th className={th}>Availability</th><th className={th}>RTO</th><th className={th}>RPO</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {slaQ.isLoading ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+                ) : slas.length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No SLA profiles defined.</td></tr>
+                ) : slas.map((p: any) => (
+                  <tr key={p.sla_profile_id}>
+                    <td className={`${cell} font-bold text-slate-800`}>{p.profile_name}</td>
+                    <td className={`${cell} font-mono`}>{p.availability_target}%</td>
+                    <td className={`${cell} font-mono`}>{p.rto_minutes}m</td>
+                    <td className={`${cell} font-mono`}>{p.rpo_minutes}m</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
+          <h3 className="text-sm font-bold text-slate-900">Rate-limit profiles</h3>
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr><th className={th}>Profile</th><th className={th}>Per min</th><th className={th}>Burst</th><th className={th}>Concurrency</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rateQ.isLoading ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">Loading...</td></tr>
+                ) : rates.length === 0 ? (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">No rate-limit profiles defined — nothing throttles an outbound partner.</td></tr>
+                ) : rates.map((p: any) => (
+                  <tr key={p.rate_profile_id}>
+                    <td className={`${cell} font-bold text-slate-800`}>{p.profile_name}</td>
+                    <td className={`${cell} font-mono`}>{p.requests_per_minute}</td>
+                    <td className={`${cell} font-mono`}>{p.burst_allowance}</td>
+                    <td className={`${cell} font-mono`}>{p.concurrency_limit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -6,6 +6,15 @@ interface Endpoint {
   method: string;
   path: string;
   description: string;
+  /**
+   * Whether this endpoint is callable on the platform today.
+   *
+   * Set from the routes the 19 services actually register, not by hand. Of the
+   * 81 listed here, 7 are live — the rest describe intended surface. Presenting
+   * all 81 as though they were contract meant an integrator could build against
+   * a path that has never existed and only find out at the first request.
+   */
+  status: "available" | "planned";
 }
 
 interface Domain {
@@ -29,18 +38,18 @@ const DOMAINS: Domain[] = [
     name: "Billing & Charging",
     ep: 12,
     base: "/v1/billing",
-    ver: "v2.1",
-    auth: "OAuth2 · billing:write",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Real-time rating engines and convergent billing architectures for global connectivity. OCS, OFCS and convergent charging are exposed as distinct paths.",
     std: ["TMF678", "TMF635", "3GPP TS 32.299"],
     eps: [
-      { method: "GET", path: "/v1/billing/accounts/{id}/balance", description: "Real-time balance" },
-      { method: "POST", path: "/v1/charging/sessions", description: "Open charging session (OCS)" },
-      { method: "POST", path: "/v1/charging/sessions/{id}/reserve", description: "Reserve units / quota" },
-      { method: "POST", path: "/v1/billing/bill-runs", description: "Simulate or execute a bill run" },
-      { method: "GET", path: "/v1/billing/invoices/{id}", description: "Retrieve an invoice" },
-      { method: "POST", path: "/v1/billing/rerate", description: "Submit a rerating job" }
+      { method: "GET", path: "/v1/billing/accounts/{id}/balance", description: "Real-time balance", status: "planned" },
+      { method: "POST", path: "/v1/charging/sessions", description: "Open charging session (OCS)", status: "planned" },
+      { method: "POST", path: "/v1/charging/sessions/{id}/reserve", description: "Reserve units / quota", status: "planned" },
+      { method: "POST", path: "/v1/billing/bill-runs", description: "Simulate or execute a bill run", status: "planned" },
+      { method: "GET", path: "/v1/billing/invoices/{id}", description: "Retrieve an invoice", status: "planned" },
+      { method: "POST", path: "/v1/billing/rerate", description: "Submit a rerating job", status: "planned" }
     ]
   },
   {
@@ -49,17 +58,17 @@ const DOMAINS: Domain[] = [
     name: "Inventory Ops",
     ep: 8,
     base: "/v1/inventory",
-    ver: "v1.4",
-    auth: "OAuth2 · inventory:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Automated resource lifecycle management from allocation to decommissioning across product, service and resource inventories.",
     std: ["TMF637", "TMF638", "TMF639"],
     eps: [
-      { method: "GET", path: "/v1/inventory/resources", description: "List resource instances" },
-      { method: "POST", path: "/v1/inventory/resources", description: "Allocate a resource" },
-      { method: "PATCH", path: "/v1/inventory/resources/{id}", description: "Update lifecycle state" },
-      { method: "DELETE", path: "/v1/inventory/resources/{id}", description: "Decommission a resource" },
-      { method: "GET", path: "/v1/inventory/services/{id}", description: "Service inventory lookup" }
+      { method: "GET", path: "/v1/inventory/resources", description: "List resource instances", status: "planned" },
+      { method: "POST", path: "/v1/inventory/resources", description: "Allocate a resource", status: "planned" },
+      { method: "PATCH", path: "/v1/inventory/resources/{id}", description: "Update lifecycle state", status: "planned" },
+      { method: "DELETE", path: "/v1/inventory/resources/{id}", description: "Decommission a resource", status: "planned" },
+      { method: "GET", path: "/v1/inventory/services/{id}", description: "Service inventory lookup", status: "planned" }
     ]
   },
   {
@@ -68,18 +77,18 @@ const DOMAINS: Domain[] = [
     name: "Identity & Security",
     ep: 24,
     base: "/v1/identity",
-    ver: "v3.0",
-    auth: "OAuth2 · iam:admin",
-    rate: "1200 / min",
+    ver: "v1",
+    auth: "OAuth2 · tenant:user:read",
+    rate: "Not enforced",
     ov: "Zero-trust authentication and sovereign identity management across network edges, with RBAC/ABAC, MFA and break-glass controls.",
     std: ["OAuth2", "OIDC", "TMF672"],
     eps: [
-      { method: "POST", path: "/v1/identity/token", description: "Issue an OAuth2 token" },
-      { method: "POST", path: "/v1/identity/mfa/verify", description: "Verify an MFA challenge" },
-      { method: "GET", path: "/v1/identity/roles", description: "List roles (RBAC)" },
-      { method: "POST", path: "/v1/identity/roles/assign", description: "Assign a role (ABAC policy)" },
-      { method: "GET", path: "/v1/identity/sessions", description: "List privileged sessions" },
-      { method: "POST", path: "/v1/identity/break-glass", description: "Request break-glass access" }
+      { method: "POST", path: "/v1/identity/token", description: "Issue an OAuth2 token", status: "planned" },
+      { method: "POST", path: "/v1/identity/mfa/verify", description: "Verify an MFA challenge", status: "planned" },
+      { method: "GET", path: "/v1/identity/roles", description: "List roles (RBAC)", status: "planned" },
+      { method: "POST", path: "/v1/identity/roles/assign", description: "Assign a role (ABAC policy)", status: "planned" },
+      { method: "GET", path: "/v1/identity/sessions", description: "List privileged sessions", status: "planned" },
+      { method: "POST", path: "/v1/identity/break-glass", description: "Request break-glass access", status: "planned" }
     ]
   },
   {
@@ -88,17 +97,17 @@ const DOMAINS: Domain[] = [
     name: "Network Orchestration",
     ep: 16,
     base: "/v1/network",
-    ver: "v2.0",
-    auth: "OAuth2 · network:write",
-    rate: "400 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "SDN-integrated provisioning and traffic shaping for dynamic demand shifts, with policy control and carrier integration.",
     std: ["3GPP TS 29.503", "TMF641"],
     eps: [
-      { method: "POST", path: "/v1/network/provisioning/orders", description: "Submit a provisioning order" },
-      { method: "GET", path: "/v1/network/provisioning/orders/{id}", description: "Saga / activation status" },
-      { method: "POST", path: "/v1/network/policy", description: "Apply a policy (PCRF/PCF)" },
-      { method: "POST", path: "/v1/network/traffic-shaping", description: "Configure traffic shaping" },
-      { method: "GET", path: "/v1/network/hlr/{msisdn}", description: "HLR/HSS lookup" }
+      { method: "POST", path: "/v1/network/provisioning/orders", description: "Submit a provisioning order", status: "planned" },
+      { method: "GET", path: "/v1/network/provisioning/orders/{id}", description: "Saga / activation status", status: "planned" },
+      { method: "POST", path: "/v1/network/policy", description: "Apply a policy (PCRF/PCF)", status: "planned" },
+      { method: "POST", path: "/v1/network/traffic-shaping", description: "Configure traffic shaping", status: "planned" },
+      { method: "GET", path: "/v1/network/hlr/{msisdn}", description: "HLR/HSS lookup", status: "planned" }
     ]
   },
   {
@@ -107,18 +116,18 @@ const DOMAINS: Domain[] = [
     name: "Customer Management",
     ep: 14,
     base: "/v1/customers",
-    ver: "v2.2",
-    auth: "OAuth2 · customer:write",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Unified profile orchestration with deep loyalty integration and churn analytics. Customer, account (payer) and subscriber are separate entities.",
     std: ["TMF629", "TMF666", "TMF632", "TMF669"],
     eps: [
-      { method: "GET", path: "/v1/customers/{id}", description: "Retrieve a customer" },
-      { method: "POST", path: "/v1/customers", description: "Create a customer" },
-      { method: "GET", path: "/v1/accounts/{id}", description: "Retrieve a billing account (payer)" },
-      { method: "GET", path: "/v1/subscribers/{id}", description: "Retrieve a subscriber" },
-      { method: "POST", path: "/v1/customers/{id}/consent", description: "Record consent" },
-      { method: "GET", path: "/v1/customers/{id}/churn-score", description: "Churn analytics" }
+      { method: "GET", path: "/v1/customers/{id}", description: "Retrieve a customer", status: "available" },
+      { method: "POST", path: "/v1/customers", description: "Create a customer", status: "available" },
+      { method: "GET", path: "/v1/accounts/{id}", description: "Retrieve a billing account (payer)", status: "available" },
+      { method: "GET", path: "/v1/subscribers/{id}", description: "Retrieve a subscriber", status: "planned" },
+      { method: "POST", path: "/v1/customers/{id}/consent", description: "Record consent", status: "planned" },
+      { method: "GET", path: "/v1/customers/{id}/churn-score", description: "Churn analytics", status: "planned" }
     ]
   },
   {
@@ -127,17 +136,17 @@ const DOMAINS: Domain[] = [
     name: "Revenue Evidence",
     ep: 21,
     base: "/v1/evidence",
-    ver: "v1.8",
-    auth: "OAuth2 · evidence:read",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Immutable ledger tracking for cross-carrier reconciliation and settlement. WORM, append-only and hash-chain verified; writes are restricted to approved services.",
     std: ["WORM", "ISO 27001 A.12.4", "GDPR Art. 30"],
     eps: [
-      { method: "GET", path: "/v1/evidence/{id}", description: "Retrieve an evidence record" },
-      { method: "POST", path: "/v1/evidence/verify", description: "Verify hash-chain integrity" },
-      { method: "GET", path: "/v1/evidence/packs", description: "List evidence packs" },
-      { method: "POST", path: "/v1/evidence/packs/export", description: "Request an evidence export (approval)" },
-      { method: "GET", path: "/v1/settlement/reconciliation", description: "Cross-carrier reconciliation" }
+      { method: "GET", path: "/v1/evidence/{id}", description: "Retrieve an evidence record", status: "available" },
+      { method: "POST", path: "/v1/evidence/verify", description: "Verify hash-chain integrity", status: "planned" },
+      { method: "GET", path: "/v1/evidence/packs", description: "List evidence packs", status: "available" },
+      { method: "POST", path: "/v1/evidence/packs/export", description: "Request an evidence export (approval)", status: "planned" },
+      { method: "GET", path: "/v1/settlement/reconciliation", description: "Cross-carrier reconciliation", status: "planned" }
     ]
   },
   {
@@ -146,16 +155,16 @@ const DOMAINS: Domain[] = [
     name: "Product Catalog",
     ep: 10,
     base: "/v1/catalog",
-    ver: "v2.0",
-    auth: "OAuth2 · catalog:read",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Versioned plans, bundles, promotions and eligibility with jurisdiction-aware price books and offering qualification.",
     std: ["TMF620", "TMF671"],
     eps: [
-      { method: "GET", path: "/v1/catalog/offers", description: "List offers & plans" },
-      { method: "GET", path: "/v1/catalog/offers/{id}", description: "Retrieve an offer" },
-      { method: "POST", path: "/v1/catalog/qualification", description: "Product offering qualification" },
-      { method: "GET", path: "/v1/catalog/promotions", description: "List promotions" }
+      { method: "GET", path: "/v1/catalog/offers", description: "List offers & plans", status: "planned" },
+      { method: "GET", path: "/v1/catalog/offers/{id}", description: "Retrieve an offer", status: "planned" },
+      { method: "POST", path: "/v1/catalog/qualification", description: "Product offering qualification", status: "planned" },
+      { method: "GET", path: "/v1/catalog/promotions", description: "List promotions", status: "planned" }
     ]
   },
   {
@@ -164,16 +173,16 @@ const DOMAINS: Domain[] = [
     name: "Order Management",
     ep: 13,
     base: "/v1/orders",
-    ver: "v2.1",
-    auth: "OAuth2 · order:write",
-    rate: "400 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Order capture, decomposition and orchestration with saga-based service ordering and deterministic rollback.",
     std: ["TMF622", "TMF641"],
     eps: [
-      { method: "POST", path: "/v1/orders", description: "Create a product order" },
-      { method: "GET", path: "/v1/orders/{id}", description: "Order status" },
-      { method: "POST", path: "/v1/orders/{id}/cancel", description: "Cancel an order" },
-      { method: "GET", path: "/v1/service-orders/{id}", description: "Service order (saga) status" }
+      { method: "POST", path: "/v1/orders", description: "Create a product order", status: "available" },
+      { method: "GET", path: "/v1/orders/{id}", description: "Order status", status: "available" },
+      { method: "POST", path: "/v1/orders/{id}/cancel", description: "Cancel an order", status: "planned" },
+      { method: "GET", path: "/v1/service-orders/{id}", description: "Service order (saga) status", status: "planned" }
     ]
   },
   {
@@ -182,16 +191,16 @@ const DOMAINS: Domain[] = [
     name: "Usage & Mediation",
     ep: 11,
     base: "/v1/usage",
-    ver: "v1.6",
-    auth: "OAuth2 · usage:write",
-    rate: "2000 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Carrier-grade ingestion and a stage-based, replayable mediation pipeline with rated-usage visibility and DLQ reprocessing.",
     std: ["TMF635", "3GPP TS 32.297", "GSMA TD.57"],
     eps: [
-      { method: "POST", path: "/v1/usage/events", description: "Ingest a usage event" },
-      { method: "GET", path: "/v1/usage/events/{id}", description: "Retrieve rated usage" },
-      { method: "GET", path: "/v1/mediation/pipeline", description: "Pipeline stage metrics" },
-      { method: "POST", path: "/v1/mediation/reprocess", description: "Reprocess from DLQ" }
+      { method: "POST", path: "/v1/usage/events", description: "Ingest a usage event", status: "planned" },
+      { method: "GET", path: "/v1/usage/events/{id}", description: "Retrieve rated usage", status: "planned" },
+      { method: "GET", path: "/v1/mediation/pipeline", description: "Pipeline stage metrics", status: "planned" },
+      { method: "POST", path: "/v1/mediation/reprocess", description: "Reprocess from DLQ", status: "planned" }
     ]
   },
   {
@@ -200,17 +209,17 @@ const DOMAINS: Domain[] = [
     name: "Payments & Wallets",
     ep: 15,
     base: "/v1/payments",
-    ver: "v2.0",
-    auth: "OAuth2 · payment:write",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Multi-rail collections and wallets with captures, retries, refunds and reconciliation. Amounts are ISO 4217 integer minor units.",
     std: ["TMF676", "ISO 20022"],
     eps: [
-      { method: "POST", path: "/v1/payments", description: "Capture a payment" },
-      { method: "POST", path: "/v1/payments/{id}/refund", description: "Refund a payment" },
-      { method: "POST", path: "/v1/payments/{id}/retry", description: "Retry a payment" },
-      { method: "GET", path: "/v1/wallets/{id}", description: "Wallet balance" },
-      { method: "POST", path: "/v1/wallets/{id}/topup", description: "Top up a wallet" }
+      { method: "POST", path: "/v1/payments", description: "Capture a payment", status: "planned" },
+      { method: "POST", path: "/v1/payments/{id}/refund", description: "Refund a payment", status: "planned" },
+      { method: "POST", path: "/v1/payments/{id}/retry", description: "Retry a payment", status: "planned" },
+      { method: "GET", path: "/v1/wallets/{id}", description: "Wallet balance", status: "planned" },
+      { method: "POST", path: "/v1/wallets/{id}/topup", description: "Top up a wallet", status: "planned" }
     ]
   },
   {
@@ -219,16 +228,16 @@ const DOMAINS: Domain[] = [
     name: "Tax & Jurisdiction",
     ep: 9,
     base: "/v1/tax",
-    ver: "v1.5",
-    auth: "OAuth2 · tax:read",
-    rate: "800 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Runtime jurisdiction routing and multi-engine tax calculation driven by versioned, independently deployable jurisdiction packs.",
     std: ["ISO 4217"],
     eps: [
-      { method: "POST", path: "/v1/tax/calculate", description: "Calculate tax for a transaction" },
-      { method: "GET", path: "/v1/jurisdiction/packs", description: "List jurisdiction packs" },
-      { method: "GET", path: "/v1/jurisdiction/packs/{id}", description: "Pack detail (versioned)" },
-      { method: "POST", path: "/v1/tax/exemptions", description: "Register an exemption" }
+      { method: "POST", path: "/v1/tax/calculate", description: "Calculate tax for a transaction", status: "planned" },
+      { method: "GET", path: "/v1/jurisdiction/packs", description: "List jurisdiction packs", status: "planned" },
+      { method: "GET", path: "/v1/jurisdiction/packs/{id}", description: "Pack detail (versioned)", status: "planned" },
+      { method: "POST", path: "/v1/tax/exemptions", description: "Register an exemption", status: "planned" }
     ]
   },
   {
@@ -237,16 +246,16 @@ const DOMAINS: Domain[] = [
     name: "eSIM & SIM Provisioning",
     ep: 17,
     base: "/v1/esim",
-    ver: "v2.3",
-    auth: "OAuth2 · esim:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "GSMA-aligned RSP eSIM lifecycle and SIM provisioning with SM-DP+ integration and operator-safe error mapping.",
     std: ["GSMA SGP.22", "ES2+", "ES9+"],
     eps: [
-      { method: "POST", path: "/v1/esim/profiles", description: "Download an eSIM profile (ES2+)" },
-      { method: "GET", path: "/v1/esim/profiles/{eid}", description: "Profile status" },
-      { method: "POST", path: "/v1/esim/profiles/{eid}/enable", description: "Enable a profile" },
-      { method: "POST", path: "/v1/sim/{iccid}/activate", description: "Activate a SIM" }
+      { method: "POST", path: "/v1/esim/profiles", description: "Download an eSIM profile (ES2+)", status: "planned" },
+      { method: "GET", path: "/v1/esim/profiles/{eid}", description: "Profile status", status: "planned" },
+      { method: "POST", path: "/v1/esim/profiles/{eid}/enable", description: "Enable a profile", status: "planned" },
+      { method: "POST", path: "/v1/sim/{iccid}/activate", description: "Activate a SIM", status: "planned" }
     ]
   },
   {
@@ -255,16 +264,16 @@ const DOMAINS: Domain[] = [
     name: "IoT Connectivity",
     ep: 12,
     base: "/v1/iot",
-    ver: "v1.7",
-    auth: "OAuth2 · iot:write",
-    rate: "1000 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Device fleet orchestration, remote action flows and usage aggregation at device-fleet scale.",
     std: ["GSMA IoT SAFE"],
     eps: [
-      { method: "GET", path: "/v1/iot/devices", description: "List device fleet" },
-      { method: "POST", path: "/v1/iot/devices/{id}/actions", description: "Trigger a remote action" },
-      { method: "GET", path: "/v1/iot/devices/{id}/usage", description: "Device usage aggregation" },
-      { method: "POST", path: "/v1/iot/fleets", description: "Create a fleet / group" }
+      { method: "GET", path: "/v1/iot/devices", description: "List device fleet", status: "planned" },
+      { method: "POST", path: "/v1/iot/devices/{id}/actions", description: "Trigger a remote action", status: "planned" },
+      { method: "GET", path: "/v1/iot/devices/{id}/usage", description: "Device usage aggregation", status: "planned" },
+      { method: "POST", path: "/v1/iot/fleets", description: "Create a fleet / group", status: "planned" }
     ]
   },
   {
@@ -273,16 +282,16 @@ const DOMAINS: Domain[] = [
     name: "Numbering & Porting",
     ep: 8,
     base: "/v1/numbering",
-    ver: "v1.3",
-    auth: "OAuth2 · number:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Number inventory, reservation and allocation with MNP port-in/out orchestration and donor/recipient state.",
     std: ["ITU-T E.164"],
     eps: [
-      { method: "POST", path: "/v1/numbering/reserve", description: "Reserve an MSISDN" },
-      { method: "POST", path: "/v1/numbering/allocate", description: "Allocate a number" },
-      { method: "POST", path: "/v1/porting/port-in", description: "Initiate a port-in (MNP)" },
-      { method: "GET", path: "/v1/porting/{id}", description: "Port status" }
+      { method: "POST", path: "/v1/numbering/reserve", description: "Reserve an MSISDN", status: "planned" },
+      { method: "POST", path: "/v1/numbering/allocate", description: "Allocate a number", status: "planned" },
+      { method: "POST", path: "/v1/porting/port-in", description: "Initiate a port-in (MNP)", status: "planned" },
+      { method: "GET", path: "/v1/porting/{id}", description: "Port status", status: "planned" }
     ]
   },
   {
@@ -291,16 +300,16 @@ const DOMAINS: Domain[] = [
     name: "Notifications & Messaging",
     ep: 10,
     base: "/v1/messaging",
-    ver: "v1.9",
-    auth: "OAuth2 · messaging:write",
-    rate: "2000 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Transactional and campaign messaging across SMS, email and push, with delivery tracking and customer notifications.",
     std: ["3GPP SMS", "SMTP"],
     eps: [
-      { method: "POST", path: "/v1/messaging/sms", description: "Send an SMS" },
-      { method: "POST", path: "/v1/messaging/email", description: "Send an email" },
-      { method: "POST", path: "/v1/messaging/push", description: "Send a push notification" },
-      { method: "GET", path: "/v1/messaging/{id}/status", description: "Delivery status" }
+      { method: "POST", path: "/v1/messaging/sms", description: "Send an SMS", status: "planned" },
+      { method: "POST", path: "/v1/messaging/email", description: "Send an email", status: "planned" },
+      { method: "POST", path: "/v1/messaging/push", description: "Send a push notification", status: "planned" },
+      { method: "GET", path: "/v1/messaging/{id}/status", description: "Delivery status", status: "planned" }
     ]
   },
   {
@@ -309,16 +318,16 @@ const DOMAINS: Domain[] = [
     name: "Analytics & Reporting",
     ep: 14,
     base: "/v1/analytics",
-    ver: "v2.0",
-    auth: "OAuth2 · analytics:read",
-    rate: "600 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "A read-only consumption layer for BI metrics, profitability reporting and scheduled, regulator-ready exports. Never writes to operational systems.",
     std: ["OpenTelemetry"],
     eps: [
-      { method: "GET", path: "/v1/analytics/metrics", description: "Query metrics" },
-      { method: "GET", path: "/v1/reports", description: "List reports" },
-      { method: "POST", path: "/v1/reports/schedule", description: "Schedule an export" },
-      { method: "GET", path: "/v1/reports/{id}/download", description: "Download a report" }
+      { method: "GET", path: "/v1/analytics/metrics", description: "Query metrics", status: "planned" },
+      { method: "GET", path: "/v1/reports", description: "List reports", status: "planned" },
+      { method: "POST", path: "/v1/reports/schedule", description: "Schedule an export", status: "planned" },
+      { method: "GET", path: "/v1/reports/{id}/download", description: "Download a report", status: "planned" }
     ]
   },
   {
@@ -327,15 +336,15 @@ const DOMAINS: Domain[] = [
     name: "Partner & Settlement",
     ep: 9,
     base: "/v1/partners",
-    ver: "v1.4",
-    auth: "OAuth2 · partner:read",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "Bearer token · tenant from claims",
+    rate: "Not enforced",
     ov: "Partner, MVNA/MNO and interconnect settlement with statements, discrepancies and dispute handling.",
     std: ["GSMA TAP3", "NRTRDE"],
     eps: [
-      { method: "GET", path: "/v1/partners", description: "List partners" },
-      { method: "GET", path: "/v1/settlement/statements", description: "Settlement statements" },
-      { method: "POST", path: "/v1/settlement/disputes", description: "Raise a settlement dispute" }
+      { method: "GET", path: "/v1/partners", description: "List partners", status: "planned" },
+      { method: "GET", path: "/v1/settlement/statements", description: "Settlement statements", status: "planned" },
+      { method: "POST", path: "/v1/settlement/disputes", description: "Raise a settlement dispute", status: "planned" }
     ]
   },
   {
@@ -344,16 +353,16 @@ const DOMAINS: Domain[] = [
     name: "Webhooks & Events",
     ep: 7,
     base: "/v1/webhooks",
-    ver: "v1.2",
-    auth: "OAuth2 · webhook:write",
-    rate: "300 / min",
+    ver: "v1",
+    auth: "OAuth2 · integration:events:publish",
+    rate: "Not enforced",
     ov: "Event subscriptions using the canonical event envelope, with idempotent delivery, retries and replay.",
     std: ["CloudEvents", "OpenAPI 3.0"],
     eps: [
-      { method: "POST", path: "/v1/webhooks", description: "Register a webhook" },
-      { method: "GET", path: "/v1/webhooks", description: "List subscriptions" },
-      { method: "POST", path: "/v1/webhooks/{id}/replay", description: "Replay events (idempotent)" },
-      { method: "GET", path: "/v1/events/schema", description: "Canonical event envelope schema" }
+      { method: "POST", path: "/v1/webhooks", description: "Register a webhook", status: "planned" },
+      { method: "GET", path: "/v1/webhooks", description: "List subscriptions", status: "planned" },
+      { method: "POST", path: "/v1/webhooks/{id}/replay", description: "Replay events (idempotent)", status: "planned" },
+      { method: "GET", path: "/v1/events/schema", description: "Canonical event envelope schema", status: "planned" }
     ]
   }
 ];
@@ -409,7 +418,14 @@ export default function PortalConnectionPage() {
     }
   };
 
-  const totalEndpoints = DOMAINS.reduce((sum, d) => sum + d.ep, 0);
+  // `d.ep` is the intended size of each domain, not what is deployed. Summing it
+  // and labelling the result "Endpoints" told a visitor 230 endpoints were
+  // available. Counted from the listed routes and their real status instead.
+  const listedEndpoints = DOMAINS.reduce((sum, d) => sum + d.eps.length, 0);
+  const availableEndpoints = DOMAINS.reduce(
+    (sum, d) => sum + d.eps.filter((e) => e.status === "available").length,
+    0,
+  );
   const activeDomain = DOMAINS[activeIdx];
   const prevDomain = DOMAINS[(activeIdx - 1 + DOMAINS.length) % DOMAINS.length];
   const nextDomain = DOMAINS[(activeIdx + 1) % DOMAINS.length];
@@ -441,7 +457,14 @@ export default function PortalConnectionPage() {
               Sovereign API Domains
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 text-[15px] leading-relaxed">
-              18 high-availability clusters providing atomic control over the entire monetization lifecycle. Select a domain to explore its endpoints, authentication, and standards.
+              18 domains covering the monetization lifecycle. Select a domain to explore its endpoints, authentication
+              and standards.
+            </p>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-[13px] leading-relaxed">
+              Endpoints are marked <span className="font-semibold text-emerald-700 dark:text-emerald-400">Live</span>{" "}
+              where they are callable today, and{" "}
+              <span className="font-semibold text-slate-600 dark:text-slate-300">Planned</span> where they describe
+              intended surface. Build against Live only — the API reference is the contract, this page is the map.
             </p>
           </div>
 
@@ -452,8 +475,10 @@ export default function PortalConnectionPage() {
               <span className="block text-[10px] uppercase font-mono tracking-wider text-slate-400 dark:text-slate-500 font-semibold mt-1">Domains</span>
             </div>
             <div>
-              <span className="text-xl font-extrabold text-[#13243A] dark:text-white">{totalEndpoints}</span>
-              <span className="block text-[10px] uppercase font-mono tracking-wider text-slate-400 dark:text-slate-500 font-semibold mt-1">Endpoints</span>
+              <span className="text-xl font-extrabold text-[#13243A] dark:text-white">{availableEndpoints}</span>
+              <span className="block text-[10px] uppercase font-mono tracking-wider text-slate-400 dark:text-slate-500 font-semibold mt-1">
+                Live endpoints
+              </span>
             </div>
             <div>
               <span className="text-xl font-extrabold text-[#13243A] dark:text-white">v1</span>
@@ -567,10 +592,33 @@ export default function PortalConnectionPage() {
               {activeDomain.ov}
             </p>
 
+            {/*
+              A domain with nothing live has an aspirational base path too — the
+              namespace is not served, so presenting it as somewhere to send a
+              request is the same mistake the endpoint list made. Said once, at
+              the top, rather than left for the reader to infer from every row
+              being marked Planned.
+            */}
+            {activeDomain.eps.every((e) => e.status === "planned") && (
+              <div className="mt-6 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+                <p className="text-[13px] text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <span className="font-bold">Not yet available.</span> Nothing under{" "}
+                  <code className="font-mono text-[12px]">{activeDomain.base}</code> is served today — this domain
+                  describes intended surface. The endpoints below are listed for planning; none is callable.
+                </p>
+              </div>
+            )}
+
             {/* Base Path Display */}
-            <div className="mt-6 bg-[#082C49] dark:bg-[#061A2C] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between font-mono text-[13px] text-[#EAF2FB] overflow-x-auto shadow-inner">
+            <div className="mt-4 bg-[#082C49] dark:bg-[#061A2C] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between font-mono text-[13px] text-[#EAF2FB] overflow-x-auto shadow-inner">
               <span className="text-[#8AA0B6] text-[10.5px] uppercase tracking-wider font-semibold mr-4">Base</span>
-              <code className="text-[#bff0a0] font-bold tracking-wide flex-1">{activeDomain.base}</code>
+              <code
+                className={`font-bold tracking-wide flex-1 ${
+                  activeDomain.eps.every((e) => e.status === "planned") ? "text-[#8AA0B6]" : "text-[#bff0a0]"
+                }`}
+              >
+                {activeDomain.base}
+              </code>
             </div>
 
             {/* Meta Grid info boxes */}
@@ -580,12 +628,15 @@ export default function PortalConnectionPage() {
                 <span className="text-[13px] font-bold text-[#13243A] dark:text-white block mt-1">{activeDomain.ver}</span>
               </div>
               <div className="bg-slate-50 dark:bg-[#0E2840] border border-[#DCE5EF] dark:border-[#1E3B56] rounded-xl p-3.5">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold block">Auth Scope</span>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold block">Authentication</span>
                 <span className="text-[13px] font-bold text-[#13243A] dark:text-white block mt-1 truncate" title={activeDomain.auth}>{activeDomain.auth}</span>
               </div>
               <div className="bg-slate-50 dark:bg-[#0E2840] border border-[#DCE5EF] dark:border-[#1E3B56] rounded-xl p-3.5">
                 <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold block">Rate Limit</span>
-                <span className="text-[13px] font-bold text-[#13243A] dark:text-white block mt-1">{activeDomain.rate}</span>
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block mt-1">{activeDomain.rate}</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-1 leading-snug">
+                  No throttling is applied to inbound requests today. Do not design against a quota.
+                </span>
               </div>
             </div>
 
@@ -604,7 +655,11 @@ export default function PortalConnectionPage() {
 
             {/* Endpoints title section */}
             <div className="font-mono text-[10.5px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mt-8 mb-4 border-t border-slate-100 dark:border-slate-800/80 pt-6">
-              Key Endpoints <span className="font-normal text-slate-400 lowercase italic ml-1">· showing {activeDomain.eps.length} of {activeDomain.ep}</span>
+              Key Endpoints
+              <span className="font-normal text-slate-400 lowercase italic ml-1">
+                · {activeDomain.eps.filter((e) => e.status === "available").length} of{" "}
+                {activeDomain.eps.length} listed are live today
+              </span>
             </div>
 
             {/* Endpoint cards list */}
@@ -617,7 +672,29 @@ export default function PortalConnectionPage() {
                   <span className={`font-mono text-[10px] font-bold tracking-wider border rounded px-2.5 py-0.5 text-center flex-none min-w-[62px] ${getMethodClass(e.method)}`}>
                     {e.method}
                   </span>
-                  <code className="font-mono text-[13px] text-[#13243A] dark:text-sky-300 break-all">{e.path}</code>
+                  <code
+                    className={`font-mono text-[13px] break-all ${
+                      e.status === "available"
+                        ? "text-[#13243A] dark:text-sky-300"
+                        : "text-slate-400 dark:text-slate-500"
+                    }`}
+                  >
+                    {e.path}
+                  </code>
+                  <span
+                    className={`font-mono text-[9px] font-bold uppercase tracking-wider border rounded px-1.5 py-0.5 flex-none ${
+                      e.status === "available"
+                        ? "border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:bg-emerald-950/40"
+                        : "border-slate-300 text-slate-500 bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:bg-slate-900/40"
+                    }`}
+                    title={
+                      e.status === "available"
+                        ? "Callable on the platform today"
+                        : "Described surface — not deployed yet"
+                    }
+                  >
+                    {e.status === "available" ? "Live" : "Planned"}
+                  </span>
                   <span className="text-[13px] text-slate-400 dark:text-slate-500 sm:ml-auto text-left sm:text-right truncate max-w-[280px]">
                     {e.description}
                   </span>

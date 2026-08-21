@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { platformApi } from '@/lib/admin/platform/client';
 import { renderPreviewEmail } from '../../../actions/renderPreviewEmail';
+
+interface TenantRef { tenant_id: string; name: string }
+interface BrandRef { id: string; name: string; code_name: string }
 
 interface BrandPreset {
   name: string;
@@ -12,7 +17,6 @@ interface BrandPreset {
   replyTo: string;
   supportUrl: string;
 }
-
 const BRAND_PRESETS: Record<string, BrandPreset> = {
   zoikonex: {
     name: 'ZoikoNex Core (Platform Default)',
@@ -61,6 +65,23 @@ const SAMPLE_TEMPLATES = [
   { id: 'ZNX-EM-SUP-013', name: 'Incident detected (SUP-013)' },
 ];
 
+/**
+ * White-label email preview.
+ *
+ * Two sources of brand identity, and they are different things:
+ *
+ *   - A tenant's REAL brands, loaded from identity-tenancy. It is one of the
+ *     two services that honour a platform-admin `X-Tenant-ID` override, so a
+ *     super admin can preview against a genuine brand rather than a sample.
+ *   - The preset personas below, which are sample INPUT for the preview and
+ *     are labelled as such. They are not tenant records and are never shown
+ *     as live state.
+ *
+ * What is NOT persisted: logo, colour, sender and reply-to. No service stores
+ * per-brand email presentation — there is no notification/template domain among
+ * the 19 — so this remains a preview tool. The page says so rather than
+ * implying a Save that would go nowhere.
+ */
 export default function TenantBrandingPage() {
   const [selectedPreset, setSelectedPreset] = useState('zoikonex');
   const [selectedTemplate, setSelectedTemplate] = useState('ZNX-EM-IAM-001');
@@ -71,12 +92,35 @@ export default function TenantBrandingPage() {
   const [senderName, setSenderName] = useState(BRAND_PRESETS.zoikonex.senderName);
   const [replyTo, setReplyTo] = useState(BRAND_PRESETS.zoikonex.replyTo);
   const [supportUrl, setSupportUrl] = useState(BRAND_PRESETS.zoikonex.supportUrl);
-
+  const [tenantId, setTenantId] = useState('');
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
-  // Apply preset
+  const tenantsQ = useQuery({
+    queryKey: ['superadmin', 'branding', 'tenants'],
+    queryFn: async () => (await platformApi.get<{ tenants?: TenantRef[] }>('identity', '/v1/tenants')).tenants ?? [],
+  });
+
+  const brandsQ = useQuery({
+    queryKey: ['superadmin', 'branding', 'brands', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () =>
+      (await platformApi.get<{ brands?: BrandRef[] }>('identity', '/v1/brands', { asTenant: tenantId })).brands ?? [],
+  });
+
+  // Seed the preview from the first real brand once a tenant is chosen. Only
+  // fields the brand record actually carries are filled; the rest stay blank
+  // rather than being invented from the brand name.
+  useEffect(() => {
+    const brand = brandsQ.data?.[0];
+    if (!brand) return;
+    setBrandName(brand.name);
+    setSenderName(`${brand.name} Notifications`);
+  }, [brandsQ.data]);
+
+  // Apply a sample persona. This overwrites whatever the real-brand seed put
+  // in, which is intended: the operator has explicitly asked for the sample.
   const handleApplyPreset = (presetKey: string) => {
     setSelectedPreset(presetKey);
     const preset = BRAND_PRESETS[presetKey];
@@ -123,10 +167,11 @@ export default function TenantBrandingPage() {
             <h1 className="text-lg font-bold text-white tracking-wide">White-Label Governance</h1>
             <p className="text-xs text-slate-400 mt-0.5">Section 02 Multi-Tenant Brand Studio</p>
           </div>
-          <span className="text-[10px] font-mono bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
-            290 Templates
-          </span>
         </div>
+
+        <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2 mt-4">
+          Preview only — no service stores per-brand email presentation, so nothing on this page is persisted.
+        </p>
 
         <div className="space-y-6 mt-5">
           {/* Quick Presets */}
@@ -166,7 +211,40 @@ export default function TenantBrandingPage() {
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               Brand Identity (Locked Boundary)
             </h2>
-            
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Tenant</label>
+              <select
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+              >
+                <option value="">
+                  {tenantsQ.isLoading ? 'Loading tenants…' : tenantsQ.isError ? 'Tenant list unavailable' : '— select a tenant —'}
+                </option>
+                {(tenantsQ.data ?? []).map((t) => (
+                  <option key={t.tenant_id} value={t.tenant_id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {tenantId && (
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Brand</label>
+                <select
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                >
+                  {brandsQ.isLoading && <option>Loading brands…</option>}
+                  {!brandsQ.isLoading && (brandsQ.data ?? []).length === 0 && <option>No brands in this tenant</option>}
+                  {(brandsQ.data ?? []).map((b) => (
+                    <option key={b.id} value={b.name}>{b.name} · {b.code_name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">Display Name</label>
               <input 

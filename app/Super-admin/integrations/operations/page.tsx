@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { platformApi } from '@/lib/admin/platform/client';
+import { errMessage } from '@/lib/admin/envelope';
 import Link from 'next/link';
 import { 
   Activity, 
@@ -36,70 +39,155 @@ interface IntegrationEvent {
   payloadSummary: string;
   errorDetail?: string;
   rawPayload: any;
+  /** Present only for dead-lettered events — the only ones that can be reprocessed. */
+  dlqId?: string;
+  /** Present only for webhook deliveries — the only ones with an attempt history. */
+  deliveryId?: string;
 }
 
-const MOCK_EVENTS: IntegrationEvent[] = [
-  {
-    correlationId: 'corr_evt_99812401',
-    providerEventId: 'evt_stripe_charge_fulfilled_881',
-    tenantId: 'ten_golite_us',
-    partnerName: 'Stripe Payments',
-    eventType: 'PAYMENT.CHARGE_SUCCEEDED.V1',
-    protocol: 'Webhook',
-    status: 'DELIVERED',
-    timestamp: '2026-08-11 13:42:10 UTC',
-    attempts: 1,
-    payloadSummary: 'Payment $45.00 captured successfully for Account ACC-9921',
-    rawPayload: { amount: 4500, currency: 'usd', customer: 'cus_M129', id: 'ch_3M001' }
-  },
-  {
-    correlationId: 'corr_evt_99812402',
-    providerEventId: 'evt_smdp_profile_release_002',
-    tenantId: 'ten_zoiko_uk',
-    partnerName: 'GSMA SM-DP+',
-    eventType: 'TEL.ESIM_PROFILE_RELEASED.V1',
-    protocol: 'Kafka Stream',
-    status: 'QUARANTINE',
-    timestamp: '2026-08-11 13:40:02 UTC',
-    attempts: 3,
-    payloadSummary: 'eSIM activation confirmation signature mismatch',
-    errorDetail: 'INT-SEC-014 Violation: Signature validation failed against provider key ring',
-    rawPayload: { iccid: '8944500129841209841', matching_id: 'MATCH-902', status: 'UNVERIFIED' }
-  },
-  {
-    correlationId: 'corr_evt_99812403',
-    providerEventId: 'evt_suretax_calc_retry_409',
-    tenantId: 'ten_driverx_us',
-    partnerName: 'SureTax Regulatory',
-    eventType: 'TAX.JURISDICTION_CALC.V1',
-    protocol: 'REST Call',
-    status: 'DLQ',
-    timestamp: '2026-08-11 13:35:19 UTC',
-    attempts: 5,
-    payloadSummary: 'USF tax calculation timeout after 5 retries',
-    errorDetail: 'INT-REL-003 Max retries exhausted. Bounded exponential backoff failed.',
-    rawPayload: { invoice_id: 'INV-88120', state: 'US-CA', subtotal: 120.00 }
-  },
-  {
-    correlationId: 'corr_evt_99812404',
-    providerEventId: 'file_gamma_cdr_20260811_01.csv',
-    tenantId: 'ten_zoiko_uk',
-    partnerName: 'Gamma Telecom MVNA',
-    eventType: 'USAGE.CDR_BATCH_INGEST.V1',
-    protocol: 'SFTP File',
-    status: 'DELIVERED',
-    timestamp: '2026-08-11 13:30:00 UTC',
-    attempts: 1,
-    payloadSummary: 'Batch 14,290 usage CDR records processed',
-    rawPayload: { file_name: 'gamma_cdr_01.csv', records: 14290, hash: 'sha256_88192a...' }
+interface DeliveryAttempt {
+  attempt_id?: string;
+  attempt_number?: number;
+  response_status?: number;
+  outcome_class?: string;
+  error_detail?: string;
+  attempted_at?: string;
+}
+
+// ─── Backend record shapes ────────────────────────────────────────────────────
+// Mirrored from integration-ecosystem:
+//   Delivery      internal/domain/webhook/webhook.go:140
+//   DLQRecord     internal/delivery/http/dto (DLQRecordResponse)
+
+interface WebhookDelivery {
+  delivery_id: string;
+  subscription_id: string;
+  tenant_id: string;
+  event_id: string;
+  event_type: string;
+  payload_json: string;
+  status: string;
+  attempts: number;
+  max_attempts: number;
+  last_attempt_at?: string;
+  response_status?: number;
+  response_summary?: string;
+  outcome_class?: string;
+  dlq_id?: string;
+  correlation_id?: string;
+  created_at: string;
+}
+
+interface DLQRecord {
+  dlq_id: string;
+  connector_id: string;
+  event_type: string;
+  payload_json: string;
+  failure_reason: string;
+  retry_count: number;
+  status: string;
+  created_at: string;
+}
+
+interface QuarantineRecord {
+  id?: string;
+  quarantine_id?: string;
+  tenant_id?: string;
+  connector_id?: string;
+  reason?: string;
+  event_type?: string;
+  payload_json?: string;
+  created_at?: string;
+}
+
+/** Payloads are stored as an opaque JSON string; show the object when it parses. */
+function parsePayload(raw: string | undefined): any {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { raw };
   }
-];
+}
+
+/**
+ * The delivery log has richer states than this console's five. RETRYING covers
+ * anything still scheduled; anything terminal-but-unsuccessful is FAILED.
+ */
+function deliveryStatus(d: WebhookDelivery): IntegrationEvent['status'] {
+  const s = (d.status || '').toUpperCase();
+  if (d.dlq_id) return 'DLQ';
+  if (s === 'DELIVERED' || s === 'SUCCEEDED') return 'DELIVERED';
+  if (s === 'PENDING' || s === 'RETRYING' || s === 'SCHEDULED') return 'RETRYING';
+  return 'FAILED';
+}
+
+function mapDelivery(d: WebhookDelivery): IntegrationEvent {
+  return {
+    correlationId: d.correlation_id || d.delivery_id,
+    providerEventId: d.event_id,
+    tenantId: d.tenant_id,
+    // The delivery record carries the subscription, not a partner display name.
+    // Showing the id beats inventing a friendly label.
+    partnerName: `subscription ${d.subscription_id?.slice(0, 8) ?? '—'}`,
+    eventType: d.event_type,
+    protocol: 'Webhook',
+    status: deliveryStatus(d),
+    timestamp: d.last_attempt_at || d.created_at,
+    attempts: d.attempts ?? 0,
+    payloadSummary: d.response_summary
+      ? `HTTP ${d.response_status ?? '—'} · ${d.response_summary}`
+      : `${d.attempts ?? 0}/${d.max_attempts ?? 0} attempts`,
+    errorDetail: d.outcome_class && d.outcome_class !== 'SUCCESS' ? d.outcome_class : undefined,
+    rawPayload: parsePayload(d.payload_json),
+    dlqId: d.dlq_id,
+    deliveryId: d.delivery_id,
+  };
+}
+
+function mapDlq(r: DLQRecord): IntegrationEvent {
+  return {
+    correlationId: r.dlq_id,
+    providerEventId: r.dlq_id,
+    tenantId: '—',
+    partnerName: `connector ${r.connector_id?.slice(0, 8) ?? '—'}`,
+    eventType: r.event_type,
+    protocol: 'Webhook',
+    status: 'DLQ',
+    timestamp: r.created_at,
+    attempts: r.retry_count ?? 0,
+    payloadSummary: r.failure_reason || 'Dead-lettered',
+    errorDetail: r.failure_reason,
+    rawPayload: parsePayload(r.payload_json),
+    dlqId: r.dlq_id,
+  };
+}
+
+function mapQuarantine(r: QuarantineRecord): IntegrationEvent {
+  const id = r.quarantine_id ?? r.id ?? '—';
+  return {
+    correlationId: id,
+    providerEventId: id,
+    tenantId: r.tenant_id ?? '—',
+    partnerName: `connector ${r.connector_id?.slice(0, 8) ?? '—'}`,
+    eventType: r.event_type ?? 'QUARANTINED',
+    protocol: 'Webhook',
+    status: 'QUARANTINE',
+    timestamp: r.created_at ?? '',
+    attempts: 0,
+    payloadSummary: r.reason || 'Held in quarantine',
+    errorDetail: r.reason,
+    rawPayload: parsePayload(r.payload_json),
+  };
+}
+
 
 export default function IntegrationOperationsPage() {
-  const [events, setEvents] = useState<IntegrationEvent[]>(MOCK_EVENTS);
+  const qc = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedEvent, setSelectedEvent] = useState<IntegrationEvent | null>(null);
+  const [isWritingOff, setIsWritingOff] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -108,17 +196,125 @@ export default function IntegrationOperationsPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleReplayEvent = (correlationId: string) => {
+  // The event stream is assembled from the three places integration-ecosystem
+  // actually records one: the webhook delivery log, the dead-letter store, and
+  // the quarantine. They are separate endpoints because they are separate
+  // lifecycle states, but an operator triaging "what happened to this event"
+  // wants them in one list. One failing must not blank the other two.
+  const eventsQ = useQuery({
+    queryKey: ['superadmin', 'integration-events'],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const [deliveries, dlq, quarantine] = await Promise.all([
+        platformApi
+          .get<{ deliveries?: WebhookDelivery[] }>('integration', '/v1/webhooks/deliveries?limit=100')
+          .then((r) => r.deliveries ?? [])
+          .catch(() => [] as WebhookDelivery[]),
+        platformApi
+          .get<{ records?: DLQRecord[] }>('integration', '/v1/dlq')
+          .then((r) => r.records ?? [])
+          .catch(() => [] as DLQRecord[]),
+        platformApi
+          .get<{ records?: QuarantineRecord[] }>('integration', '/v1/quarantine')
+          .then((r) => r.records ?? [])
+          .catch(() => [] as QuarantineRecord[]),
+      ]);
+      return [
+        ...deliveries.map(mapDelivery),
+        ...dlq.map(mapDlq),
+        ...quarantine.map(mapQuarantine),
+      ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    },
+  });
+  const events = eventsQ.data ?? [];
+
+  /**
+   * Replay is only meaningful for a DLQ record — that is the only one of the
+   * three stores with a reprocess route. The button is hidden for the others
+   * rather than firing a call that cannot succeed.
+   */
+  const handleReplayEvent = async (correlationId: string) => {
+    const target = events.find((e) => e.correlationId === correlationId);
+    if (!target?.dlqId) {
+      showToast('Only dead-lettered events can be reprocessed.');
+      return;
+    }
     setIsReplaying(true);
-    setTimeout(() => {
-      setEvents(prev => prev.map(e => e.correlationId === correlationId ? { ...e, status: 'DELIVERED', attempts: e.attempts + 1 } : e));
-      if (selectedEvent && selectedEvent.correlationId === correlationId) {
-        setSelectedEvent(prev => prev ? { ...prev, status: 'DELIVERED', attempts: prev.attempts + 1 } : null);
-      }
+    try {
+      await platformApi.post('integration', `/v1/dlq/${target.dlqId}/reprocess`, {});
+      showToast(`Reprocess submitted for [${correlationId}].`);
+      setSelectedEvent(null);
+      await qc.invalidateQueries({ queryKey: ['superadmin', 'integration-events'] });
+    } catch (e) {
+      showToast(errMessage(e, 'Reprocess failed.'));
+    } finally {
       setIsReplaying(false);
-      showToast(`Safe replay executed for [${correlationId}]. Status updated to DELIVERED.`);
-    }, 600);
+    }
   };
+
+  /**
+   * The other terminal option for a dead-lettered event.
+   *
+   * Reprocess says "try again"; write-off says "this will never succeed, stop
+   * counting it as an outstanding failure". A poison message — malformed
+   * payload, a partner that no longer exists — is retried forever otherwise,
+   * and the DLQ stops being a list anyone reads.
+   *
+   * Guarded behind a confirmation because it is not reversible: written off is
+   * a terminal state, and the event is not delivered by some other route
+   * afterwards. Only DLQ records have the route; quarantine and plain failed
+   * deliveries do not, so the button is hidden for them rather than firing a
+   * call that 404s.
+   */
+  const handleWriteOff = async (correlationId: string) => {
+    const target = events.find((e) => e.correlationId === correlationId);
+    if (!target?.dlqId) {
+      showToast('Only dead-lettered events can be written off.');
+      return;
+    }
+    if (!window.confirm('Write off this event? It will not be delivered, and this cannot be undone.')) return;
+    setIsWritingOff(true);
+    try {
+      await platformApi.post('integration', `/v1/dlq/${target.dlqId}/write-off`, {});
+      showToast(`Written off [${correlationId}].`);
+      setSelectedEvent(null);
+      await qc.invalidateQueries({ queryKey: ['superadmin', 'integration-events'] });
+    } catch (e) {
+      showToast(errMessage(e, 'Write-off failed.'));
+    } finally {
+      setIsWritingOff(false);
+    }
+  };
+
+  /**
+   * Per-delivery attempt history. The list row carries only a count; this is
+   * the record of what each attempt actually got back, which is the difference
+   * between "the partner is down" and "we are sending them something they
+   * reject". Fetched only when a delivery is selected — there is no value in
+   * pulling attempt history for every row on screen.
+   */
+  const attemptsQ = useQuery({
+    queryKey: ['superadmin', 'delivery-attempts', selectedEvent?.deliveryId],
+    enabled: !!selectedEvent?.deliveryId,
+    retry: false,
+    queryFn: async () =>
+      (await platformApi.get<{ attempts?: DeliveryAttempt[] }>(
+        'integration',
+        `/v1/webhooks/deliveries/${selectedEvent!.deliveryId}/attempts`,
+      )).attempts ?? [],
+  });
+
+  /**
+   * The full DLQ record. The unified list flattens three stores into one shape,
+   * so fields unique to a DLQ record — connector, retry policy, the original
+   * headers — are dropped on the way in. Fetched on selection to show them.
+   */
+  const dlqDetailQ = useQuery({
+    queryKey: ['superadmin', 'dlq-detail', selectedEvent?.dlqId],
+    enabled: !!selectedEvent?.dlqId,
+    retry: false,
+    queryFn: () => platformApi.get<Record<string, unknown>>('integration', `/v1/dlq/${selectedEvent!.dlqId}`),
+  });
 
   const filteredEvents = events.filter(e => {
     const matchesSearch = 
@@ -355,6 +551,64 @@ export default function IntegrationOperationsPage() {
                 </pre>
               </div>
 
+              {/* Attempt history — webhook deliveries only */}
+              {selectedEvent.deliveryId && (
+                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Attempt history
+                  </div>
+                  {attemptsQ.isLoading && <p className="text-xs text-slate-500">Loading attempts…</p>}
+                  {attemptsQ.error && (
+                    <p className="text-xs text-rose-400">{errMessage(attemptsQ.error, 'Attempt history unavailable.')}</p>
+                  )}
+                  {attemptsQ.data && attemptsQ.data.length === 0 && (
+                    <p className="text-xs text-slate-500">No attempts recorded yet.</p>
+                  )}
+                  {attemptsQ.data && attemptsQ.data.length > 0 && (
+                    <ol className="flex flex-col gap-2">
+                      {attemptsQ.data.map((a, i) => (
+                        <li
+                          key={a.attempt_id ?? i}
+                          className="flex items-start gap-3 text-xs border-b border-slate-800/60 last:border-0 pb-2 last:pb-0"
+                        >
+                          <span className="font-mono text-slate-500 shrink-0 w-6">#{a.attempt_number ?? i + 1}</span>
+                          <span
+                            className={`font-mono font-bold shrink-0 w-12 ${
+                              a.response_status && a.response_status < 400 ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
+                          >
+                            {a.response_status ?? '—'}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="text-slate-300">{a.outcome_class ?? '—'}</span>
+                            {a.error_detail && (
+                              <span className="block text-slate-500 font-mono text-[10px] mt-0.5 break-all">
+                                {a.error_detail}
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-slate-600 text-[10px] shrink-0">
+                            {a.attempted_at ? new Date(a.attempted_at).toLocaleTimeString() : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              )}
+
+              {/* Full DLQ record — fields the unified list drops */}
+              {selectedEvent.dlqId && dlqDetailQ.data && (
+                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Full DLQ record
+                  </div>
+                  <pre className="text-[10px] text-slate-400 font-mono overflow-x-auto max-h-48">
+                    {JSON.stringify(dlqDetailQ.data, null, 2)}
+                  </pre>
+                </div>
+              )}
+
               {/* Operator Replay Action Button (INT-REL-005) */}
               {(selectedEvent.status === 'DLQ' || selectedEvent.status === 'QUARANTINE' || selectedEvent.status === 'FAILED') && (
                 <button
@@ -365,6 +619,24 @@ export default function IntegrationOperationsPage() {
                   <RotateCcw className={`w-4 h-4 ${isReplaying ? 'animate-spin' : ''}`} />
                   {isReplaying ? 'Executing Replay...' : 'Execute Safe Operator Replay (INT-REL-005)'}
                 </button>
+              )}
+
+              {/* Write-off — the terminal alternative, DLQ records only */}
+              {selectedEvent.dlqId && (
+                <div>
+                  <button
+                    disabled={isWritingOff}
+                    onClick={() => handleWriteOff(selectedEvent.correlationId)}
+                    className="w-full py-3 bg-transparent hover:bg-rose-950/40 text-rose-400 border border-rose-500/30 font-bold rounded-2xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <AlertOctagon className="w-4 h-4" />
+                    {isWritingOff ? 'Writing off…' : 'Write Off — Will Not Be Delivered'}
+                  </button>
+                  <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                    Use when the event can never succeed — a malformed payload, or a partner that no longer exists.
+                    Terminal and not reversible; the event is not delivered by any other route afterwards.
+                  </p>
+                </div>
               )}
             </div>
           </div>
