@@ -1063,11 +1063,45 @@ function OperationsSection({ connector }: { connector: Connector }) {
 
   const ops = q.data?.operations ?? [];
 
+  const suggestions = OPERATION_SUGGESTIONS[connector.connector_type] ?? [];
+  const pathError = pathTemplateError(form.path_template);
+
+  const applySuggestion = (key: string) => {
+    const sug = suggestions.find((x) => x.name === key);
+    if (!sug) return;
+    setForm({ ...form, operation_name: sug.name, http_method: sug.method, path_template: sug.path });
+  };
+
   return (
     <div className="flex flex-col gap-4 text-xs">
       <p className="text-slate-600 leading-relaxed">
-        Operations form a strict allow-list. Apps execute provider actions by operation name (e.g. <code>charge_card</code>) rather than direct URLs.
+        Operations form a strict allow-list. Apps execute provider actions by operation name (e.g. <code>create_payment_intent</code>) rather than direct URLs.
       </p>
+
+      {suggestions.length > 0 && (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col gap-2">
+          <label className="text-xs font-semibold text-slate-700">
+            Start from a common {connector.connector_type.replace(/_/g, " ").toLowerCase()} operation
+          </label>
+          <select
+            className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
+            value=""
+            onChange={(e) => applySuggestion(e.target.value)}
+          >
+            <option value="">— pick one to fill the fields below —</option>
+            {suggestions.map((sg) => (
+              <option key={sg.name} value={sg.name}>
+                {sg.name} · {sg.method} {sg.path} — {sg.note}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Suggestions only. The platform does not hold a registry of what each provider exposes, so check the name,
+            method and path against <span className="font-semibold">{connector.provider_name}</span>&apos;s own API
+            documentation before registering — every field stays editable.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -1075,9 +1109,17 @@ function OperationsSection({ connector }: { connector: Connector }) {
           <input
             className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
             value={form.operation_name}
-            placeholder="charge_card"
+            placeholder="create_payment_intent"
+            list={`op-names-${connector.connector_id}`}
             onChange={(e) => setForm({ ...form, operation_name: e.target.value })}
           />
+          {/* Names already registered on this connector, so a second environment
+              or a corrected entry can reuse the exact spelling rather than
+              risking a near-miss that callers then have to guess at. */}
+          <datalist id={`op-names-${connector.connector_id}`}>
+            {suggestions.map((sg) => <option key={`s-${sg.name}`} value={sg.name} />)}
+            {ops.map((o) => <option key={`o-${o.operation_id}`} value={o.operation_name} />)}
+          </datalist>
         </div>
         <div>
           <label className="text-xs font-semibold text-slate-700 mb-1 block">HTTP Method</label>
@@ -1095,12 +1137,26 @@ function OperationsSection({ connector }: { connector: Connector }) {
 
       <div>
         <label className="text-xs font-semibold text-slate-700 mb-1 block">Path Template</label>
-        <input
-          className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
-          value={form.path_template}
-          placeholder="/v1/payment_intents"
-          onChange={(e) => setForm({ ...form, path_template: e.target.value })}
-        />
+        <div className="flex items-center gap-0 rounded-lg border border-slate-300 focus-within:ring-2 focus-within:ring-[#1d64b8]/20 focus-within:border-[#1d64b8] overflow-hidden bg-white">
+          {/* The base URL is fixed on the connector and the path is joined onto
+              it, so showing it inline removes the main reason people typed a
+              full URL here — which the backend rejects. */}
+          <span className="px-2.5 py-2 text-[11px] font-mono text-slate-400 bg-slate-50 border-r border-slate-200 whitespace-nowrap max-w-[220px] truncate">
+            {connector.base_url || "(no base URL set)"}
+          </span>
+          <input
+            className="flex-1 px-3 py-2 text-xs font-medium text-slate-800 bg-white focus:outline-none"
+            value={form.path_template}
+            placeholder="/v1/payment_intents"
+            onChange={(e) => setForm({ ...form, path_template: e.target.value })}
+          />
+        </div>
+        {pathError && <p className="text-[11px] text-rose-600 mt-1 leading-relaxed">{pathError}</p>}
+        {!pathError && (
+          <p className="text-[11px] text-slate-500 mt-1">
+            Use <code>{"{id}"}</code> for a path parameter. Must start with a slash.
+          </p>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-slate-700 cursor-pointer font-medium">
@@ -1113,7 +1169,7 @@ function OperationsSection({ connector }: { connector: Connector }) {
       </label>
 
       <button
-        disabled={!form.operation_name || !form.path_template}
+        disabled={!form.operation_name.trim() || !form.path_template || !!pathError}
         onClick={() => register.mutate()}
         className="px-4 py-2 bg-[#1d64b8] hover:bg-[#154e93] disabled:opacity-50 text-white font-bold text-xs rounded-lg shadow-sm transition cursor-pointer self-start"
       >
@@ -1730,6 +1786,61 @@ function MFTTab() {
       </div>
     </div>
   );
+}
+
+
+/**
+ * Starter operations offered per connector capability.
+ *
+ * These are SUGGESTIONS, not contract. The platform has no registry of what any
+ * given provider exposes — operation_name and path_template are free text on the
+ * backend by design, because the allow-list has to describe whatever the provider
+ * actually offers. Presenting these as authoritative would repeat the mistake of
+ * listing endpoints nobody had verified, so the picker says to check them against
+ * the provider's own documentation, and every field stays editable.
+ *
+ * Kept deliberately short and generic. Where a provider has moved on — Stripe
+ * treats PaymentIntents as the current surface and /v1/charges as legacy — the
+ * current one is offered first.
+ */
+const OPERATION_SUGGESTIONS: Record<string, { name: string; method: string; path: string; note: string }[]> = {
+  PAYMENT_GATEWAY: [
+    { name: "create_payment_intent", method: "POST", path: "/v1/payment_intents", note: "Current surface on most gateways" },
+    { name: "capture_payment", method: "POST", path: "/v1/payment_intents/{id}/capture", note: "Capture an authorised intent" },
+    { name: "refund_payment", method: "POST", path: "/v1/refunds", note: "Full or partial refund" },
+    { name: "get_payment", method: "GET", path: "/v1/payment_intents/{id}", note: "Read one payment" },
+  ],
+  TAX_PROVIDER: [
+    { name: "calculate_tax", method: "POST", path: "/v1/tax/calculate", note: "Quote tax for a transaction" },
+    { name: "commit_tax", method: "POST", path: "/v1/tax/commit", note: "Commit a calculated document" },
+  ],
+  KYC_VENDOR: [
+    { name: "submit_verification", method: "POST", path: "/v1/verifications", note: "Open a verification case" },
+    { name: "get_verification", method: "GET", path: "/v1/verifications/{id}", note: "Poll case outcome" },
+  ],
+  MOBILE_MONEY: [
+    { name: "request_payment", method: "POST", path: "/v1/collections", note: "Collect from a wallet" },
+    { name: "disbursement", method: "POST", path: "/v1/disbursements", note: "Pay out to a wallet" },
+  ],
+  ESIM_RSP: [
+    { name: "download_profile", method: "POST", path: "/v1/profiles/download", note: "ES2+ profile download" },
+    { name: "enable_profile", method: "POST", path: "/v1/profiles/{id}/enable", note: "Enable an installed profile" },
+  ],
+};
+
+/**
+ * Mirrors capability.ValidatePathTemplate so the reason shows next to the field
+ * instead of arriving as a 422 after Register. The backend remains the authority;
+ * this only saves a round trip.
+ */
+function pathTemplateError(tpl: string): string | null {
+  if (!tpl) return null;
+  if (!tpl.startsWith("/")) return "Must start with / — it is joined onto the connector's base URL.";
+  if (tpl.startsWith("//")) return "Protocol-relative paths would change the target host.";
+  if (tpl.includes("://")) return "An absolute URL would redirect the call away from the connector's base URL.";
+  if (tpl.includes("..")) return "Path traversal is rejected.";
+  if (tpl.includes("\\")) return "Backslashes are normalised to slashes by some proxies and are rejected.";
+  return null;
 }
 
 /* ───────── Quarantine Records Sub-Tab ───────── */
