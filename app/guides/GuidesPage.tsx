@@ -53,13 +53,22 @@ const PLAYBOOKS_DATA: Playbook[] = [
       {
         title: "1. Configure Shadow Mediation Pipeline",
         desc: "Ingest duplicated network telemetry without altering live charging loops. ZoikoNex normalizes raw 3GPP CDRs and writes them to the shadow queue.",
-        codeSnippet: `// ZoikoNex Mediation Shadow Ingestion
-POST /api/v2/mediation/shadow-stream
-Headers: { "X-Zoiko-Tenant": "tenant_live_01", "Authorization": "Bearer zn_sec_..." }
+        codeSnippet: `// Usage ingestion — usage-ingestion-mediation
+POST /v1/usage/ingest
+Headers: { "X-Tenant-ID": "<tenant-id>", "Authorization": "Bearer <token>" }
 Body: {
-  "source_stream": "kafka://cdrs.core.prod:9092/cdr-tap",
-  "replay_mode": "shadow_evaluate",
-  "sample_rate": 1.0
+  "event_id": "00000000-0000-4000-8000-000000000001",
+  "network_element": "MSC-LON-01",
+  "occurred_at": "2026-08-21T10:00:00Z",
+  "events": [
+    {
+      "subscriber_id": "sub-0987",
+      "usage_type": "DATA",
+      "quantity": 42000000,
+      "unit": "BYTES",
+      "start_at": "2026-08-21T09:58:00Z"
+    }
+  ]
 }`,
         codeLang: "json",
       },
@@ -97,14 +106,13 @@ Body: {
       {
         title: "1. Tenant & Brand Hierarchy Definition",
         desc: "Create isolated brand spaces with dedicated currency scales, invoice templates, and support permissions.",
-        codeSnippet: `curl -X POST https://api.zoikonex.com/v2/brands \\
-  -H "Authorization: Bearer zn_admin_token" \\
-  -H "Content-Type: application/json" \\
+        codeSnippet: `curl -X POST https://identity.api.zoikonex.com/v1/brands \
+  -H "Authorization: Bearer <token>" \
+  -H "X-Tenant-ID: <tenant-id>" \
+  -H "Content-Type: application/json" \
   -d '{
-    "brand_name": "NexMobile US",
-    "currency": "USD",
-    "parent_tenant": "org_7721",
-    "jurisdiction_pack": "US-FEDERAL-TAX-2026"
+    "name": "NexMobile US",
+    "code_name": "nexmobile-us"
   }'`,
         codeLang: "bash",
       },
@@ -565,18 +573,18 @@ export default function GuidesPage() {
                 <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs font-mono text-slate-300">
                   <div className="flex items-center gap-2">
                     <Image src="/image/guides/icon-terminal-window.svg" alt="Terminal" width={16} height={16} />
-                    <span className="text-emerald-400 font-bold">POST /v1/rating/sessions/commit</span>
+                    <span className="text-emerald-400 font-bold">POST /v1/prepaid/debit</span>
                   </div>
                   <span className="text-[10px] text-slate-500">cURL · Idempotent</span>
                 </div>
                 <pre className="p-5 text-xs font-mono text-slate-200 overflow-x-auto">
-                  <code>{`curl -X POST https://api.zoikonex.com/v1/rating/sessions/commit \\
-  -H "Authorization: Bearer zn_live_token" \\
-  -H "X-Idempotency-Key: idm_8829141" \\
+                  <code>{`curl -X POST https://rating.api.zoikonex.com/v1/prepaid/debit \
+  -H "Authorization: Bearer <token>" \
+  -H "X-Tenant-ID: <tenant-id>" \
   -d '{
-    "sessionId": "ses_991204a",
-    "consumedUnits": 42000000,
-    "tariffSnapshotId": "sn_2026_q3_v2"
+    "reservation_id": "<id from POST /v1/prepaid/reserve>",
+    "amount": 4200,
+    "evidence_id": "<evidence-id>"
   }'`}</code>
                 </pre>
               </div>
