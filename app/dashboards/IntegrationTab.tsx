@@ -517,6 +517,25 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
 
   const valid = form.connector_name && form.provider_name && form.base_url && form.tenancy_mode && form.brand_id;
 
+  /**
+   * Mirrors onboarding.assertTopologyComplete. The backend reports all seven
+   * field names on failure without saying which is blank, and it only does so at
+   * the activation step — by which point the connector cannot be corrected.
+   */
+  const topologyMissing = (
+    [
+      ["tenancy_mode", form.tenancy_mode],
+      ["funds_flow_mode", form.funds_flow_mode],
+      ["merchant_or_payee_role", form.merchant_or_payee_role],
+      ["regulated_role", form.regulated_role],
+      ["data_processing_role", form.data_processing_role],
+      ["revenue_presentation", form.revenue_presentation],
+      ["arrangement_version", form.arrangement_version],
+    ] as const
+  )
+    .filter(([, v]) => !String(v ?? "").trim())
+    .map(([k]) => k);
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -747,7 +766,43 @@ function AddConnectorModal({ onClose, onDone }: { onClose: () => void; onDone: (
                   <option value="UNDER_REVIEW">Under Review</option>
                 </select>
               </div>
+              {/*
+                arrangement_version was in the payload and in form state but had
+                no field, so it went out as "" on every create. §4.1 counts it as
+                part of a complete topology, and there is no PATCH route for a
+                connector — so every connector made here was permanently unable
+                to pass production activation, and the only symptom was
+                ErrTopologyIncomplete at the activation step, naming seven fields
+                without saying which one was actually blank.
+              */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 mb-1 block">Arrangement Version</label>
+                <input
+                  className="w-full px-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1d64b8]/20 focus:border-[#1d64b8]"
+                  value={form.arrangement_version ?? ""}
+                  placeholder="v1"
+                  onChange={(e) => setForm({ ...form, arrangement_version: e.target.value })}
+                />
+                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  The commercial arrangement this topology was agreed under. Free text — use whatever Legal references.
+                </p>
+              </div>
             </div>
+
+            {/*
+              Said here rather than discovered at activation. These seven are
+              what §4.1 requires before a production activation request, they
+              cannot be changed afterwards (no PATCH route exists), and a
+              connector created without them has to be recreated.
+            */}
+            {topologyMissing.length > 0 && (
+              <div className="mt-4 p-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 leading-relaxed">
+                <strong>Incomplete for production activation.</strong> Still blank:{" "}
+                <span className="font-mono">{topologyMissing.join(", ")}</span>. The connector will still be created
+                and can be activated for testing, but a production activation request will be refused — and these
+                cannot be edited later, so it would have to be recreated.
+              </div>
+            )}
           </div>
         </div>
 
@@ -784,6 +839,54 @@ function ConnectorDetailModal({
   onChanged: () => void;
 }) {
   const [step, setStep] = useState<"credential" | "operations" | "activation">("credential");
+  const qc = useQueryClient();
+
+  /**
+   * The connector's own lifecycle, separate from the §10 activation workflow.
+   *
+   * POST /v1/connectors/{id}/activate is a plain DRAFT|SUSPENDED -> ACTIVE state
+   * change with no approvals and no topology check. The governed workflow on the
+   * Activation tab is what produces an auditable production sign-off; this is
+   * what makes a connector callable at all, and the invoke path only ever checks
+   * status == ACTIVE.
+   *
+   * All three routes were registered with no caller, which meant a connector
+   * created here could never be invoked from here: the only activation the UI
+   * offered was the governed one, and that refuses on an incomplete topology
+   * that cannot be corrected afterwards.
+   */
+  const lifecycle = useMutation({
+    mutationFn: ({ action, reason }: { action: "activate" | "suspend" | "retire"; reason?: string }) =>
+      api.post("integration", `/v1/connectors/${connector.connector_id}/${action}`, reason ? { reason } : {}),
+    onSuccess: (_r, v) => {
+      toast.success(
+        v.action === "activate"
+          ? "Connector is ACTIVE — certified operations can now be invoked"
+          : `Connector ${v.action}d`,
+      );
+      qc.invalidateQueries({ queryKey: ["integration", "connectors"] });
+      onChanged();
+    },
+    onError: (e) => toast.error(errMessage(e, "The state change was rejected")),
+  });
+
+  const confirmLifecycle = (action: "activate" | "suspend" | "retire") => {
+    if (action === "activate") return lifecycle.mutate({ action });
+    const verb = action === "suspend" ? "Suspend" : "Retire";
+    const extra =
+      action === "retire"
+        ? " Retiring is terminal — the connector cannot be reactivated."
+        : " In-flight calls will start failing.";
+    const reason = window.prompt(`${verb} ${connector.connector_name}?${extra}
+
+Reason:`);
+    if (reason === null) return;
+    if (!reason.trim()) {
+      toast.error("A reason is required.");
+      return;
+    }
+    lifecycle.mutate({ action, reason: reason.trim() });
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -816,6 +919,46 @@ function ConnectorDetailModal({
             <div>
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Base URL</div>
               <div className="font-mono text-xs text-slate-700 mt-0.5 truncate">{connector.base_url || "—"}</div>
+            </div>
+          </div>
+
+          {/* Connector lifecycle — plain state changes, no approvals involved. */}
+          <div className="flex items-center justify-between gap-3 flex-wrap p-3.5 bg-white border border-slate-200 rounded-xl">
+            <p className="text-slate-600 leading-relaxed flex-1 min-w-[260px]">
+              {connector.status === "ACTIVE"
+                ? "Certified operations on this connector can be invoked."
+                : connector.status === "RETIRED"
+                  ? "Retired connectors cannot be reactivated."
+                  : "A connector must be ACTIVE before any operation can be invoked. This is a state change only — the Activation tab is where a production sign-off is recorded."}
+            </p>
+            <div className="flex gap-2 shrink-0">
+              {(connector.status === "DRAFT" || connector.status === "SUSPENDED") && (
+                <button
+                  onClick={() => confirmLifecycle("activate")}
+                  disabled={lifecycle.isPending}
+                  className="px-3 py-1.5 bg-[#1d64b8] hover:bg-[#154e93] disabled:opacity-50 text-white font-bold text-[11px] rounded-lg transition cursor-pointer"
+                >
+                  {lifecycle.isPending ? "Working…" : "Activate"}
+                </button>
+              )}
+              {connector.status === "ACTIVE" && (
+                <button
+                  onClick={() => confirmLifecycle("suspend")}
+                  disabled={lifecycle.isPending}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-bold text-[11px] rounded-lg transition cursor-pointer"
+                >
+                  Suspend
+                </button>
+              )}
+              {connector.status !== "RETIRED" && (
+                <button
+                  onClick={() => confirmLifecycle("retire")}
+                  disabled={lifecycle.isPending}
+                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-[11px] rounded-lg transition cursor-pointer"
+                >
+                  Retire
+                </button>
+              )}
             </div>
           </div>
 
