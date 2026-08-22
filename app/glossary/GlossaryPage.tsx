@@ -5,26 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Search,
-  BookOpen,
-  ArrowRight,
-  Shield,
-  Layers,
-  FileText,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Database,
-  Lock,
-  Cpu,
-  Sparkles,
-  GitBranch,
-  Copy,
   Check,
+  Copy,
   Plus,
   Minus,
+  ArrowRight,
 } from "lucide-react";
 
 interface SeedTerm {
@@ -54,7 +39,7 @@ const SEED_TERMS: SeedTerm[] = [
     num: "01",
     name: "Governed Monetization",
     shortDef: "Every charge, rate and revenue rule traces to an approved, versioned source of truth.",
-    categoryBadge: "ZOIKONEX FRAMEWORK",
+    categoryBadge: "ZoikoNex framework",
     quote: "A monetization approach where every charge, rate, and revenue rule is traceable to an approved, versioned source of truth.",
     expandedExplanation: "Rather than logic embedded ad hoc across billing systems, every pricing decision — from a rate card change to a one-time discount — is issued from a single controlled source, reviewed before it takes effect, and recorded so it can be reconstructed later.",
     scope: "Applies platform-wide across ZoikoNex charging, rating and billing modules. Does not describe a specific pricing model, tax treatment, or jurisdictional rule set.",
@@ -66,7 +51,7 @@ const SEED_TERMS: SeedTerm[] = [
     zoikoContext: "Governed Monetization is the framework the Unified Revenue Ledger and Governed Rate Card enforce operationally — see Related below.",
     authority: "ZoikoNex framework",
     currentness: "Current",
-    scopeTag: "#Platform-wide",
+    scopeTag: "Platform-wide",
     broader: "Revenue Governance",
     narrower: "Governed Rate Card",
     usedBy: "Unified Revenue Ledger",
@@ -78,8 +63,8 @@ const SEED_TERMS: SeedTerm[] = [
     num: "02",
     name: "Sovereign OSS/BSS",
     shortDef: "OSS/BSS deployed and controlled entirely within a defined jurisdiction's boundary.",
-    categoryBadge: "ARCHITECTURAL CONCEPT",
-    quote: "Operational and Business Support Systems deployed, managed, and audited completely within a sovereign geographic and legal perimeter.",
+    categoryBadge: "ZoikoNex framework",
+    quote: "OSS/BSS deployed, managed, and audited completely within a sovereign geographic and legal perimeter.",
     expandedExplanation: "Ensures subscriber personal identifiable information (PII), Call Detail Records (CDRs), and taxation transactions never leave designated national boundaries without cryptographic verification and regulatory sign-off.",
     scope: "Applies to sovereign cloud deployments, multi-tenant telecom partitions, and private operator instances.",
     whatItIsNot: [
@@ -90,7 +75,7 @@ const SEED_TERMS: SeedTerm[] = [
     zoikoContext: "Sovereign OSS/BSS enables multi-jurisdiction telecom operations while remaining 100% compliant with local data residency mandates.",
     authority: "Regulatory / legal / tax",
     currentness: "Current",
-    scopeTag: "#Sovereign-deployments",
+    scopeTag: "Sovereign-deployments",
     broader: "Telecom Architecture",
     narrower: "Jurisdiction Pack",
     usedBy: "Sovereign Core Module",
@@ -102,7 +87,7 @@ const SEED_TERMS: SeedTerm[] = [
     num: "03",
     name: "Real-time Rating Engine",
     shortDef: "Prices a usage event at the moment it occurs, not in a later batch cycle.",
-    categoryBadge: "CORE CAPABILITY",
+    categoryBadge: "Industry conventional",
     quote: "A low-latency computation service that calculates the exact monetary value of network usage events within sub-200ms SLAs.",
     expandedExplanation: "Evaluates multidimensional rate cards against live usage streams (voice, data slices, API invocations) without external batch dependencies or database locking.",
     scope: "Active across all 3GPP Rel 16/17 CHF/SMF network integrations and CAMARA API gateways.",
@@ -114,7 +99,7 @@ const SEED_TERMS: SeedTerm[] = [
     zoikoContext: "The rating engine calculates price; the charging core validates against subscriber balances and credit policies.",
     authority: "Industry conventional",
     currentness: "Current",
-    scopeTag: "#Sub-200ms-rating",
+    scopeTag: "Sub-200ms-rating",
     broader: "Monetization Core",
     narrower: "Tariff Snapshot",
     usedBy: "Real-time Charging (CHF)",
@@ -126,7 +111,7 @@ const SEED_TERMS: SeedTerm[] = [
     num: "04",
     name: "Slice Billing",
     shortDef: "Meters and charges a single network slice independently of the rest of the plan.",
-    categoryBadge: "5G CAPABILITY",
+    categoryBadge: "External standard",
     quote: "Independent metering, rating, and invoicing for dedicated 5G network slices based on dynamic QoS, bandwidth, and latency guarantees.",
     expandedExplanation: "Enables operators to monetize enterprise SLAs (e.g. low-latency drone control, dedicated video feeds) separately from standard subscriber mobile data plans.",
     scope: "Governs 5G standalone (SA) Network Exposure Function (NEF) and Network Slice Selection Function (NSSF) interfaces.",
@@ -138,7 +123,7 @@ const SEED_TERMS: SeedTerm[] = [
     zoikoContext: "Slice Billing maps network slice instance IDs directly to enterprise contract terms and automated SLA credit rules.",
     authority: "External standard",
     currentness: "Current",
-    scopeTag: "#5G-Network-Slicing",
+    scopeTag: "5G-Network-Slicing",
     broader: "Network Monetization",
     narrower: "QoS Rating Formula",
     usedBy: "Enterprise Invoicing",
@@ -148,14 +133,14 @@ const SEED_TERMS: SeedTerm[] = [
 ];
 
 const DOMAINS = [
-  { name: "Identity / Account", count: "33", desc: "Customer, account and identity vocabulary." },
-  { name: "Catalog / Order", count: "44", desc: "Product, catalog and order concepts." },
-  { name: "Usage / Rating", count: "41", desc: "Mediation, rating and charging terms." },
-  { name: "Billing / Payments", count: "57", desc: "Billing, payments and reconciliation." },
-  { name: "Tax / Jurisdiction", count: "22", desc: "Jurisdictional tax and regulatory terms." },
-  { name: "Voice / Carrier", count: "29", desc: "Voice, ILD and carrier partner terms." },
-  { name: "eSIM / IoT / APIs", count: "37", desc: "eSIM, IoT and network API vocabulary." },
-  { name: "Governance / Evidence", count: "26", desc: "Governance, evidence and AI-boundary terms." },
+  { name: "Identity / Account", count: 38, desc: "Customer, account and identity vocabulary." },
+  { name: "Catalog / Order", count: 44, desc: "Product, catalog and order concepts." },
+  { name: "Usage / Rating", count: 61, desc: "Mediation, rating and charging terms." },
+  { name: "Billing / Payments", count: 57, desc: "Billing, payments and reconciliation." },
+  { name: "Tax / Jurisdiction", count: 22, desc: "Jurisdictional tax and regulatory terms." },
+  { name: "Voice / Carrier", count: 29, desc: "Voice, ILD and carrier partner terms." },
+  { name: "eSIM / IoT / APIs", count: 33, desc: "eSIM, IoT and network API vocabulary." },
+  { name: "Governance / Evidence", count: 26, desc: "Governance, evidence and AI-boundary terms." },
 ];
 
 const ROLES = [
@@ -170,12 +155,12 @@ const ROLES = [
 
 const AUTHORITY_TYPES = [
   { title: "External standard", desc: "Defined by a recognized external standards body." },
-  { title: "Industry conventional", desc: "Common usage across telecom, without a single owning body." },
+  { title: "Industry conventional", desc: "Common usage across telecoms, without a single owning body." },
   { title: "Regulatory / legal / tax", desc: "Defined by a regulator, statute or tax authority." },
   { title: "ZoikoNex framework", desc: "A ZoikoNex category or architectural concept." },
   { title: "ZoikoNex product", desc: "The name of a specific ZoikoNex product or module." },
   { title: "Acronym", desc: "An expansion of an existing approved term." },
-  { title: "Legacy / deprecated", desc: "Superseded — retained for search and history-only." },
+  { title: "Legacy / deprecated", desc: "Superseded — retained for search and history only." },
 ];
 
 const FAQS = [
@@ -185,151 +170,158 @@ const FAQS = [
   },
   {
     q: "Does it replace Documentation or API Reference?",
-    a: "No. The glossary defines concept vocabulary and architectural boundaries. API endpoints, data models, schemas, and integration guides are canonical in our official Documentation and API Reference.",
+    a: "No. API Reference and Documentation remain canonical for technical implementation, schemas, and endpoints. The glossary defines concept vocabulary and governance boundaries.",
   },
   {
     q: "Are all terms industry standards?",
-    a: "No. Every term explicitly states its authority type: External Standard (e.g. 3GPP, TM Forum), Industry Conventional, Regulatory / Tax, or ZoikoNex Framework.",
+    a: "No. Every term is explicitly tagged with its authority level: External standard (e.g. 3GPP/TM Forum), Industry conventional, Regulatory/legal/tax, or ZoikoNex framework/product.",
   },
   {
     q: "How are definitions reviewed?",
-    a: "Definitions follow a 6-step lifecycle: Source → Review → Approve → Publish → Monitor → Update/Supersede. All public definitions require human approval and verifiable citations.",
+    a: "Definitions follow a 6-stage lifecycle: Source → Review → Approve → Publish → Monitor → Update/Supersede. All public terms require human approval.",
   },
   {
     q: "How do I know a definition is current?",
-    a: "Each definition displays its currentness status (Current, Review Due, or Superseded) along with the date of last review and the next scheduled review cycle.",
+    a: "Each term displays its currentness status (Current, Updated, or Superseded) along with the review date and scheduled next review cycle.",
   },
   {
     q: "What happens when a term has multiple meanings?",
-    a: "ZoikoNex never merges collision terms silently. Homonyms (like 'Usage Rating' vs 'Service Rating') open a disambiguation panel with explicit domain scopes.",
+    a: "Collisions are never merged silently. The search interface opens a disambiguation panel showing explicit domain context and distinct definitions.",
   },
   {
     q: "Can I search acronyms and aliases?",
-    a: "Yes. The search index supports acronyms (e.g. GRC, CHF, USF, CDR) and approved aliases, routing you directly to the canonical definition.",
+    a: "Yes. Acronym expansions and historical aliases are mapped to canonical records with visible matched-alias badges.",
   },
   {
     q: "Does AI publish definitions?",
-    a: "No. While AI may assist in drafting or collision detection during internal review, every public record requires sign-off from a named domain editor.",
+    a: "No. While AI may assist internal drafting, no definition goes live without human editorial sign-off and linked source evidence.",
   },
   {
     q: "Where should developers go?",
-    a: "Developers should follow the 'Continue to' links on any term to jump directly into the relevant API Reference endpoints, SDK guides, or code examples.",
+    a: "Developers should consult the API Reference and Developer Portal for endpoints, authentication, webhooks, and SDKs.",
   },
   {
     q: "Can definitions be jurisdiction-specific?",
-    a: "Yes. Tax and compliance terms (such as USF, GST/PST, or VAT rules) specify their applicable geographic and legal jurisdictions in the scope metadata.",
+    a: "Yes. Tax and regulatory terminology highlights specific jurisdictional scope and applicable legal frameworks.",
   },
 ];
 
 export default function GlossaryPage() {
   const [selectedSeed, setSelectedSeed] = useState<SeedTerm>(SEED_TERMS[0]);
-  const [copied, setCopied] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("Executive");
+  const [selectedRole, setSelectedRole] = useState<string>("Executive");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("gov");
 
   const handleCopyLink = () => {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(`${window.location.origin}/glossary#${selectedSeed.id}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
-    <div className="w-full bg-[#EEF2F7] text-slate-900 min-h-screen">
-      {/* 1. HERO SECTION (Dark Navy `#08182B`) */}
+    <div className="w-full bg-white text-slate-900 min-h-screen font-['Plus_Jakarta_Sans']">
+      {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden bg-[#08182B] text-white pt-16 pb-20 lg:pt-24 lg:pb-28">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(56,189,248,0.12),transparent_55%)] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(30,58,138,0.4),transparent_60%)] pointer-events-none" />
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="inline-flex items-center gap-2 text-sky-400 font-semibold text-xs uppercase tracking-wider">
-                <span className="w-4 h-[2px] bg-sky-400 inline-block" />
+              <div className="inline-flex items-center gap-2 text-blue-300 font-medium text-xs uppercase tracking-widest font-['IBM_Plex_Mono']">
+                <span className="w-4 h-px bg-blue-300 inline-block" />
                 REFERENCE / GLOSSARY
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
-                Telecom monetization terms, defined precisely.
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white leading-[54px]">
+                Telecom monetization<br />
+                terms, defined<br />
+                precisely.
               </h1>
 
-              <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed">
-                A governed reference for language across charging, rating, billing, tax, payments,
-                OSS/BSS, governance, APIs, evidence and modern telecom operations.
+              <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-7">
+                A governed reference for language across charging, rating, billing,<br className="hidden sm:inline" />
+                tax, payments, OSS/BSS, governance, APIs, evidence and modern<br className="hidden sm:inline" />
+                telecom operations.
               </p>
 
-              {/* CTAs */}
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <Link
-                  href="/contact-us"
-                  className="px-6 py-3.5 rounded-md bg-[#63B233] hover:bg-[#549c29] text-white font-semibold transition-all duration-200 text-sm shadow-md inline-flex items-center gap-2"
+                  href="/request-a-demo"
+                  className="px-6 py-3.5 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold transition-all text-base inline-flex items-center gap-2 shadow-[0px_2px_12px_0px_rgba(43,126,193,0.30)] cursor-pointer"
                 >
-                  Request a Demo →
+                  Request a Demo
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
-                  href="/documentation"
-                  className="px-6 py-3.5 rounded-md bg-white hover:bg-slate-100 text-slate-900 font-semibold transition-all duration-200 text-sm shadow-md"
+                  href="/platform-architecture"
+                  className="px-6 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-gray-900 font-semibold transition-all text-base border border-slate-300 cursor-pointer"
                 >
                   View Platform Architecture
                 </Link>
               </div>
             </div>
 
-            {/* Right Terminal / Search Preview Widget */}
+            {/* Right Interactive Search Terminal Box */}
             <div className="lg:col-span-6 w-full">
-              <div className="rounded-2xl bg-[#061424] border border-slate-700/80 p-5 sm:p-6 shadow-2xl space-y-4 text-xs font-mono">
-                {/* Header bar */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-[11px] text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+              <div className="rounded-2xl bg-slate-900 shadow-[0px_30px_60px_-20px_rgba(0,0,0,0.50)] border border-cyan-900/60 overflow-hidden">
+                {/* Search Bar Top */}
+                <div className="px-4 py-3 border-b border-blue-950 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-cyan-900 rounded-xs" />
+                    <div className="w-2 h-2 bg-cyan-900 rounded-xs" />
+                    <div className="w-2 h-2 bg-cyan-900 rounded-xs" />
+                  </div>
+                  <div className="text-slate-500 text-xs font-['IBM_Plex_Mono']">
+                    /glossary — search
+                  </div>
+                </div>
+
+                {/* Search input + results */}
+                <div className="p-4 space-y-3">
+                  <div className="h-10 px-3 bg-slate-900 rounded-lg border border-blue-950 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-slate-500" />
+                    <span className="text-slate-300 text-xs font-normal">gov</span>
+                    <span className="w-0.5 h-4 bg-blue-500 animate-pulse" />
+                  </div>
+
+                  {/* Active Match Card */}
+                  <div className="p-4 bg-sky-950 rounded-xl border border-blue-500 space-y-2">
+                    <div className="text-white text-base font-semibold">
+                      Governed Monetization
+                    </div>
+                    <p className="text-slate-400 text-xs leading-5">
+                      A monetization approach where every charge, rate, and revenue rule traces to an approved, versioned source of truth.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <span className="px-2 py-0.5 bg-indigo-500/20 text-violet-300 rounded-full border border-indigo-500/30 text-[10px] font-medium font-['IBM_Plex_Mono']">
+                        ZoikoNex framework
+                      </span>
+                      <span className="px-2 py-0.5 bg-emerald-600/20 text-emerald-300 rounded-full border border-emerald-600/30 text-[10px] font-medium font-['IBM_Plex_Mono']">
+                        Current
+                      </span>
+                      <span className="px-2 py-0.5 bg-blue-950 text-slate-400 rounded-full border border-cyan-900 text-[10px] font-medium font-['IBM_Plex_Mono']">
+                        Platform-wide
+                      </span>
                     </div>
                   </div>
-                  <span className="text-slate-500">zkx-glossary-query</span>
-                </div>
 
-                {/* Search Input Simulation */}
-                <div className="flex items-center gap-2 bg-[#0B1E34] px-3.5 py-2 rounded-lg border border-slate-700 text-slate-200 text-xs">
-                  <Search className="w-3.5 h-3.5 text-sky-400" />
-                  <span className="font-semibold text-white">gov</span>
-                  <span className="w-1.5 h-3.5 bg-sky-400 animate-pulse" />
-                </div>
-
-                {/* Match 1 — Governed Monetization */}
-                <div className="p-3.5 rounded-xl bg-[#0B1E34] border border-sky-500/40 space-y-2 text-slate-300">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-xs">Governed Monetization</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
-                      Current
-                    </span>
+                  {/* Match 2 */}
+                  <div className="p-3.5 bg-slate-900 rounded-xl border border-blue-950 space-y-1">
+                    <div className="text-white text-sm font-semibold">Governed Rate Card</div>
+                    <div className="text-orange-300 text-xs font-['IBM_Plex_Mono']">
+                      Matched alias: &quot;Rate governance&quot;
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
-                    A monetization approach where every charge, rate, and revenue rule traces to an
-                    approved, versioned source of truth.
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-[10px]">
-                    <span className="px-2 py-0.5 rounded bg-[#102A45] text-sky-300">
-                      ZoikoNex framework
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                      #Platform-wide
-                    </span>
-                  </div>
-                </div>
 
-                {/* Match 2 — Governed Rate Card */}
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-300 space-y-1">
-                  <div className="font-bold text-white text-xs">Governed Rate Card</div>
-                  <div className="text-[10px] text-slate-400">
-                    Matched alias: &quot;Rate governance&quot;
-                  </div>
-                </div>
-
-                {/* Match 3 — Governance Lifecycle */}
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-300 space-y-1">
-                  <div className="font-bold text-white text-xs">Governance Lifecycle</div>
-                  <div className="text-[10px] text-slate-400">
-                    Source → Review → Approve → Publish → Monitor → Update.
+                  {/* Match 3 */}
+                  <div className="p-3.5 bg-slate-900 rounded-xl border border-blue-950 space-y-1">
+                    <div className="text-white text-sm font-semibold">Governance Lifecycle</div>
+                    <div className="text-slate-400 text-xs">
+                      Source → Review → Approve → Publish → Monitor → Update.
+                    </div>
                   </div>
                 </div>
               </div>
@@ -338,113 +330,95 @@ export default function GlossaryPage() {
         </div>
       </section>
 
-      {/* 2. GLOSSARY TRUST CONTRACT — Know what you can rely on */}
+      {/* 2. GLOSSARY TRUST CONTRACT */}
       <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-12">
-            {/* Left Description */}
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-12">
+          {/* Top text + photo grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            {/* Left text */}
             <div className="lg:col-span-7 space-y-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                — GLOSSARY TRUST CONTRACT
+              <div className="inline-flex items-center gap-2 text-blue-500 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+                <span className="w-4 h-px bg-blue-500 inline-block" />
+                Glossary trust contract
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                Know what you can rely on before you rely on it.
+              <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-10">
+                Know what you can rely on<br />
+                before you rely on it.
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Every visible definition carries controlled authority, visible scope, a currentness state
-                and an editorial owner. Corrections run through governed review — nothing here
-                overrides API Reference, product documentation, standards, contracts or regulatory
-                authority.
+              <p className="text-base text-gray-500 leading-6 max-w-xl">
+                Every visible definition carries controlled authority, visible scope, a currentness state and an editorial owner. Corrections run through governed review — nothing here overrides API Reference, product documentation, standards, contracts or regulatory authority.
               </p>
             </div>
 
-            {/* Right Photo (`glossary-hero.jpg`) */}
-            <div className="lg:col-span-5 w-full">
-              <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200">
-                <div className="relative h-64 sm:h-72 w-full">
-                  <Image
-                    src="/image/glossary/glossary-hero.jpg"
-                    alt="Editorial review and terminology governance"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 p-2.5 rounded-lg bg-slate-950/80 backdrop-blur-md text-white text-[11px] font-mono border border-slate-700/60">
-                    registry_state: reviewed → approved → published
-                  </div>
-                </div>
+            {/* Right Photo: glossary-tax.png */}
+            <div className="lg:col-span-5 relative rounded-2xl overflow-hidden shadow-xl h-72">
+              <Image
+                src="/image/glossary/glossary-tax.png"
+                alt="Glossary trust contract verification"
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute bottom-4 left-4 right-4 z-10 text-white text-xs font-['IBM_Plex_Mono'] tracking-tight">
+                registry_state: reviewed → approved → published
               </div>
             </div>
           </div>
 
-          {/* 5 Classification Tier Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="p-4 rounded-xl bg-[#EEF2F7] border border-slate-200 space-y-1.5 shadow-xs">
-              <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-xs">
-                <CheckCircle2 className="w-4 h-4" />
+          {/* Bottom 5 Trust Contract Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              {
+                title: "Reviewed definitions",
+                desc: "Human review and approved source evidence, always.",
+              },
+              {
+                title: "Scope shown",
+                desc: "Jurisdiction, version and domain limits stated plainly.",
+              },
+              {
+                title: "Currentness shown",
+                desc: "Current, updated, or superseded — never ambiguous.",
+              },
+              {
+                title: "Authority preserved",
+                desc: "Standards and canonical sources stay authoritative.",
+              },
+              {
+                title: "No fabricated answers",
+                desc: "No match means approved alternatives — never an invented one.",
+              },
+            ].map((card, i) => (
+              <div
+                key={i}
+                className="p-4 bg-slate-100/80 rounded-xl border border-gray-200 space-y-2"
+              >
+                <div className="w-4 h-4 text-blue-500 flex items-center justify-center">
+                  <div className="w-3.5 h-3.5 border border-blue-500 rounded-xs flex items-center justify-center">
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full inline-block" />
+                  </div>
+                </div>
+                <div className="text-zinc-900 text-sm font-bold leading-5">{card.title}</div>
+                <p className="text-gray-500 text-xs leading-5">{card.desc}</p>
               </div>
-              <h3 className="text-xs font-bold text-slate-900">Reviewed definitions</h3>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Human review and approved source evidence, always.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#EEF2F7] border border-slate-200 space-y-1.5 shadow-xs">
-              <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-xs">
-                <Layers className="w-4 h-4" />
-              </div>
-              <h3 className="text-xs font-bold text-slate-900">Scope shown</h3>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Jurisdiction, version and domain limits stated plainly.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#EEF2F7] border border-slate-200 space-y-1.5 shadow-xs">
-              <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-xs">
-                <FileText className="w-4 h-4" />
-              </div>
-              <h3 className="text-xs font-bold text-slate-900">Currentness shown</h3>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Current, updated, or superseded — never ambiguous.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#EEF2F7] border border-slate-200 space-y-1.5 shadow-xs">
-              <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-xs">
-                <Shield className="w-4 h-4" />
-              </div>
-              <h3 className="text-xs font-bold text-slate-900">Authority preserved</h3>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Standards and canonical sources stay authoritative.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#EEF2F7] border border-slate-200 space-y-1.5 shadow-xs">
-              <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-xs">
-                <AlertCircle className="w-4 h-4" />
-              </div>
-              <h3 className="text-xs font-bold text-slate-900">No fabricated answers</h3>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                No match means approved alternatives — never an invented one.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 3. PRIORITY TERMS + TERM DETAIL — The four evidence-backed seed terms */}
-      <section className="py-16 sm:py-20 bg-[#EEF2F7] border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      {/* 3. PRIORITY TERMS + TERM DETAIL */}
+      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-8">
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              — PRIORITY TERMS + TERM DETAIL
+            <div className="inline-flex items-center gap-2 text-blue-500 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+              <span className="w-4 h-px bg-blue-500 inline-block" />
+              Priority terms + term detail
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-10">
               The four evidence-backed seed terms
             </h2>
-            <p className="text-sm text-slate-600 max-w-2xl">
-              Priority Terms surface only the evidence-backed seed set or approved registry records —
-              never a generated placeholder.
+            <p className="text-base text-gray-500 leading-6 max-w-xl">
+              Priority Terms surface only the evidence-backed seed set or approved registry records — never a generated placeholder.
             </p>
           </div>
 
@@ -456,66 +430,69 @@ export default function GlossaryPage() {
                 <div
                   key={term.id}
                   onClick={() => setSelectedSeed(term)}
-                  className={`p-5 rounded-2xl bg-white border cursor-pointer transition-all duration-200 space-y-2 ${
+                  className={`p-5 rounded-xl border cursor-pointer transition-all ${
                     isSelected
-                      ? "border-blue-600 shadow-md ring-2 ring-blue-600/20"
-                      : "border-slate-200 hover:border-slate-300 shadow-xs"
+                      ? "bg-white border-blue-500 shadow-md ring-1 ring-blue-500"
+                      : "bg-neutral-100 border-gray-200 hover:bg-neutral-200/60"
                   }`}
                 >
-                  <div className="text-[10px] font-bold text-slate-400 font-mono">{term.num}</div>
-                  <h3 className="text-sm font-bold text-slate-900">{term.name}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{term.shortDef}</p>
+                  <div className="text-zinc-400 text-xs font-['IBM_Plex_Mono'] mb-1">{term.num}</div>
+                  <div className="text-zinc-900 text-base font-semibold leading-6 mb-1.5">{term.name}</div>
+                  <p className="text-gray-500 text-xs leading-5">{term.shortDef}</p>
                 </div>
               );
             })}
           </div>
 
-          {/* Expanded Dictionary Detail Card for Selected Seed */}
-          <div className="rounded-2xl bg-white border border-slate-200 shadow-lg p-6 sm:p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Active Detail Inspection Card */}
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-[0px_24px_48px_-30px_rgba(20,30,50,0.22)] overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
               {/* Left 8 cols: Definition Details */}
-              <div className="lg:col-span-8 space-y-6">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">{selectedSeed.name}</h3>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+              <div className="lg:col-span-8 p-8 sm:p-10 space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-zinc-900">
+                    {selectedSeed.name}
+                  </h3>
+                  <span className="px-2.5 py-1 bg-violet-100 text-indigo-600 rounded-full text-xs font-['IBM_Plex_Mono'] uppercase tracking-wide">
                     {selectedSeed.categoryBadge}
                   </span>
                 </div>
 
-                {/* Quote definition callout */}
-                <div className="p-4 rounded-xl bg-blue-50/50 border-l-4 border-blue-600 text-sm font-medium text-slate-800 leading-relaxed">
-                  {selectedSeed.quote}
+                <div className="pl-4 border-l-[3px] border-blue-500 py-1">
+                  <p className="text-zinc-900 text-lg leading-7">
+                    {selectedSeed.quote}
+                  </p>
                 </div>
 
                 {/* Expanded Explanation */}
                 <div className="space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    EXPANDED EXPLANATION
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    Expanded explanation
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="text-gray-500 text-sm leading-6">
                     {selectedSeed.expandedExplanation}
                   </p>
                 </div>
 
                 {/* Scope */}
                 <div className="space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    SCOPE
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    Scope
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="text-gray-500 text-sm leading-6">
                     {selectedSeed.scope}
                   </p>
                 </div>
 
-                {/* What It Is Not */}
+                {/* What it is not */}
                 <div className="space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    WHAT IT IS NOT
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    What it is not
                   </div>
                   <div className="space-y-1.5">
                     {selectedSeed.whatItIsNot.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                        <span className="text-rose-500 font-bold">✕</span>
+                      <div key={i} className="flex items-start gap-2.5 text-sm text-gray-500">
+                        <span className="text-red-500 font-bold">✕</span>
                         <span>{item}</span>
                       </div>
                     ))}
@@ -524,92 +501,94 @@ export default function GlossaryPage() {
 
                 {/* ZoikoNex Context */}
                 <div className="space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    ZOIKONEX CONTEXT
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    ZoikoNex context
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="text-gray-500 text-sm leading-6">
                     {selectedSeed.zoikoContext}
                   </p>
                 </div>
 
-                {/* Copy Link Action */}
+                {/* Copy Link Button */}
                 <div className="pt-2">
                   <button
                     onClick={handleCopyLink}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-200 text-blue-500 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-blue-500" />}
                     <span>{copied ? "Copied link to clipboard" : `Copy link to ${selectedSeed.name}`}</span>
                   </button>
                 </div>
               </div>
 
-              {/* Right 4 cols: Authority, Relationships & Next Links */}
-              <div className="lg:col-span-4 bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-6 text-xs">
+              {/* Right 4 cols: Authority & Metadata */}
+              <div className="lg:col-span-4 p-6 sm:p-8 bg-neutral-100 space-y-6 text-xs">
                 {/* Authority & State */}
                 <div className="space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    AUTHORITY & STATE
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    Authority &amp; state
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-2 py-1 bg-violet-100 text-indigo-600 rounded-full border border-violet-200 font-['IBM_Plex_Mono'] text-xs">
                       {selectedSeed.authority}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 font-['IBM_Plex_Mono'] text-xs">
                       {selectedSeed.currentness}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px]">
+                    <span className="px-2 py-1 bg-white text-gray-500 rounded-full border border-gray-200 font-['IBM_Plex_Mono'] text-xs">
                       {selectedSeed.scopeTag}
                     </span>
                   </div>
                 </div>
 
                 {/* Relationships */}
-                <div className="space-y-3 pt-3 border-t border-slate-200">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    RELATIONSHIPS
+                <div className="space-y-3 pt-3 border-t border-gray-200">
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    Relationships
                   </div>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Broader:</span>
-                      <div className="text-slate-900 font-semibold">{selectedSeed.broader}</div>
+                  <div className="space-y-2.5 divide-y divide-gray-200">
+                    <div className="pt-1">
+                      <div className="text-zinc-400 text-[10px] uppercase font-['IBM_Plex_Mono']">Broader</div>
+                      <div className="text-zinc-900 font-semibold text-xs mt-0.5">{selectedSeed.broader}</div>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Narrower:</span>
-                      <div className="text-slate-900 font-semibold">{selectedSeed.narrower}</div>
+                    <div className="pt-2">
+                      <div className="text-zinc-400 text-[10px] uppercase font-['IBM_Plex_Mono']">Narrower</div>
+                      <div className="text-zinc-900 font-semibold text-xs mt-0.5">{selectedSeed.narrower}</div>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Used By:</span>
-                      <div className="text-slate-900 font-semibold">{selectedSeed.usedBy}</div>
+                    <div className="pt-2">
+                      <div className="text-zinc-400 text-[10px] uppercase font-['IBM_Plex_Mono']">Used by</div>
+                      <div className="text-zinc-900 font-semibold text-xs mt-0.5">{selectedSeed.usedBy}</div>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Contrasts With:</span>
-                      <div className="text-slate-900 font-semibold">{selectedSeed.contrastsWith}</div>
+                    <div className="pt-2">
+                      <div className="text-zinc-400 text-[10px] uppercase font-['IBM_Plex_Mono']">Contrasts with</div>
+                      <div className="text-zinc-900 font-semibold text-xs mt-0.5">{selectedSeed.contrastsWith}</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Source / Currentness */}
-                <div className="space-y-1.5 pt-3 border-t border-slate-200 text-[11px] text-slate-500">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    SOURCE / CURRENTNESS
+                <div className="space-y-1 pt-3 border-t border-gray-200">
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    Source / currentness
                   </div>
-                  <p className="leading-relaxed">{selectedSeed.sourceReviewed}</p>
+                  <p className="text-gray-500 text-xs leading-5">
+                    {selectedSeed.sourceReviewed}
+                  </p>
                 </div>
 
                 {/* Continue To Links */}
-                <div className="space-y-2 pt-3 border-t border-slate-200">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    CONTINUE TO
+                <div className="space-y-2 pt-3 border-t border-gray-200">
+                  <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    Continue to
                   </div>
-                  <div className="space-y-1 text-[11px]">
-                    <Link href="/platform" className="block text-blue-600 hover:underline font-semibold">
+                  <div className="space-y-1.5 text-xs">
+                    <Link href="/platform" className="block text-blue-500 font-semibold hover:underline">
                       Platform → Revenue Governance
                     </Link>
-                    <Link href="/guides" className="block text-blue-600 hover:underline font-semibold">
+                    <Link href="/guides" className="block text-blue-500 font-semibold hover:underline">
                       Documentation → Rate Card Guide
                     </Link>
-                    <Link href="/api-reference" className="block text-blue-600 hover:underline font-semibold">
+                    <Link href="/api-reference" className="block text-blue-500 font-semibold hover:underline">
                       API Reference → Charging endpoints
                     </Link>
                   </div>
@@ -620,78 +599,71 @@ export default function GlossaryPage() {
         </div>
       </section>
 
-      {/* 4. BROWSE BY TELECOM DOMAIN + ROLE (Dark Navy `#08182B`) */}
-      <section className="py-16 sm:py-20 bg-[#08182B] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      {/* 4. BROWSE BY TELECOM DOMAIN + ROLE */}
+      <section className="py-16 sm:py-20 bg-slate-900 text-white">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-10">
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-sky-400">
-              — BROWSE BY TELECOM DOMAIN + ROLE
+            <div className="inline-flex items-center gap-2 text-blue-300 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+              <span className="w-4 h-px bg-blue-300 inline-block" />
+              Browse by telecom domain + role
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white leading-10">
               Discover vocabulary without needing the exact term
             </h2>
-            <p className="text-sm text-slate-300 max-w-2xl">
-              Role tags are editorial relevance only — never behavioral profiling. A term can belong to
-              several domains while keeping one canonical record.
+            <p className="text-base text-slate-400 leading-6 max-w-xl">
+              Role tags are editorial relevance only — never behavioral profiling. A term can belong to several domains while keeping one canonical record.
             </p>
           </div>
 
-          {/* Main Domain Split: Photo on left + 8 Domain Cards on right */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Photo (`glossary-esim.png`) */}
-            <div className="lg:col-span-5 w-full">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-950">
-                <div className="relative h-80 sm:h-96 w-full">
-                  <Image
-                    src="/image/glossary/glossary-esim.png"
-                    alt="Domain vocabulary and taxonomy discovery"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4 p-3 rounded-xl bg-slate-950/85 backdrop-blur-md text-white text-xs border border-slate-700/60">
-                    <div className="text-[10px] text-sky-400 font-mono">18 registry domains</div>
-                    <div className="font-semibold mt-0.5">One canonical record, many entry points</div>
-                  </div>
+          {/* Split: Photo on Left (glossary-governance.png) + 8 Domain Cards on Right */}
+          <div className="rounded-2xl border border-blue-950 bg-slate-900 overflow-hidden shadow-2xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+              {/* Left Photo (glossary-governance.png) */}
+              <div className="lg:col-span-5 relative min-h-[320px] lg:min-h-[400px]">
+                <Image
+                  src="/image/glossary/glossary-governance.png"
+                  alt="Browse by domain"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/20 to-slate-950/90" />
+                <div className="absolute bottom-6 left-6 right-6 z-10 space-y-1">
+                  <div className="text-slate-400 text-xs font-['IBM_Plex_Mono'] tracking-wide">10 registry domains</div>
+                  <div className="text-white text-lg font-semibold leading-7">One canonical record, many entry points</div>
                 </div>
               </div>
-            </div>
 
-            {/* Right 8 Domain Grid */}
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {DOMAINS.map((dom, i) => (
-                <div
-                  key={i}
-                  className="p-4 rounded-xl bg-[#0F243A] border border-slate-700 hover:border-sky-500/60 transition-colors space-y-1 group cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white group-hover:text-sky-300 transition-colors">
-                      {dom.name}
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-sky-400 bg-slate-900 px-2 py-0.5 rounded">
+              {/* Right 8 Domain Rows */}
+              <div className="lg:col-span-7 p-6 bg-blue-950/60 divide-y divide-slate-800/80">
+                {DOMAINS.map((dom, i) => (
+                  <div key={i} className="py-3.5 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-white text-sm font-bold">{dom.name}</div>
+                      <div className="text-slate-400 text-xs leading-4 mt-0.5">{dom.desc}</div>
+                    </div>
+                    <span className="text-slate-400 text-xs font-['IBM_Plex_Mono'] bg-slate-900 px-2 py-0.5 rounded">
                       {dom.count}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">{dom.desc}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Browse by Role Pills */}
-          <div className="pt-4 border-t border-slate-800 space-y-3">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              BROWSE BY ROLE
+          <div className="space-y-3 pt-2">
+            <div className="text-slate-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+              Browse by role
             </div>
             <div className="flex flex-wrap gap-2">
               {ROLES.map((role) => (
                 <button
                   key={role}
                   onClick={() => setSelectedRole(role)}
-                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+                  className={`px-4 py-1.5 rounded-full text-xs transition-all cursor-pointer ${
                     selectedRole === role
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                      : "bg-[#0F243A] text-slate-300 hover:bg-slate-800 border border-slate-700"
+                      ? "bg-blue-500 text-white font-semibold shadow-sm"
+                      : "bg-sky-950 text-slate-300 border border-cyan-900 hover:bg-slate-800"
                   }`}
                 >
                   {role}
@@ -703,61 +675,55 @@ export default function GlossaryPage() {
       </section>
 
       {/* 5. RELATIONSHIPS + DISAMBIGUATION — Never merge collisions silently */}
-      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <section className="py-16 sm:py-20 bg-neutral-100 border-b border-slate-200">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-8">
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              — RELATIONSHIPS + DISAMBIGUATION + PROVENANCE
+            <div className="inline-flex items-center gap-2 text-blue-500 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+              <span className="w-4 h-px bg-blue-500 inline-block" />
+              Relationships + disambiguation + provenance
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-10">
               Never merge collisions silently
             </h2>
-            <p className="text-sm text-slate-600 max-w-2xl">
-              Ambiguous terms open a decisive panel with visible scope and class metadata — the
-              interpretation is never inferred from a guessed persona.
+            <p className="text-base text-gray-500 leading-6 max-w-xl">
+              Ambiguous terms open a decisive panel with visible scope and class metadata — the interpretation is never inferred from a guessed persona.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-11 items-start">
             {/* Left Card (Dark Disambiguation Panel) */}
-            <div className="lg:col-span-6 rounded-2xl bg-[#08182B] text-white p-6 border border-slate-800 shadow-xl space-y-4">
+            <div className="lg:col-span-6 p-7 bg-slate-900 rounded-2xl border border-slate-800 text-white space-y-4 shadow-xl">
               <div>
-                <h3 className="text-base font-bold text-white">Which meaning do you need?</h3>
-                <div className="text-xs text-slate-400 font-mono mt-0.5">Search token: &quot;rating&quot;</div>
+                <h3 className="text-white text-xl font-semibold leading-8">Which meaning do you need?</h3>
+                <div className="text-slate-400 text-xs font-normal leading-5 mt-0.5">Search token: &quot;rating&quot;</div>
               </div>
 
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl bg-[#0B2036] border border-blue-500/50 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white">Usage Rating</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-300">
-                      Industry conventional
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Calculating the price of a metered usage event as it occurs. Domain: Usage / Charging.
-                  </p>
+              <div className="p-4 bg-sky-950 rounded-xl border border-blue-500 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-white text-base font-semibold">Usage Rating</span>
+                  <span className="text-slate-400 text-[10px] font-['IBM_Plex_Mono']">Industry conventional</span>
                 </div>
+                <p className="text-slate-400 text-xs leading-5">
+                  Calculating the price of a metered usage event as it occurs. Domain: Usage / Charging.
+                </p>
+              </div>
 
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white">Service Rating</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-300">
-                      Industry conventional
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    A customer-facing satisfaction or quality score. Domain: Customer Experience.
-                  </p>
+              <div className="p-4 bg-sky-950 rounded-xl border border-cyan-900 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-white text-base font-semibold">Service Rating</span>
+                  <span className="text-slate-400 text-[10px] font-['IBM_Plex_Mono']">Industry conventional</span>
                 </div>
+                <p className="text-slate-400 text-xs leading-5">
+                  A customer-facing satisfaction or quality score. Domain: Customer Experience.
+                </p>
               </div>
             </div>
 
             {/* Right: Relationship Types Pills + Commonly Confused Box */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="space-y-2.5">
-                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  RELATIONSHIP TYPES
+              <div className="space-y-2">
+                <div className="text-zinc-400 text-xs font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                  Relationship types
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -774,7 +740,7 @@ export default function GlossaryPage() {
                   ].map((rel) => (
                     <span
                       key={rel}
-                      className="px-3 py-1 rounded-md bg-[#EEF2F7] border border-slate-200 text-slate-700 text-xs font-mono"
+                      className="px-3 py-1.5 bg-white rounded-full border border-gray-200 text-gray-500 text-xs font-['IBM_Plex_Mono']"
                     >
                       {rel}
                     </span>
@@ -782,19 +748,18 @@ export default function GlossaryPage() {
                 </div>
               </div>
 
-              {/* Commonly Confused With Box */}
-              <div className="p-5 rounded-2xl bg-[#EEF2F7] border border-slate-300 space-y-2 shadow-sm">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-rose-600 font-mono">
-                  COMMONLY CONFUSED WITH
+              {/* Commonly Confused Box */}
+              <div className="p-5 bg-white rounded-xl border border-gray-200 space-y-2 shadow-xs">
+                <div className="text-red-500 text-xs font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                  Commonly confused with
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-900">
+                <div className="flex flex-wrap items-center gap-3 text-base font-semibold text-zinc-900">
                   <span>Real-time Rating Engine</span>
-                  <span className="text-xs text-slate-500 font-normal italic">not the same as</span>
+                  <span className="text-zinc-400 text-xs font-normal font-['IBM_Plex_Mono']">not the same as</span>
                   <span>Real-time Charging</span>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Rating calculates the price of an event; charging applies that price against balance
-                  and policy. Related, not interchangeable — both records are sourced.
+                <p className="text-gray-500 text-xs leading-5">
+                  Rating calculates the price of an event; charging applies that price against balance and policy. Related, not interchangeable — both records are sourced.
                 </p>
               </div>
             </div>
@@ -803,209 +768,205 @@ export default function GlossaryPage() {
       </section>
 
       {/* 6. STANDARDS / INDUSTRY / ZOIKONEX TERMINOLOGY + CURRENTNESS */}
-      <section className="py-16 sm:py-20 bg-[#EEF2F7] border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-10">
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              — STANDARDS / INDUSTRY / ZOIKONEX TERMINOLOGY + CURRENTNESS
+            <div className="inline-flex items-center gap-2 text-indigo-500 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+              <span className="w-4 h-px bg-indigo-500 inline-block" />
+              Standards / industry / ZoikoNex terminology + currentness
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-10">
               Provenance and terminology age, made explicit
             </h2>
-            <p className="text-sm text-slate-600 max-w-2xl">
-              Every term exposes its applicable authority label and source. Currentness chips stay
-              visually distinct from authority chips — never collapsed into red/green alone.
+            <p className="text-base text-gray-500 leading-6 max-w-xl">
+              Every term exposes its applicable authority label and source. Currentness chips stay visually distinct from authority chips — never collapsed into red/green alone.
             </p>
           </div>
 
-          {/* 7 Authority Types Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 7 Authority Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {AUTHORITY_TYPES.map((auth, i) => (
               <div
                 key={i}
-                className={`p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-xs ${
-                  i === 6 ? "sm:col-span-2 lg:col-span-2" : ""
-                }`}
+                className="p-4 bg-neutral-100 rounded-xl border border-gray-200 space-y-1"
               >
-                <div className="text-xs font-bold text-blue-700">{auth.title}</div>
-                <p className="text-[11px] text-slate-600 leading-relaxed">{auth.desc}</p>
+                <div className="text-indigo-500 text-xs font-normal font-['IBM_Plex_Mono']">{auth.title}</div>
+                <p className="text-gray-500 text-xs leading-5">{auth.desc}</p>
               </div>
             ))}
           </div>
 
-          {/* Recently Updated Alert + Photo Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
+          {/* Split: Superseded box on Left + Photo on Right (glossary-ledger.png) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-11 items-center pt-2">
             {/* Left Superseded Alert Box */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                RECENTLY UPDATED / SUPERSEDES
+            <div className="lg:col-span-6 space-y-3">
+              <div className="text-zinc-400 text-xs font-normal font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                Recently updated / superseded
               </div>
-              <div className="p-6 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-3 shadow-xs">
+              <div className="p-5 bg-rose-100 rounded-xl border border-rose-200 space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span className="text-xs font-bold text-rose-800">Superseded — Jan 2026</span>
+                  <span className="w-2 h-2 bg-red-500 rounded-xs" />
+                  <span className="text-orange-800 text-sm font-bold">Superseded — Jan 2026</span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                  &quot;Convergent Billing&quot; has been replaced in current ZoikoNex terminology. Historic
-                  documentation retains the original dated term unchanged.
+                <p className="text-yellow-900 text-xs leading-5">
+                  &quot;Convergent Billing&quot; has been replaced in current ZoikoNex terminology. Historic documentation retains the original dated term unchanged.
                 </p>
-                <div className="pt-1">
-                  <Link href="#governed-monetization" className="text-xs font-bold text-blue-600 hover:underline">
-                    → Replaced by Unified Revenue Ledger
-                  </Link>
+                <div className="pt-1 text-zinc-900 text-sm font-semibold">
+                  → Replaced by Unified Revenue Ledger
                 </div>
               </div>
             </div>
 
-            {/* Right Photo (`glossary-governance.png`) */}
-            <div className="lg:col-span-6 w-full">
-              <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-slate-100">
-                <div className="relative h-64 sm:h-72 w-full">
-                  <Image
-                    src="/image/glossary/glossary-governance.png"
-                    alt="Corporate governance and terminology audit team"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 p-2.5 rounded-lg bg-slate-950/80 backdrop-blur-md text-white text-[11px] font-mono border border-slate-700/60">
-                    every record: source, scope, review date, owner
-                  </div>
-                </div>
+            {/* Right Photo: glossary-ledger.png */}
+            <div className="lg:col-span-6 relative rounded-2xl overflow-hidden shadow-xl h-80">
+              <Image
+                src="/image/glossary/glossary-ledger.png"
+                alt="Provenance and terminology age"
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute bottom-4 left-4 right-4 z-10 text-white text-xs font-['IBM_Plex_Mono'] leading-4">
+                every record: source, scope, review date, owner
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 7. FOR BUILDERS + GOVERNED DEFINITIONS (Dark Navy `#08182B`) */}
-      <section className="py-16 sm:py-20 bg-[#08182B] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      {/* 7. FOR BUILDERS + GOVERNED DEFINITIONS */}
+      <section className="py-16 sm:py-20 bg-slate-950 text-white">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-10">
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-sky-400">
-              — FOR BUILDERS + GOVERNED DEFINITIONS
+            <div className="inline-flex items-center gap-2 text-blue-300 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+              <span className="w-4 h-px bg-blue-300 inline-block" />
+              For builders + governed definitions
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white leading-10">
               Concept vocabulary, handed off to technical authority
             </h2>
-            <p className="text-sm text-slate-300 max-w-2xl">
-              API Reference and Documentation remain canonical for fields, schemas, endpoints and
-              guarantees — the glossary never overrides them.
+            <p className="text-base text-slate-400 leading-6 max-w-3xl">
+              API Reference and Documentation remain canonical for fields, schemas, endpoints and guarantees — the glossary never overrides them.
             </p>
           </div>
 
-          {/* Technical Container with Photo on left and Governance flow on right */}
-          <div className="rounded-2xl bg-[#061424] border border-slate-700/80 p-6 sm:p-8 shadow-2xl">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              {/* Photo on left (`glossary-architecture.jpg`) */}
-              <div className="lg:col-span-6 w-full">
-                <div className="relative rounded-xl overflow-hidden shadow-lg border border-slate-700">
-                  <div className="relative h-64 sm:h-80 w-full">
-                    <Image
-                      src="/image/glossary/glossary-architecture.jpg"
-                      alt="Engineers reviewing telecom architecture"
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5 text-[10px] font-mono">
-                      <span className="px-2 py-0.5 rounded bg-slate-950/80 text-sky-300 border border-slate-700">
-                        idempotency_key
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-950/80 text-emerald-300 border border-slate-700">
-                        event / domain concept
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-950/80 text-amber-300 border border-slate-700">
-                        evidence record
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-950/80 text-purple-300 border border-slate-700">
-                        deployment boundary
-                      </span>
-                    </div>
-                  </div>
+          {/* Split: Photo on Left (glossary-charging.png) + Governance steps on Right */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-2xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+              {/* Photo on left (glossary-charging.png) */}
+              <div className="lg:col-span-6 relative min-h-[320px] lg:min-h-[380px]">
+                <Image
+                  src="/image/glossary/glossary-charging.png"
+                  alt="Engineers reviewing technical architecture"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/20" />
+                <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-wrap gap-2">
+                  <span className="px-2.5 py-1 bg-slate-900/70 rounded-full border border-white/20 backdrop-blur-xs text-slate-200 text-xs font-['IBM_Plex_Mono']">
+                    idempotency key
+                  </span>
+                  <span className="px-2.5 py-1 bg-slate-900/70 rounded-full border border-white/20 backdrop-blur-xs text-slate-200 text-xs font-['IBM_Plex_Mono']">
+                    event / domain concept
+                  </span>
+                  <span className="px-2.5 py-1 bg-slate-900/70 rounded-full border border-white/20 backdrop-blur-xs text-slate-200 text-xs font-['IBM_Plex_Mono']">
+                    evidence record
+                  </span>
+                  <span className="px-2.5 py-1 bg-slate-900/70 rounded-full border border-white/20 backdrop-blur-xs text-slate-200 text-xs font-['IBM_Plex_Mono']">
+                    deployment boundary
+                  </span>
                 </div>
               </div>
 
-              {/* Right: How Definitions Are Governed */}
-              <div className="lg:col-span-6 space-y-6">
+              {/* Right: How definitions are governed */}
+              <div className="lg:col-span-6 p-8 sm:p-10 space-y-6">
                 <div className="space-y-2">
-                  <div className="text-xs font-bold text-sky-400 uppercase tracking-wider font-mono">
-                    HOW DEFINITIONS ARE GOVERNED
+                  <div className="text-slate-400 text-xs font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                    How definitions are governed
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Every public definition — even where AI assisted the internal draft — requires
-                    human approval and stored source evidence before it publishes.
+                  <p className="text-slate-400 text-sm leading-6">
+                    Every public definition — even where AI assisted the internal draft — requires human approval and stored source evidence before it publishes.
                   </p>
                 </div>
 
-                {/* 6 Step Sequence */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono">
-                  <div className="p-2.5 rounded-lg bg-[#0D2138] border border-slate-700">
-                    <span className="text-sky-400 font-bold">1</span> Source
+                {/* 6-step flow */}
+                <div className="flex flex-wrap items-center gap-y-3 gap-x-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 bg-blue-950 rounded-lg border border-cyan-900 flex items-center justify-center text-blue-300 font-['IBM_Plex_Mono']">1</span>
+                    <span className="text-slate-200 font-semibold">Source</span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#0D2138] border border-slate-700">
-                    <span className="text-sky-400 font-bold">2</span> Review
+                  <span className="text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 bg-blue-950 rounded-lg border border-cyan-900 flex items-center justify-center text-blue-300 font-['IBM_Plex_Mono']">2</span>
+                    <span className="text-slate-200 font-semibold">Review</span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#0D2138] border border-slate-700">
-                    <span className="text-sky-400 font-bold">3</span> Approve
+                  <span className="text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 bg-blue-950 rounded-lg border border-cyan-900 flex items-center justify-center text-blue-300 font-['IBM_Plex_Mono']">3</span>
+                    <span className="text-slate-200 font-semibold">Approve</span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#0D2138] border border-slate-700">
-                    <span className="text-sky-400 font-bold">4</span> Publish
+                  <span className="text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 bg-blue-950 rounded-lg border border-cyan-900 flex items-center justify-center text-blue-300 font-['IBM_Plex_Mono']">4</span>
+                    <span className="text-slate-200 font-semibold">Publish</span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#0D2138] border border-slate-700">
-                    <span className="text-sky-400 font-bold">5</span> Monitor
+                  <span className="text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 bg-blue-950 rounded-lg border border-cyan-900 flex items-center justify-center text-blue-300 font-['IBM_Plex_Mono']">5</span>
+                    <span className="text-slate-200 font-semibold">Monitor</span>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#0D2138] border border-slate-700">
-                    <span className="text-sky-400 font-bold">6</span> Update / Supersede
+                  <span className="text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 bg-blue-950 rounded-lg border border-cyan-900 flex items-center justify-center text-blue-300 font-['IBM_Plex_Mono']">6</span>
+                    <span className="text-slate-200 font-semibold">Update / Supersede</span>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-800 pt-4">
-                  Every technical term continues to current API Reference or Documentation. No schemas,
-                  private endpoints or internal event names are shown here.
-                </p>
+                <div className="pt-4 border-t border-blue-950 text-slate-400 text-xs leading-5">
+                  Every technical term continues to current API Reference or Documentation. No schemas, private endpoints or internal event names are shown here.
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 8. RELATED RESOURCES — A useful next step, not a lead form */}
-      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      {/* 8. RELATED RESOURCES */}
+      <section className="py-16 sm:py-20 bg-neutral-100 border-b border-slate-200">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 space-y-10">
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              — RELATED RESOURCES
+            <div className="inline-flex items-center gap-2 text-blue-500 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+              <span className="w-4 h-px bg-blue-500 inline-block" />
+              Related resources
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-10">
               A useful next step — not a lead form
             </h2>
-            <p className="text-sm text-slate-600 max-w-2xl">
-              Developer intent routes to API/Documentation. Architecture or governance intent routes to
-              Platform/Trust. Evaluation only when explicitly chosen.
+            <p className="text-base text-gray-500 leading-6 max-w-2xl">
+              Developer intent routes to API/Documentation. Architecture or governance intent routes to Platform/Trust. Evaluation only when explicitly chosen.
             </p>
           </div>
 
           {/* 4 Link Columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7 text-xs">
             {/* Documentation */}
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                DOCUMENTATION
+              <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                Documentation
               </div>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link href="/guides" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+              <ul className="space-y-1.5 divide-y divide-gray-200">
+                <li className="pt-1.5">
+                  <Link href="/guides" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Rate Card Guide
                   </Link>
                 </li>
-                <li>
-                  <Link href="/guides" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/guides" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Billing Configuration
                   </Link>
                 </li>
-                <li>
-                  <Link href="/changelog" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/changelog" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Release Notes
                   </Link>
                 </li>
@@ -1014,22 +975,22 @@ export default function GlossaryPage() {
 
             {/* API Reference */}
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                API REFERENCE
+              <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                API Reference
               </div>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link href="/api-reference" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+              <ul className="space-y-1.5 divide-y divide-gray-200">
+                <li className="pt-1.5">
+                  <Link href="/api-reference" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Charging endpoints
                   </Link>
                 </li>
-                <li>
-                  <Link href="/api-reference" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/api-reference" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Event schemas
                   </Link>
                 </li>
-                <li>
-                  <Link href="/api-reference" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/api-reference" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Idempotency
                   </Link>
                 </li>
@@ -1038,23 +999,23 @@ export default function GlossaryPage() {
 
             {/* Platform / Architecture */}
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                PLATFORM / ARCHITECTURE
+              <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                Platform / Architecture
               </div>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link href="/platform" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+              <ul className="space-y-1.5 divide-y divide-gray-200">
+                <li className="pt-1.5">
+                  <Link href="/platform" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Deployment models
                   </Link>
                 </li>
-                <li>
-                  <Link href="/platform" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/platform" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Unified Revenue Ledger
                   </Link>
                 </li>
-                <li>
-                  <Link href="/platform" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
-                    Identity & Trust
+                <li className="pt-1.5">
+                  <Link href="/platform" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
+                    Identity &amp; Trust
                   </Link>
                 </li>
               </ul>
@@ -1062,22 +1023,22 @@ export default function GlossaryPage() {
 
             {/* Trust / Governance */}
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                TRUST / GOVERNANCE
+              <div className="text-zinc-400 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">
+                Trust / Governance
               </div>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link href="/privacy-policy" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+              <ul className="space-y-1.5 divide-y divide-gray-200">
+                <li className="pt-1.5">
+                  <Link href="/privacy-policy" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Term Registry policy
                   </Link>
                 </li>
-                <li>
-                  <Link href="/compliance" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/compliance" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Compliance overview
                   </Link>
                 </li>
-                <li>
-                  <Link href="/contact-us" className="text-slate-800 hover:text-blue-600 font-semibold transition-colors">
+                <li className="pt-1.5">
+                  <Link href="/contact-us" className="text-zinc-900 text-sm font-normal hover:text-blue-600 transition-colors">
                     Report a definition issue
                   </Link>
                 </li>
@@ -1085,15 +1046,15 @@ export default function GlossaryPage() {
             </div>
           </div>
 
-          {/* Evaluation Banner */}
-          <div className="p-6 rounded-2xl bg-[#EEF2F7] border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-xs sm:text-sm text-slate-700 max-w-xl">
-              <strong>Looking to evaluate ZoikoNex</strong> rather than look something up? That&apos;s a
-              separate, explicit path — we won&apos;t infer it from a glossary search.
+          {/* Bottom Evaluation Banner */}
+          <div className="px-8 py-7 bg-neutral-100 rounded-2xl border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm">
+              <span className="text-zinc-900 font-bold">Looking to evaluate ZoikoNex</span>
+              <span className="text-gray-500"> rather than look something up? That&apos;s a separate, explicit path — we won&apos;t infer it from a glossary search.</span>
             </div>
             <Link
               href="/contact-us"
-              className="px-5 py-2.5 rounded-lg bg-[#08182B] hover:bg-slate-800 text-white font-semibold text-xs transition-colors whitespace-nowrap shadow-sm"
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-slate-900 text-sm font-semibold hover:bg-white transition-colors whitespace-nowrap cursor-pointer"
             >
               Talk to the team
             </Link>
@@ -1101,37 +1062,41 @@ export default function GlossaryPage() {
         </div>
       </section>
 
-      {/* 9. FAQ ACCORDION — Common questions, answered directly */}
+      {/* 9. FAQ ACCORDION */}
       <section className="py-16 sm:py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-2 mb-12">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">— FAQ</div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Common questions, answered directly.
-            </h2>
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 flex flex-col items-center gap-4">
+          <div className="inline-flex items-center gap-2 text-blue-500 text-xs font-medium font-['IBM_Plex_Mono'] uppercase tracking-widest">
+            <span className="w-4 h-px bg-blue-500 inline-block" />
+            FAQ
           </div>
+          <h2 className="text-center text-zinc-900 text-3xl sm:text-4xl font-bold leading-10">
+            Common questions, answered directly.
+          </h2>
 
-          <div className="divide-y divide-slate-200 border-t border-slate-200">
-            {FAQS.map((faq, idx) => (
-              <div key={idx} className="py-4">
-                <button
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full text-left flex items-center justify-between gap-4 text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors"
-                >
-                  <span>{faq.q}</span>
-                  {openFaq === idx ? (
-                    <Minus className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <div className="w-full max-w-[760px] pt-6 divide-y divide-gray-200 border-b border-gray-200">
+            {FAQS.map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div key={idx} className="py-5">
+                  <button
+                    onClick={() => setOpenFaq(isOpen ? null : idx)}
+                    className="w-full text-left flex items-center justify-between gap-4 cursor-pointer group"
+                  >
+                    <span className="text-zinc-900 text-base font-semibold group-hover:text-blue-600 transition-colors">
+                      {faq.q}
+                    </span>
+                    <span className="text-blue-500 text-lg font-semibold font-['IBM_Plex_Mono'] shrink-0">
+                      {isOpen ? "×" : "+"}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <p className="mt-3 text-sm text-gray-500 leading-6">
+                      {faq.a}
+                    </p>
                   )}
-                </button>
-                {openFaq === idx && (
-                  <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {faq.a}
-                  </p>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
