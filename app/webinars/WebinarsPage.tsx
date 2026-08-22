@@ -7,26 +7,24 @@ import {
   Calendar,
   Clock,
   Play,
+  Pause,
   Search,
-  Users,
-  CheckCircle2,
-  ArrowRight,
+  Check,
   ChevronDown,
   X,
   FileText,
   Layers,
   BookOpen,
   Video,
-  Check,
   Plus,
-  Minus,
+  RotateCcw,
+  RotateCw,
   Briefcase,
   Code2,
   ShieldCheck,
   TrendingUp,
   DollarSign,
-  MonitorCheck,
-  Sparkles,
+  Cpu,
 } from "lucide-react";
 
 interface Webinar {
@@ -42,6 +40,7 @@ interface Webinar {
   role: string;
   speaker: string;
   speakerRole: string;
+  speakerImage: string;
   status: "open" | "waitlist" | "rescheduled";
   statusText: string;
   category: string;
@@ -60,12 +59,6 @@ interface ReplayItem {
   speaker: string;
 }
 
-const SPEAKER_IMAGES: Record<string, string> = {
-  "M. Alderin": "/image/webinars/speaker-malderin.png",
-  "R. Okafor": "/image/webinars/speaker-rokafor.png",
-  "S. Devraj": "/image/webinars/speaker-sdevraj.png",
-};
-
 const UPCOMING_SESSIONS: Webinar[] = [
   {
     id: "rtc-arch",
@@ -81,6 +74,7 @@ const UPCOMING_SESSIONS: Webinar[] = [
     role: "CTO / Architect",
     speaker: "M. Alderin",
     speakerRole: "Chief Architect",
+    speakerImage: "/image/webinars/speaker-malderin.png",
     status: "open",
     statusText: "REGISTRATION OPEN",
     category: "Monetization & billing",
@@ -100,6 +94,7 @@ const UPCOMING_SESSIONS: Webinar[] = [
     role: "Governance",
     speaker: "R. Okafor",
     speakerRole: "VP Compliance",
+    speakerImage: "/image/webinars/speaker-rokafor.png",
     status: "waitlist",
     statusText: "WAITLIST",
     category: "Governance & evidence",
@@ -119,6 +114,7 @@ const UPCOMING_SESSIONS: Webinar[] = [
     role: "Executive",
     speaker: "S. Devraj",
     speakerRole: "Head of AI Ethics",
+    speakerImage: "/image/webinars/speaker-sdevraj.png",
     status: "rescheduled",
     statusText: "RESCHEDULED",
     category: "AI governance",
@@ -135,7 +131,7 @@ const REPLAY_LIBRARY: ReplayItem[] = [
     category: "Security",
     currentness: "CURRENT",
     tags: ["CC: EN, ES", "Transcript"],
-    imageSrc: "/image/webinars/evidence-thumb.png",
+    imageSrc: "/image/webinars/learning-monetization.png",
     speaker: "T. Vance, Lead Security Architect",
   },
   {
@@ -146,7 +142,7 @@ const REPLAY_LIBRARY: ReplayItem[] = [
     category: "eSIM / IoT",
     currentness: "REVIEW DUE",
     tags: ["CC: EN", "Transcript"],
-    imageSrc: "/image/webinars/esim-thumb.png",
+    imageSrc: "/image/webinars/icon-executive.png",
     speaker: "K. Lindqvist, IoT Infrastructure",
   },
   {
@@ -157,18 +153,48 @@ const REPLAY_LIBRARY: ReplayItem[] = [
     category: "Network API",
     currentness: "SUPERSEDED",
     tags: ["CC: EN", "Transcript gated"],
-    imageSrc: "/image/webinars/network-thumb.png",
+    imageSrc: "/image/webinars/icon-architect.png",
     speaker: "E. Chen, Telco API Lead",
   },
 ];
 
 const ROLES = [
-  { id: "executive", label: "Executive", count: "6 sessions", iconSrc: "/image/webinars/icon-executive.png" },
-  { id: "cto-architect", label: "CTO / Architect", count: "11 sessions", iconSrc: "/image/webinars/icon-architect.png" },
-  { id: "developer", label: "Developer", count: "9 sessions", iconSrc: "/image/webinars/icon-developer.png" },
-  { id: "commercial", label: "Commercial", count: "4 sessions", iconSrc: "/image/webinars/icon-commercial.png" },
-  { id: "finance", label: "Finance", count: "3 sessions", iconSrc: "/image/webinars/icon-finance.png" },
-  { id: "security", label: "Security", count: "5 sessions", iconSrc: "/image/webinars/icon-security.png" },
+  {
+    id: "executive",
+    label: "Executive",
+    count: "6 sessions",
+    icon: Briefcase,
+  },
+  {
+    id: "cto-architect",
+    label: "CTO / Architect",
+    count: "11 sessions",
+    icon: Cpu,
+  },
+  {
+    id: "developer",
+    label: "Developer",
+    count: "9 sessions",
+    icon: Code2,
+  },
+  {
+    id: "commercial",
+    label: "Commercial",
+    count: "4 sessions",
+    icon: TrendingUp,
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    count: "3 sessions",
+    icon: DollarSign,
+  },
+  {
+    id: "security",
+    label: "Security",
+    count: "5 sessions",
+    icon: ShieldCheck,
+  },
 ];
 
 const TOPICS = [
@@ -182,10 +208,48 @@ const TOPICS = [
   "eSIM / IoT / Network API",
 ];
 
+const CHAPTERS = [
+  {
+    id: 1,
+    title: "Why evidence, not logs",
+    time: "00:00",
+    snippet:
+      "Every financial and compliance event is written to a hash-chained ledger, so it can be verified independently of the system that produced it...",
+  },
+  {
+    id: 2,
+    title: "Hash-chained ledger design",
+    time: "08:40",
+    snippet:
+      "Merkle tree checkpoints anchor state across distributed nodes with zero-knowledge proof exports.",
+  },
+  {
+    id: 3,
+    title: "Tamper-evidence in practice",
+    time: "17:55",
+    snippet:
+      "Auditor verification protocols that detect unauthorized modification attempts in sub-second verification times.",
+  },
+  {
+    id: 4,
+    title: "Regulatory export packages",
+    time: "27:10",
+    snippet:
+      "Pre-formatted, jurisdiction-certified bundles exported directly for fiscal authorities and telecom regulators.",
+  },
+  {
+    id: 5,
+    title: "Live Q&A",
+    time: "33:30",
+    snippet:
+      "Lead architects address multi-tenant segregation, high-throughput rating benchmarks and cloud portability.",
+  },
+];
+
 const FAQS = [
   {
     q: "How are session times shown?",
-    a: "Every live session shows your localized date and time plus its named timezone. The canonical time and UTC offset are always available on the session detail page and in the calendar file (.ics).",
+    a: "Every live session shows your localized date and time plus its named timezone. The canonical time and UTC offset are always available on the session detail page.",
   },
   {
     q: "Do I need to register to attend?",
@@ -210,6 +274,8 @@ export default function WebinarsPage() {
   const [selectedTopic, setSelectedTopic] = useState("Monetization & billing");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"chapters" | "transcript" | "captions">("chapters");
+  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   // Registration form state
@@ -230,12 +296,22 @@ export default function WebinarsPage() {
     }
   };
 
+  const filteredReplays = REPLAY_LIBRARY.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q) ||
+      item.speaker.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="w-full bg-[#EEF2F7] text-slate-900 min-h-screen">
-      {/* 1. HERO SECTION (Figma exact: Dark Navy `#08182B`) */}
-      <section className="relative overflow-hidden bg-[#08182B] text-white pt-16 pb-20 lg:pt-24 lg:pb-28">
+      {/* 1. HERO SECTION (Dark Navy `#08182B` with Overlay+Shadow.png) */}
+      <section className="relative overflow-hidden bg-[#08182B] text-white pt-14 pb-16 lg:pt-20 lg:pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6">
               <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs tracking-wider uppercase">
@@ -243,39 +319,40 @@ export default function WebinarsPage() {
                 WEBINARS
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight lg:leading-[1.15]">
-                Live and recorded sessions for governed telecom operations.
+              <h1 className="text-white text-3xl sm:text-4xl lg:text-5xl font-extrabold font-['Plus_Jakarta_Sans'] tracking-tight leading-tight lg:leading-[51.52px]">
+                Live and recorded<br />
+                sessions for governed<br />
+                telecom operations.
               </h1>
 
-              <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed">
+              <p className="text-sm sm:text-[15px] text-slate-300 max-w-xl leading-relaxed">
                 Explore approved ZoikoNex sessions for telecom monetization, architecture,
-                integration, governance, operations and platform evaluation. See what&apos;s upcoming,
-                watch available replays, and follow each session into current documentation or resources.
+                integration, governance, operations and platform evaluation. See what&apos;s
+                upcoming, watch available replays, and follow each session into current documentation
+                or resources.
               </p>
 
               <div className="pt-2">
-                <a
-                  href="#upcoming-sessions"
-                  className="px-6 py-3 rounded-md bg-[#63B233] hover:bg-[#549c29] text-white font-semibold transition-all duration-150 text-sm inline-flex items-center justify-center shadow-sm"
+                <Link
+                  href="/contact"
+                  className="px-6 py-3 rounded-md bg-[#63B233] hover:bg-[#549C29] text-white font-semibold transition-all duration-150 text-sm inline-flex items-center justify-center shadow-md cursor-pointer"
                 >
-                  Browse Sessions
-                </a>
+                  Contact Support
+                </Link>
               </div>
             </div>
 
-            {/* Right Visual Video Image */}
-            <div className="lg:col-span-5 w-full">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50">
-                <div className="relative h-64 sm:h-80 w-full">
-                  <Image
-                    src="/image/webinars/hero-meeting.png"
-                    alt="Hybrid Video Conference Meeting"
-                    fill
-                    className="object-cover"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent" />
-                </div>
+            {/* Right Visual Image (Overlay+Shadow.png) */}
+            <div className="lg:col-span-5 w-full flex justify-center lg:justify-end">
+              <div className="relative w-full max-w-[500px]">
+                <Image
+                  src="/image/webinars/Overlay+Shadow.png"
+                  alt="Live and recorded webinar conference session"
+                  width={540}
+                  height={440}
+                  className="w-full h-auto object-contain rounded-2xl drop-shadow-2xl"
+                  priority
+                />
               </div>
             </div>
           </div>
@@ -283,9 +360,9 @@ export default function WebinarsPage() {
       </section>
 
       {/* 2. UPCOMING SESSIONS */}
-      <section id="upcoming-sessions" className="py-16 sm:py-20 bg-[#EEF2F7]">
+      <section id="upcoming-sessions" className="py-14 sm:py-18 bg-[#EEF2F7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
             <div>
               <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase mb-1">
                 <span className="w-3 h-[2px] bg-blue-600 inline-block" />
@@ -311,9 +388,11 @@ export default function WebinarsPage() {
               >
                 <div>
                   <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center">
-                      <span className="text-base font-bold text-slate-900 leading-none">{session.day}</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase leading-tight">
+                    <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-center shadow-2xs">
+                      <span className="text-base font-bold text-slate-900 leading-none">
+                        {session.day}
+                      </span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase leading-tight mt-0.5">
                         {session.month}
                       </span>
                     </div>
@@ -324,7 +403,7 @@ export default function WebinarsPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900 mb-2 leading-snug">
+                  <h3 className="text-[15px] font-bold text-slate-900 mb-2 leading-snug">
                     {session.title}
                   </h3>
 
@@ -335,13 +414,13 @@ export default function WebinarsPage() {
 
                 <div>
                   <div className="space-y-1.5 border-t border-slate-100 pt-3 mb-4 text-[11px] text-slate-500">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
                         {session.time} · {session.duration}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Video className="w-3 h-3 text-slate-400" />
+                        <Video className="w-3.5 h-3.5 text-slate-400" />
                         {session.type} · {session.role}
                       </span>
                     </div>
@@ -349,25 +428,23 @@ export default function WebinarsPage() {
 
                   <div className="flex items-center justify-between pt-1">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden relative">
-                        {SPEAKER_IMAGES[session.speaker] ? (
-                          <Image
-                            src={SPEAKER_IMAGES[session.speaker]}
-                            alt={session.speaker}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <span className="flex items-center justify-center w-full h-full text-xs font-bold text-slate-700">{session.speaker.charAt(0)}</span>
-                        )}
+                      <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 overflow-hidden relative">
+                        <Image
+                          src={session.speakerImage}
+                          alt={session.speaker}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
-                      <span className="text-xs font-semibold text-slate-800">{session.speaker}</span>
+                      <span className="text-xs font-semibold text-slate-800">
+                        {session.speaker}
+                      </span>
                     </div>
 
                     {session.status === "open" && (
                       <a
                         href="#register-section"
-                        className="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors"
+                        className="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors shadow-xs"
                       >
                         Register
                       </a>
@@ -375,7 +452,7 @@ export default function WebinarsPage() {
                     {session.status === "waitlist" && (
                       <a
                         href="#register-section"
-                        className="px-3 py-1.5 rounded-md bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold transition-colors"
+                        className="px-3.5 py-1.5 rounded-md bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold transition-colors shadow-xs"
                       >
                         Join waitlist
                       </a>
@@ -383,7 +460,7 @@ export default function WebinarsPage() {
                     {session.status === "rescheduled" && (
                       <a
                         href="#register-section"
-                        className="px-3 py-1.5 rounded-md bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold transition-colors"
+                        className="px-3.5 py-1.5 rounded-md bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold transition-colors shadow-xs"
                       >
                         View details
                       </a>
@@ -396,8 +473,8 @@ export default function WebinarsPage() {
         </div>
       </section>
 
-      {/* 3. ON-DEMAND REPLAY LIBRARY */}
-      <section id="on-demand" className="py-16 sm:py-20 bg-[#EEF2F7] border-t border-slate-200">
+      {/* 3. ON-DEMAND REPLAY LIBRARY (learning-monetization.png, icon-executive.png, icon-architect.png) */}
+      <section id="on-demand" className="py-14 sm:py-18 bg-[#EEF2F7] border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-1 mb-8">
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase">
@@ -422,13 +499,17 @@ export default function WebinarsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto text-xs text-slate-700">
-              <div className="px-4 py-2 rounded-lg bg-white border border-slate-200 flex items-center gap-1.5 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto text-xs text-slate-700">
+              <div className="px-3.5 py-2 rounded-lg bg-white border border-slate-200 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-sm transition-shadow">
                 <span className="font-medium">Topic</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
               </div>
-              <div className="px-4 py-2 rounded-lg bg-white border border-slate-200 flex items-center gap-1.5 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
+              <div className="px-3.5 py-2 rounded-lg bg-white border border-slate-200 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-sm transition-shadow">
                 <span className="font-medium">Currentness</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+              </div>
+              <div className="px-3.5 py-2 rounded-lg bg-white border border-slate-200 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-sm transition-shadow">
+                <span className="font-medium">Sort: Newest</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
               </div>
             </div>
@@ -436,51 +517,54 @@ export default function WebinarsPage() {
 
           {/* Video Replay Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {REPLAY_LIBRARY.map((item) => (
+            {filteredReplays.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
               >
                 {/* Thumbnail with overlay badges */}
-                <div className="h-44 relative overflow-hidden bg-slate-900">
+                <div className="h-48 relative overflow-hidden bg-slate-900 group">
                   <Image
                     src={item.imageSrc}
                     alt={item.title}
                     fill
-                    className="object-cover"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-slate-950/30" />
+                  <div className="absolute inset-0 bg-slate-950/20" />
 
                   {/* Top Left Badge */}
                   <span
-                    className={`absolute top-3 left-3 text-[9px] font-bold px-2 py-0.5 rounded text-white shadow-sm ${
+                    className={`absolute top-3 left-3 text-[9px] font-bold px-2.5 py-0.5 rounded-full text-white shadow-sm ${
                       item.currentness === "CURRENT"
-                        ? "bg-emerald-600"
+                        ? "bg-[#16A34A]"
                         : item.currentness === "REVIEW DUE"
-                        ? "bg-amber-600"
-                        : "bg-slate-600"
+                        ? "bg-[#CA8A04]"
+                        : "bg-[#475569]"
                     }`}
                   >
                     {item.currentness}
                   </span>
 
                   {/* Duration Bottom Right */}
-                  <span className="absolute bottom-2.5 right-3 text-[10px] font-bold text-white bg-black/70 px-1.5 py-0.5 rounded backdrop-blur">
+                  <span className="absolute bottom-2.5 right-3 text-[10px] font-bold text-white bg-black/80 px-1.5 py-0.5 rounded">
                     {item.duration}
                   </span>
 
                   {/* Center Play Button */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-full bg-black/60 border border-white/40 flex items-center justify-center text-white hover:scale-110 hover:bg-blue-600 transition-all cursor-pointer shadow-lg">
+                    <a
+                      href="#replay-player"
+                      className="w-10 h-10 rounded-full bg-black/60 border border-white/40 flex items-center justify-center text-white hover:scale-110 hover:bg-blue-600 transition-all cursor-pointer shadow-lg"
+                    >
                       <Play className="w-4 h-4 ml-0.5 fill-current" />
-                    </div>
+                    </a>
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 mb-1 leading-snug">
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-1 leading-snug">
                       {item.title}
                     </h3>
                   </div>
@@ -510,7 +594,7 @@ export default function WebinarsPage() {
       </section>
 
       {/* 4. BROWSE BY AUDIENCE */}
-      <section className="py-16 sm:py-20 bg-[#EEF2F7] border-t border-slate-200">
+      <section className="py-14 sm:py-18 bg-[#EEF2F7] border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-1 mb-8">
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase">
@@ -523,21 +607,22 @@ export default function WebinarsPage() {
           </div>
 
           {/* 6 Role Cards with Dark Navy Icon Tiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-6">
             {ROLES.map((role) => {
               const isSelected = selectedRole === role.id;
+              const IconComp = role.icon;
               return (
                 <button
                   key={role.id}
                   onClick={() => setSelectedRole(role.id)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                     isSelected
-                      ? "bg-white border-slate-300 ring-2 ring-blue-600/30 shadow-md"
-                      : "bg-[#DDE4ED] border-slate-200 hover:bg-white hover:shadow-sm"
+                      ? "bg-white border-blue-600 ring-2 ring-blue-600/20 shadow-md"
+                      : "bg-[#DDE4ED] border-slate-200/80 hover:bg-white hover:shadow-xs"
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-[#0D2137] text-white flex items-center justify-center mb-3 relative p-2 shadow-inner">
-                    <Image src={role.iconSrc} alt={role.label} width={22} height={22} className="object-contain" />
+                  <div className="w-10 h-10 rounded-lg bg-[#0D2137] text-white flex items-center justify-center mb-3 shadow-inner">
+                    <IconComp className="w-5 h-5 text-sky-400" />
                   </div>
                   <div className="text-xs font-bold text-slate-900">{role.label}</div>
                   <div className="text-[10px] text-slate-500 mt-0.5">{role.count}</div>
@@ -552,10 +637,10 @@ export default function WebinarsPage() {
               <button
                 key={topic}
                 onClick={() => setSelectedTopic(topic)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                   selectedTopic === topic
                     ? "bg-[#0D2137] text-white shadow-sm"
-                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:shadow-sm"
+                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:shadow-xs"
                 }`}
               >
                 {topic}
@@ -564,17 +649,25 @@ export default function WebinarsPage() {
           </div>
 
           {/* Active Filter Chips */}
-          <div className="flex flex-wrap items-center gap-2 text-xs bg-slate-50/80 p-3 rounded-lg border border-slate-200/80">
+          <div className="flex flex-wrap items-center gap-2 text-xs bg-slate-50/90 p-3 rounded-lg border border-slate-200/80">
             <span className="text-slate-600 font-semibold">Active filters:</span>
-            <span className="px-2.5 py-1 rounded bg-white text-slate-800 border border-slate-200 inline-flex items-center gap-1.5 text-[11px]">
-              {ROLES.find((r) => r.id === selectedRole)?.label}
-              <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-slate-700" onClick={() => setSelectedRole("all")} />
+            <span className="px-2.5 py-1 rounded bg-white text-slate-800 border border-slate-200 inline-flex items-center gap-1.5 text-[11px] shadow-2xs">
+              {ROLES.find((r) => r.id === selectedRole)?.label || "All Roles"}
+              <X
+                className="w-3 h-3 cursor-pointer text-slate-400 hover:text-slate-700"
+                onClick={() => setSelectedRole("all")}
+              />
             </span>
-            <span className="px-2.5 py-1 rounded bg-white text-slate-800 border border-slate-200 inline-flex items-center gap-1.5 text-[11px]">
-              {selectedTopic}
-              <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-slate-700" onClick={() => setSelectedTopic("")} />
-            </span>
-            <span className="px-2.5 py-1 rounded bg-white text-slate-800 border border-slate-200 inline-flex items-center gap-1.5 text-[11px]">
+            {selectedTopic && (
+              <span className="px-2.5 py-1 rounded bg-white text-slate-800 border border-slate-200 inline-flex items-center gap-1.5 text-[11px] shadow-2xs">
+                {selectedTopic}
+                <X
+                  className="w-3 h-3 cursor-pointer text-slate-400 hover:text-slate-700"
+                  onClick={() => setSelectedTopic("")}
+                />
+              </span>
+            )}
+            <span className="px-2.5 py-1 rounded bg-white text-slate-800 border border-slate-200 inline-flex items-center gap-1.5 text-[11px] shadow-2xs">
               Language: English
               <X className="w-3 h-3 cursor-pointer text-slate-400 hover:text-slate-700" />
             </span>
@@ -583,7 +676,7 @@ export default function WebinarsPage() {
                 setSelectedRole("all");
                 setSelectedTopic("");
               }}
-              className="ml-auto text-blue-600 hover:underline text-xs font-semibold"
+              className="ml-auto text-blue-600 hover:underline text-xs font-semibold cursor-pointer"
             >
               Clear all
             </button>
@@ -591,8 +684,8 @@ export default function WebinarsPage() {
         </div>
       </section>
 
-      {/* 5. FEATURED SERIES */}
-      <section className="py-16 sm:py-20 bg-[#EEF2F7] border-t border-slate-200">
+      {/* 5. FEATURED SERIES (icon-developer.png, icon-commercial.png, icon-finance.png) */}
+      <section className="py-14 sm:py-18 bg-[#EEF2F7] border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-1 mb-8">
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase">
@@ -605,104 +698,125 @@ export default function WebinarsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1 - Monetization Foundations */}
-            <div className="rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            {/* Card 1 - Monetization Foundations (icon-developer.png) */}
+            <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
               <div>
-                <div className="h-52 relative overflow-hidden">
+                <div className="h-52 relative overflow-hidden bg-slate-900">
                   <Image
-                    src="/image/webinars/learning-monetization.png"
+                    src="/image/webinars/icon-developer.png"
                     alt="Monetization Foundations"
                     fill
                     className="object-cover"
                   />
-                  <span className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#0D2137]/90 text-white shadow backdrop-blur-sm">
+                  <span className="absolute top-3 left-3 text-[10px] font-bold px-3 py-1 rounded-full bg-[#0D2137]/90 text-white shadow backdrop-blur-sm">
                     LEARNING PATH · 3 SESSIONS
                   </span>
                 </div>
                 <div className="p-5">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1.5">Monetization Foundations</h3>
+                  <h3 className="text-[15px] font-bold text-slate-900 mb-1.5">
+                    Monetization Foundations
+                  </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    An ordered sequence for teams evaluating real-time charging, rating and revenue assurance.
+                    An ordered sequence for teams evaluating real-time charging, rating and revenue
+                    assurance.
                   </p>
                 </div>
               </div>
+
+              {/* Segmented Progress bar: 3 segments, 2 active */}
               <div className="px-5 pb-5">
-                <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1 bg-blue-200 rounded-full overflow-hidden">
-                      <div className="w-2/3 h-full bg-blue-600 rounded-full"/>
-                    </div>
-                    <span className="text-slate-600">2 of 3 available</span>
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="h-1 bg-blue-600 rounded-full" />
+                    <div className="h-1 bg-blue-600 rounded-full" />
+                    <div className="h-1 bg-slate-200 rounded-full" />
                   </div>
-                  <span className="text-slate-500">CTO / Architect</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 text-[11px]">2 of 3 available</span>
+                    <span className="text-slate-500 text-[11px]">CTO / Architect</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Card 2 - Multi-Jurisdiction Compliance */}
-            <div className="rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            {/* Card 2 - Multi-Jurisdiction Compliance (icon-commercial.png) */}
+            <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
               <div>
-                <div className="h-52 relative overflow-hidden">
+                <div className="h-52 relative overflow-hidden bg-slate-900">
                   <Image
-                    src="/image/webinars/learning-compliance.png"
+                    src="/image/webinars/icon-commercial.png"
                     alt="Multi-Jurisdiction Compliance"
                     fill
                     className="object-cover"
                   />
-                  <span className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#0D2137]/90 text-white shadow backdrop-blur-sm">
+                  <span className="absolute top-3 left-3 text-[10px] font-bold px-3 py-1 rounded-full bg-[#0D2137]/90 text-white shadow backdrop-blur-sm">
                     LEARNING PATH · 4 SESSIONS
                   </span>
                 </div>
                 <div className="p-5">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1.5">Multi-Jurisdiction Compliance</h3>
+                  <h3 className="text-[15px] font-bold text-slate-900 mb-1.5">
+                    Multi-Jurisdiction Compliance
+                  </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
                     Tax orchestration, evidence ledger and regulatory export sessions in sequence.
                   </p>
                 </div>
               </div>
+
+              {/* Segmented Progress bar: 4 segments, 1 active */}
               <div className="px-5 pb-5">
-                <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1 bg-blue-200 rounded-full overflow-hidden">
-                      <div className="w-1/4 h-full bg-blue-600 rounded-full"/>
-                    </div>
-                    <span className="text-slate-600">1 of 4 available</span>
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <div className="h-1 bg-blue-600 rounded-full" />
+                    <div className="h-1 bg-slate-200 rounded-full" />
+                    <div className="h-1 bg-slate-200 rounded-full" />
+                    <div className="h-1 bg-slate-200 rounded-full" />
                   </div>
-                  <span className="text-slate-500">Governance</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 text-[11px]">1 of 4 available</span>
+                    <span className="text-slate-500 text-[11px]">Governance</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Card 3 - Developer Enablement Collection */}
-            <div className="rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            {/* Card 3 - Developer Enablement Collection (icon-finance.png) */}
+            <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
               <div>
-                <div className="h-52 relative overflow-hidden">
+                <div className="h-52 relative overflow-hidden bg-slate-900">
                   <Image
-                    src="/image/webinars/learning-dev.png"
+                    src="/image/webinars/icon-finance.png"
                     alt="Developer Enablement Collection"
                     fill
                     className="object-cover"
                   />
-                  <span className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#0D2137]/90 text-white shadow backdrop-blur-sm">
+                  <span className="absolute top-3 left-3 text-[10px] font-bold px-3 py-1 rounded-full bg-[#0D2137]/90 text-white shadow backdrop-blur-sm">
                     COLLECTION · 5 SESSIONS
                   </span>
                 </div>
                 <div className="p-5">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1.5">Developer Enablement Collection</h3>
+                  <h3 className="text-[15px] font-bold text-slate-900 mb-1.5">
+                    Developer Enablement Collection
+                  </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Related technical sessions grouped by topic — built for integration coders.
+                    Related technical sessions grouped by topic — no fixed order or completion
+                    requirement.
                   </p>
                 </div>
               </div>
+
+              {/* Segmented Progress bar: 3 segments, all filled */}
               <div className="px-5 pb-5">
-                <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1 bg-emerald-200 rounded-full overflow-hidden">
-                      <div className="w-full h-full bg-emerald-500 rounded-full"/>
-                    </div>
-                    <span className="text-slate-600">5 of 5 available</span>
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="h-1 bg-blue-600 rounded-full" />
+                    <div className="h-1 bg-blue-600 rounded-full" />
+                    <div className="h-1 bg-blue-600 rounded-full" />
                   </div>
-                  <span className="text-slate-500">Developer</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 text-[11px]">5 of 5 available</span>
+                    <span className="text-slate-500 text-[11px]">Developer</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -711,8 +825,8 @@ export default function WebinarsPage() {
       </section>
 
       {/* 6. WEBINAR DETAIL & FORM */}
-      <section id="register-section" className="py-16 sm:py-20 bg-[#EEF2F7] border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="register-section" className="py-14 sm:py-18 bg-[#EEF2F7] border-t border-slate-200">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-1 mb-8">
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase">
               <span className="w-3 h-[2px] bg-blue-600 inline-block" />
@@ -723,15 +837,15 @@ export default function WebinarsPage() {
             </h2>
           </div>
 
-          <div className="rounded-2xl bg-[#08182B] text-white p-6 sm:p-10 shadow-2xl mb-4">
+          <div className="rounded-2xl bg-[#08182B] text-white p-6 sm:p-10 shadow-2xl mb-8 border border-slate-800">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left Column */}
               <div className="lg:col-span-7 space-y-5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#63B233] text-white">
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-[#63B233] text-white shadow-xs">
                     LIVE WEBINAR
                   </span>
-                  <span className="text-[10px] text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                  <span className="text-[10px] text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded border border-slate-700">
                     Registration required
                   </span>
                 </div>
@@ -741,45 +855,63 @@ export default function WebinarsPage() {
                 </h3>
 
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  A technical walkthrough of ZoikoNex&apos;s event-driven rating and charging core, built for architects evaluating sub-200ms performance across prepaid, postpaid and roaming flows.
+                  A technical walkthrough of ZoikoNex&apos;s event-driven rating and charging core,
+                  built for architects evaluating sub-200ms performance across prepaid, postpaid and
+                  roaming flows.
                 </p>
 
                 {/* 4 dark tiles */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">DATE & TIME</div>
-                    <div className="text-xs font-bold text-white mt-0.5">Sep 16, 2026 · 10:00 AM PT (17:00 UTC)</div>
+                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60 shadow-inner">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      DATE & TIME
+                    </div>
+                    <div className="text-xs font-bold text-white mt-0.5">
+                      Sep 16, 2026 · 10:00 AM PT (17:00 UTC)
+                    </div>
                   </div>
-                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">DURATION</div>
-                    <div className="text-xs font-bold text-white mt-0.5">45 minutes + live Q&A</div>
+                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60 shadow-inner">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      DURATION
+                    </div>
+                    <div className="text-xs font-bold text-white mt-0.5">
+                      45 minutes + live Q&A
+                    </div>
                   </div>
-                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">ACCESS</div>
-                    <div className="text-xs font-bold text-white mt-0.5">Public — registration required</div>
+                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60 shadow-inner">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      ACCESS
+                    </div>
+                    <div className="text-xs font-bold text-white mt-0.5">
+                      Public — registration required
+                    </div>
                   </div>
-                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">RECORDING</div>
-                    <div className="text-xs font-bold text-white mt-0.5">Session recorded; Q&A not published</div>
+                  <div className="p-3.5 rounded-lg bg-[#0F243A] border border-slate-700/60 shadow-inner">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      RECORDING
+                    </div>
+                    <div className="text-xs font-bold text-white mt-0.5">
+                      Session recorded; Q&A not published
+                    </div>
                   </div>
                 </div>
 
                 {/* Checkmarks */}
                 <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                  <li className="flex items-start gap-2">
-                    <Check className="w-3.5 h-3.5 text-[#63B233] mt-0.5 flex-shrink-0" />
+                  <li className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-[#63B233] mt-0.5 shrink-0" />
                     <span>Understand the event-driven charging model behind sub-200ms performance</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-3.5 h-3.5 text-[#63B233] mt-0.5 flex-shrink-0" />
+                  <li className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-[#63B233] mt-0.5 shrink-0" />
                     <span>See deterministic tariff snapshots applied across prepaid, postpaid and roaming</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-3.5 h-3.5 text-[#63B233] mt-0.5 flex-shrink-0" />
+                  <li className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-[#63B233] mt-0.5 shrink-0" />
                     <span>Walk through failure handling and replay-safe usage processing</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-3.5 h-3.5 text-[#63B233] mt-0.5 flex-shrink-0" />
+                  <li className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-[#63B233] mt-0.5 shrink-0" />
                     <span>Ask the architecture team questions directly in live Q&A</span>
                   </li>
                 </ul>
@@ -789,72 +921,86 @@ export default function WebinarsPage() {
               <div className="lg:col-span-5 w-full">
                 <form
                   onSubmit={handleRegister}
-                  className="bg-white text-slate-900 rounded-xl p-6 shadow-2xl space-y-3.5"
+                  className="bg-white text-slate-900 rounded-xl p-6 shadow-2xl space-y-3.5 border border-slate-100"
                 >
                   <h4 className="text-base font-bold text-slate-900">Register to attend</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Before you register: this session is recorded. Attendee names are not shown on the replay. Captions are provided in English.
-                  </p>
+
+                  <div className="p-2.5 rounded-lg bg-[#F0F7FF] border border-[#BAE6FD] text-[11px] text-[#0C4A6E] leading-relaxed">
+                    Before you register: this session is recorded. Attendee names are not shown on
+                    the replay. Captions are provided in English.
+                  </div>
 
                   <div className="space-y-2.5 pt-1">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Work email</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Work email <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="email"
                         required
                         placeholder="you@company.com"
                         value={regForm.email}
                         onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                        className="w-full px-3 py-2 rounded border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                        className="w-full px-3 py-2 rounded-md border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Full name</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Full name <span className="text-rose-500">*</span>
+                      </label>
                       <input
                         type="text"
                         required
                         placeholder="Jordan Reyes"
                         value={regForm.name}
                         onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
-                        className="w-full px-3 py-2 rounded border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                        className="w-full px-3 py-2 rounded-md border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Company (optional)</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Company (optional)
+                      </label>
                       <input
                         type="text"
                         placeholder="Company name"
                         value={regForm.company}
                         onChange={(e) => setRegForm({ ...regForm, company: e.target.value })}
-                        className="w-full px-3 py-2 rounded border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                        className="w-full px-3 py-2 rounded-md border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Question for speakers (optional)</label>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Question for speakers (optional)
+                      </label>
                       <textarea
                         rows={2}
                         placeholder="Ask ahead of time..."
                         value={regForm.question}
                         onChange={(e) => setRegForm({ ...regForm, question: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
+                        className="w-full px-3 py-1.5 rounded-md border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 resize-none transition-all"
                       />
                     </div>
 
                     <div className="space-y-1.5 pt-1 text-[10px] text-slate-600">
-                      <label className="flex items-start gap-1.5 cursor-pointer">
+                      <label className="flex items-start gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={regForm.serviceEmails}
-                          onChange={(e) => setRegForm({ ...regForm, serviceEmails: e.target.checked })}
+                          onChange={(e) =>
+                            setRegForm({ ...regForm, serviceEmails: e.target.checked })
+                          }
                           className="mt-0.5 rounded text-blue-600"
                         />
                         <span>I agree to receive event-service emails about this session.</span>
                       </label>
-                      <label className="flex items-start gap-1.5 cursor-pointer">
+                      <label className="flex items-start gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={regForm.marketingEmails}
-                          onChange={(e) => setRegForm({ ...regForm, marketingEmails: e.target.checked })}
+                          onChange={(e) =>
+                            setRegForm({ ...regForm, marketingEmails: e.target.checked })
+                          }
                           className="mt-0.5 rounded text-blue-600"
                         />
                         <span>Also send me occasional technical briefs (optional)</span>
@@ -864,7 +1010,7 @@ export default function WebinarsPage() {
 
                   <button
                     type="submit"
-                    className="w-full py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-sm"
+                    className="w-full py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer"
                   >
                     Confirm registration
                   </button>
@@ -873,19 +1019,21 @@ export default function WebinarsPage() {
             </div>
           </div>
 
-          {/* Registration Confirmed Banner (Figma exact match) */}
-          <div className="p-3.5 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-xs text-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>
-                <strong>You&apos;re registered — confirmation sent.</strong> Sep 16, 2026 · 10:00 AM PT (17:00 UTC). We&apos;ll email a reminder 24 hours and 1 hour before the session.
-              </span>
+          {/* Exact Registration Confirmed Banner */}
+          <div className="w-full p-4 sm:p-5 rounded-xl bg-emerald-50/70 border border-emerald-400/80 text-xs text-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
+            <div className="space-y-0.5">
+              <div className="text-[13px] font-bold text-slate-900">
+                You&apos;re registered — confirmation sent.
+              </div>
+              <div className="text-xs text-slate-500">
+                Sep 16, 2026 · 10:00 AM PT (17:00 UTC). We&apos;ll email a reminder 24 hours and 1 hour before the session.
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button className="px-3 py-1 bg-white border border-slate-300 rounded text-slate-700 font-semibold text-[11px] hover:bg-slate-50">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button className="px-4 py-1.5 bg-white border border-slate-300/80 rounded-lg text-slate-800 font-semibold text-xs hover:bg-slate-50 shadow-2xs cursor-pointer">
                 Add to calendar
               </button>
-              <button className="px-3 py-1 bg-white border border-slate-300 rounded text-slate-700 font-semibold text-[11px] hover:bg-slate-50">
+              <button className="px-4 py-1.5 bg-white border border-slate-300/80 rounded-lg text-slate-800 font-semibold text-xs hover:bg-slate-50 shadow-2xs cursor-pointer">
                 Cancel registration
               </button>
             </div>
@@ -893,56 +1041,118 @@ export default function WebinarsPage() {
         </div>
       </section>
 
-      {/* 7. LIVE JOIN & RECOVERY */}
-      <section className="py-14 sm:py-16 bg-[#EEF2F7] border-t border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="text-center space-y-1">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">— LIVE JOIN & RECOVERY</div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Status is always explicit — never assumed from a clock
-            </h2>
-          </div>
-
-          {/* Step circles line */}
-          <div className="grid grid-cols-5 gap-2 max-w-2xl mx-auto text-center pt-2">
-            <div className="space-y-1.5">
-              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs mx-auto">1</div>
-              <div className="text-[10px] text-slate-500">Too early</div>
+      {/* 7. LIVE JOIN & RECOVERY (Exact Match to Figma & Screenshot) */}
+      <section className="w-full py-16 sm:py-20 bg-gray-50 flex flex-col justify-start items-center border-t border-slate-200">
+        <div className="w-full max-w-[1180px] px-4 sm:px-8 flex flex-col justify-start items-start gap-7">
+          {/* Header */}
+          <div className="w-full flex flex-col justify-start items-start gap-3.5">
+            <div className="self-stretch inline-flex justify-start items-center gap-2">
+              <div className="w-4 h-0.5 bg-blue-500" />
+              <div className="text-blue-500 text-xs font-bold uppercase tracking-widest">
+                Live Join &amp; Recovery
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs mx-auto shadow-sm">2</div>
-              <div className="text-[10px] font-bold text-blue-600">Join open</div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs mx-auto">3</div>
-              <div className="text-[10px] text-slate-500">Live</div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="w-7 h-7 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs mx-auto">!</div>
-              <div className="text-[10px] text-rose-600">Provider issue</div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs mx-auto">5</div>
-              <div className="text-[10px] text-slate-500">Ended</div>
+            <div className="w-full flex flex-col justify-start items-start">
+              <h2 className="text-slate-900 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                Status is always explicit — never assumed from a clock
+              </h2>
             </div>
           </div>
 
-          {/* Notice banner */}
-          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 max-w-2xl mx-auto shadow-xs">
-            <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span>
-              <strong>Rescheduled: Sep 18 → Sep 30, 11:00 AM PT.</strong> Your calendar invite has been updated automatically.
-            </span>
+          {/* Full-width Stepper */}
+          <div className="self-stretch pt-2.5 flex justify-between items-center w-full">
+            {/* Step 1 */}
+            <div className="flex-1 relative flex flex-col justify-start items-center gap-2.5">
+              <div className="w-full h-0.5 left-1/2 top-[17px] absolute bg-zinc-300 -z-0" />
+              <div className="w-8 h-8 bg-neutral-100 rounded-full border-2 border-stone-300 flex justify-center items-center relative z-10">
+                <span className="text-center text-gray-500 text-sm font-extrabold">1</span>
+              </div>
+              <div className="self-stretch flex flex-col justify-start items-center">
+                <span className="text-center text-slate-500 text-xs font-bold leading-5">
+                  Too early
+                </span>
+              </div>
+            </div>
+
+            {/* Step 2 (Active) */}
+            <div className="flex-1 relative flex flex-col justify-start items-center gap-2.5">
+              <div className="w-full h-0.5 left-1/2 top-[17px] absolute bg-zinc-300 -z-0" />
+              <div className="w-8 h-8 bg-blue-500 rounded-full border-2 border-blue-500 flex justify-center items-center relative z-10 shadow-sm">
+                <span className="text-center text-white text-sm font-extrabold">2</span>
+              </div>
+              <div className="self-stretch flex flex-col justify-start items-center">
+                <span className="text-center text-slate-900 text-xs font-bold leading-5">
+                  Join open
+                </span>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex-1 relative flex flex-col justify-start items-center gap-2.5">
+              <div className="w-full h-0.5 left-1/2 top-[17px] absolute bg-zinc-300 -z-0" />
+              <div className="w-8 h-8 bg-neutral-100 rounded-full border-2 border-stone-300 flex justify-center items-center relative z-10">
+                <span className="text-center text-gray-500 text-sm font-extrabold">3</span>
+              </div>
+              <div className="self-stretch flex flex-col justify-start items-center">
+                <span className="text-center text-slate-500 text-xs font-bold leading-5">
+                  Live
+                </span>
+              </div>
+            </div>
+
+            {/* Step 4 (Warning) */}
+            <div className="flex-1 relative flex flex-col justify-start items-center gap-2.5">
+              <div className="w-full h-0.5 left-1/2 top-[17px] absolute bg-zinc-300 -z-0" />
+              <div className="w-8 h-8 bg-rose-100 rounded-full border-2 border-red-500 flex justify-center items-center relative z-10">
+                <span className="text-center text-red-500 text-sm font-extrabold">!</span>
+              </div>
+              <div className="self-stretch flex flex-col justify-start items-center">
+                <span className="text-center text-slate-500 text-xs font-bold leading-5">
+                  Provider issue
+                </span>
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="flex-1 flex flex-col justify-start items-center gap-2.5">
+              <div className="w-8 h-8 bg-neutral-100 rounded-full border-2 border-stone-300 flex justify-center items-center relative z-10">
+                <span className="text-center text-gray-500 text-sm font-extrabold">5</span>
+              </div>
+              <div className="self-stretch flex flex-col justify-start items-center">
+                <span className="text-center text-slate-500 text-xs font-bold leading-5">
+                  Ended
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Full-width Rescheduled Notice Box */}
+          <div className="self-stretch p-5 bg-yellow-50 rounded-xl border border-orange-200 flex justify-start items-start gap-4 shadow-2xs">
+            <div className="w-9 h-9 bg-white rounded-lg border border-amber-200 flex justify-center items-center shrink-0">
+              <span className="text-center text-yellow-600 text-base font-normal">⏱</span>
+            </div>
+            <div className="flex flex-col justify-start items-start gap-1">
+              <div className="self-stretch flex flex-col justify-start items-start">
+                <div className="text-slate-900 text-sm font-extrabold leading-4">
+                  Rescheduled: Sep 18 → Sep 30, 11:00 AM PT
+                </div>
+              </div>
+              <div className="self-stretch flex flex-col justify-start items-start">
+                <div className="text-yellow-900/90 text-xs font-normal leading-5">
+                  Your calendar invite and registration have been updated automatically. No action needed — join link stays the same.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 8. REPLAY PLAYER WITH TRANSCRIPTS (Figma exact match) */}
-      <section className="py-16 sm:py-20 bg-white border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 8. REPLAY PLAYER WITH TRANSCRIPTS (Exact Match to Screenshot 2) */}
+      <section id="replay-player" className="py-14 sm:py-18 bg-white border-t border-slate-200">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-1 mb-8">
-            <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase">
-              <span className="w-3 h-[2px] bg-blue-600 inline-block" />
+            <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs tracking-wider uppercase">
+              <span className="w-3 h-[2px] bg-sky-400 inline-block" />
               REPLAY PLAYER
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
@@ -952,99 +1162,180 @@ export default function WebinarsPage() {
 
           <div className="rounded-2xl bg-[#08182B] text-white overflow-hidden shadow-2xl border border-slate-800">
             <div className="grid grid-cols-1 lg:grid-cols-12">
-              {/* Left video area */}
-              <div className="lg:col-span-8 p-6 flex flex-col justify-between min-h-[380px] relative bg-slate-950">
+              {/* Left video area (icon-security.png) */}
+              <div className="lg:col-span-8 p-0 flex flex-col justify-between min-h-[380px] lg:min-h-[440px] relative bg-slate-950">
                 <Image
-                  src="/image/webinars/hero-meeting.png"
-                  alt="Evidence Ledger Walkthrough"
+                  src="/image/webinars/icon-security.png"
+                  alt="Evidence Ledger Walkthrough Code Environment"
                   fill
-                  className="object-cover opacity-20"
+                  className="object-cover"
                 />
 
-                <div className="flex items-center justify-between z-10 text-xs">
-                  <div className="flex items-center gap-2 text-slate-300">
+                {/* Top overlay bar */}
+                <div className="flex items-center justify-between z-10 text-xs bg-slate-950/60 px-5 py-3 backdrop-blur-xs border-b border-slate-800/60">
+                  <div className="flex items-center gap-2 text-slate-200 text-xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     <span>Current as of Aug 4, 2026</span>
                   </div>
-                  <Link href="/documentation" className="text-sky-400 hover:underline font-semibold">
+                  <Link
+                    href="/evidence"
+                    className="text-sky-400 hover:text-sky-300 font-medium inline-flex items-center gap-1 text-xs"
+                  >
                     View current documentation →
                   </Link>
                 </div>
 
-                <div className="my-auto flex items-center justify-center z-10 py-12">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-slate-950 shadow-2xl cursor-pointer hover:scale-105 transition-all">
-                    <Play className="w-6 h-6 ml-0.5 fill-current" />
-                  </div>
-                </div>
+                {/* Center empty space / video area */}
+                <div className="my-auto" />
 
-                <div className="space-y-2 z-10">
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full w-[38%]" />
+                {/* Bottom Video Controls Bar */}
+                <div className="z-10 bg-slate-950/80 px-4 py-2.5 backdrop-blur-xs border-t border-slate-800/80 space-y-2">
+                  {/* Progress scrubber */}
+                  <div className="w-full bg-slate-700/80 h-[3px] rounded-full overflow-hidden cursor-pointer">
+                    <div className="bg-blue-500 h-full w-[38%]" />
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
-                    <span>14:32 / 38:12</span>
-                    <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">1x</span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">CC</span>
+
+                  <div className="flex items-center justify-between text-xs text-slate-300">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        className="text-white hover:text-sky-400 cursor-pointer transition-colors"
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-4 h-4 fill-current" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-current" />
+                        )}
+                      </button>
+                      <button className="text-slate-400 hover:text-white cursor-pointer transition-colors">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      <button className="text-slate-400 hover:text-white cursor-pointer transition-colors">
+                        <RotateCw className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 border border-slate-700 font-medium">
+                        1x
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 border border-slate-700 font-medium">
+                        CC
+                      </span>
                     </div>
+
+                    <span className="text-xs text-slate-400 font-mono">14:32 / 38:12</span>
                   </div>
                 </div>
               </div>
 
               {/* Right Sidebar Chapters/Transcript */}
-              <div className="lg:col-span-4 bg-[#0B1E36] p-4 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-800">
-                <div className="flex border-b border-slate-800 pb-2 mb-3 text-xs">
-                  <button
-                    onClick={() => setActiveTab("chapters")}
-                    className={`flex-1 py-1 text-center font-bold ${
-                      activeTab === "chapters" ? "text-sky-400 border-b-2 border-sky-400" : "text-slate-400"
-                    }`}
-                  >
-                    Chapters
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("transcript")}
-                    className={`flex-1 py-1 text-center font-bold ${
-                      activeTab === "transcript" ? "text-sky-400 border-b-2 border-sky-400" : "text-slate-400"
-                    }`}
-                  >
-                    Transcript
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("captions")}
-                    className={`flex-1 py-1 text-center font-bold ${
-                      activeTab === "captions" ? "text-sky-400 border-b-2 border-sky-400" : "text-slate-400"
-                    }`}
-                  >
-                    Captions
-                  </button>
+              <div className="lg:col-span-4 bg-[#0B1E36] p-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-slate-800">
+                <div>
+                  <div className="flex border-b border-slate-800/80 pb-2 mb-4 text-xs">
+                    <button
+                      onClick={() => setActiveTab("chapters")}
+                      className={`flex-1 py-1.5 text-center font-bold cursor-pointer transition-colors ${
+                        activeTab === "chapters"
+                          ? "text-sky-400 border-b-2 border-sky-400"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Chapters
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("transcript")}
+                      className={`flex-1 py-1.5 text-center font-bold cursor-pointer transition-colors ${
+                        activeTab === "transcript"
+                          ? "text-sky-400 border-b-2 border-sky-400"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Transcript
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("captions")}
+                      className={`flex-1 py-1.5 text-center font-bold cursor-pointer transition-colors ${
+                        activeTab === "captions"
+                          ? "text-sky-400 border-b-2 border-sky-400"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Captions
+                    </button>
+                  </div>
+
+                  {/* Chapters List */}
+                  {activeTab === "chapters" && (
+                    <div className="space-y-3 text-xs text-slate-300 overflow-y-auto max-h-[290px] pr-1">
+                      {CHAPTERS.map((ch, idx) => {
+                        const isActive = activeChapterIndex === idx;
+                        return (
+                          <div
+                            key={ch.id}
+                            onClick={() => setActiveChapterIndex(idx)}
+                            className="flex items-center justify-between cursor-pointer group py-1"
+                          >
+                            <span
+                              className={`text-[12px] transition-colors ${
+                                isActive
+                                  ? "text-sky-400 font-semibold"
+                                  : "text-slate-400 group-hover:text-slate-200"
+                              }`}
+                            >
+                              {ch.title}
+                            </span>
+                            <span className="font-mono text-slate-500 text-[11px] shrink-0 ml-2">
+                              {ch.time}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Transcript List */}
+                  {activeTab === "transcript" && (
+                    <div className="space-y-3 text-xs text-slate-300 overflow-y-auto max-h-[290px] pr-1 leading-relaxed">
+                      {CHAPTERS.map((ch) => (
+                        <div key={ch.id} className="py-1">
+                          <div className="text-[10px] text-sky-400 font-mono mb-0.5">{ch.time}</div>
+                          <p className="text-[11px] text-slate-300">{ch.snippet}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Captions List */}
+                  {activeTab === "captions" && (
+                    <div className="space-y-2 text-xs text-slate-300">
+                      <div className="p-3 rounded bg-slate-900/40 border border-slate-800/80 space-y-2">
+                        <div className="text-[11px] font-semibold text-white">
+                          Available Subtitles
+                        </div>
+                        <div className="space-y-1.5 text-[11px] text-slate-300">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="cc"
+                              defaultChecked
+                              className="text-sky-500"
+                            />
+                            <span>English (Generated & Verified)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="cc" className="text-sky-500" />
+                            <span>Spanish (Español)</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="space-y-2 text-xs text-slate-300 flex-1 overflow-y-auto max-h-[300px]">
-                  <div className="p-2.5 rounded bg-slate-900/80 border border-slate-700/60 flex items-center justify-between">
-                    <span>Why evidence, not logs</span>
-                    <span className="font-mono text-slate-400 text-[10px]">00:00</span>
-                  </div>
-                  <div className="p-2.5 rounded bg-slate-900/40 border border-slate-800 flex items-center justify-between">
-                    <span>Hash-chained ledger design</span>
-                    <span className="font-mono text-slate-400 text-[10px]">08:40</span>
-                  </div>
-                  <div className="p-2.5 rounded bg-slate-900/40 border border-slate-800 flex items-center justify-between">
-                    <span>Tamper-evidence in practice</span>
-                    <span className="font-mono text-slate-400 text-[10px]">17:55</span>
-                  </div>
-                  <div className="p-2.5 rounded bg-slate-900/40 border border-slate-800 flex items-center justify-between">
-                    <span>Regulatory export packages</span>
-                    <span className="font-mono text-slate-400 text-[10px]">27:10</span>
-                  </div>
-                  <div className="p-2.5 rounded bg-slate-900/40 border border-slate-800 flex items-center justify-between">
-                    <span>Live Q&A</span>
-                    <span className="font-mono text-slate-400 text-[10px]">33:30</span>
-                  </div>
-                </div>
-
-                <div className="text-[10px] text-slate-400 pt-3 border-t border-slate-800/80">
-                  <span className="text-emerald-400 font-bold">00:14 — </span>Every financial and compliance event is written to an immutable hash-chained ledger...
+                {/* Bottom live subtitle snippet */}
+                <div className="text-[11px] text-slate-400 pt-4 border-t border-slate-800/80 mt-4 leading-relaxed">
+                  <strong className="text-white font-bold">
+                    {CHAPTERS[activeChapterIndex]?.time}
+                  </strong>{" "}
+                  — {CHAPTERS[activeChapterIndex]?.snippet}
                 </div>
               </div>
             </div>
@@ -1053,7 +1344,7 @@ export default function WebinarsPage() {
       </section>
 
       {/* 9. FOR BUILDERS */}
-      <section className="py-16 sm:py-20 bg-[#EEF2F7] border-t border-slate-200">
+      <section className="py-14 sm:py-18 bg-[#EEF2F7] border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-1 mb-8">
             <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs tracking-wider uppercase">
@@ -1066,52 +1357,73 @@ export default function WebinarsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="p-6 rounded-xl bg-white border border-slate-200 space-y-2 shadow-sm">
+            <div className="p-6 rounded-xl bg-white border border-slate-200 space-y-2 shadow-sm hover:shadow-md transition-shadow">
               <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                 INTERMEDIATE
               </span>
-              <h3 className="text-sm font-bold text-slate-900">Working with the Charging & Rating API</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                Working with the Charging & Rating API
+              </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Assumes a sandbox tenant and familiarity with REST auth. Code shown links directly to current API reference.
+                Assumes a sandbox tenant and familiarity with REST auth. Code shown links directly
+                to current API reference.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-white border border-slate-200 space-y-2 shadow-sm">
+            <div className="p-6 rounded-xl bg-white border border-slate-200 space-y-2 shadow-sm hover:shadow-md transition-shadow">
               <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                 ADVANCED
               </span>
-              <h3 className="text-sm font-bold text-slate-900">Webhook Retries & Dead-Letter Handling</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                Webhook Retries & Dead-Letter Handling
+              </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Live coding session on idempotent webhook consumers using the Integration & Ecosystem domain.
+                Live coding session on idempotent webhook consumers using the Integration &
+                Ecosystem domain.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-white border border-slate-200 space-y-2 shadow-sm">
+            <div className="p-6 rounded-xl bg-white border border-slate-200 space-y-2 shadow-sm hover:shadow-md transition-shadow">
               <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                 BEGINNER
               </span>
-              <h3 className="text-sm font-bold text-slate-900">Your First Sandbox Tenant, Start to Finish</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                Your First Sandbox Tenant, Start to Finish
+              </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Environment assumptions, auth setup and a first successful charging call in one session.
+                Environment assumptions, auth setup and a first successful charging call in one
+                session.
               </p>
             </div>
           </div>
 
           {/* 4 Bottom Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <Link href="/api-reference" className="p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs">
+            <Link
+              href="/developer-portal"
+              className="p-3.5 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-2xs hover:shadow-sm transition-all"
+            >
               <FileText className="w-4 h-4 text-blue-600" />
               API Reference
             </Link>
-            <Link href="/guides" className="p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-xs">
+            <Link
+              href="/guides"
+              className="p-3.5 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-2xs hover:shadow-sm transition-all"
+            >
               <BookOpen className="w-4 h-4 text-blue-600" />
               Developer Guides
             </Link>
-            <Link href="/glossary" className="p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-xs">
+            <Link
+              href="/glossary"
+              className="p-3.5 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-2xs hover:shadow-sm transition-all"
+            >
               <Layers className="w-4 h-4 text-blue-600" />
               Glossary
             </Link>
-            <Link href="/changelog" className="p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-xs">
+            <Link
+              href="/changelog"
+              className="p-3.5 rounded-lg bg-white border border-slate-200 hover:border-blue-400 flex items-center gap-2.5 font-semibold text-slate-800 shadow-2xs hover:shadow-sm transition-all"
+            >
               <Calendar className="w-4 h-4 text-blue-600" />
               Release Notes
             </Link>
@@ -1119,21 +1431,22 @@ export default function WebinarsPage() {
         </div>
       </section>
 
-      {/* 10. CTA BANNER (Figma exact: `#08182B`) */}
+      {/* 10. CTA BANNER */}
       <section className="py-12 bg-[#EEF2F7]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-xl bg-[#08182B] text-white p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="rounded-xl bg-[#08182B] text-white p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl border border-slate-800">
             <div className="space-y-1">
               <h2 className="text-xl sm:text-2xl font-bold text-white">
                 Ready to go deeper than a webinar?
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-lg">
-                When a session answers your question, the next step is optional — no gate, no forced form.
+                When a session answers your question, the next step is optional — no gate, no
+                forced form.
               </p>
             </div>
             <Link
               href="/request-a-demo"
-              className="px-6 py-3 rounded-md bg-[#63B233] hover:bg-[#549c29] text-white font-semibold text-xs sm:text-sm shadow-md whitespace-nowrap"
+              className="px-6 py-3 rounded-md bg-[#63B233] hover:bg-[#549C29] text-white font-semibold text-xs sm:text-sm shadow-md whitespace-nowrap transition-all"
             >
               Request a demo
             </Link>
@@ -1141,37 +1454,43 @@ export default function WebinarsPage() {
         </div>
       </section>
 
-      {/* 11. FAQ ACCORDION */}
-      <section className="py-16 sm:py-20 bg-white border-t border-slate-200">
+      {/* 11. FAQ ACCORDION (Exact Match to Screenshot 3) */}
+      <section className="py-14 sm:py-20 bg-white border-t border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-1 mb-10">
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-600">— FAQ</div>
+          <div className="space-y-1 mb-10">
+            <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs tracking-wider uppercase">
+              <span className="w-4 h-[2px] bg-sky-400 inline-block" />
+              FAQ
+            </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               Common questions about Webinars.
             </h2>
           </div>
 
-          <div className="divide-y divide-slate-200 border-y border-slate-200">
-            {FAQS.map((faq, idx) => (
-              <div key={idx} className="py-4">
-                <button
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full text-left flex items-center justify-between gap-4 text-sm font-bold text-slate-900 hover:text-blue-600 transition-colors"
-                >
-                  <span>{faq.q}</span>
-                  {openFaq === idx ? (
-                    <Minus className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-blue-600 flex-shrink-0" />
+          <div className="divide-y divide-slate-100">
+            {FAQS.map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div key={idx} className="py-5">
+                  <button
+                    onClick={() => setOpenFaq(isOpen ? null : idx)}
+                    className="w-full text-left flex items-center justify-between gap-4 text-sm font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer"
+                  >
+                    <span>{faq.q}</span>
+                    {isOpen ? (
+                      <X className="w-4 h-4 text-sky-500 shrink-0" />
+                    ) : (
+                      <Plus className="w-4 h-4 text-sky-500 shrink-0" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <p className="mt-3 text-xs sm:text-sm text-slate-500 leading-relaxed max-w-3xl">
+                      {faq.a}
+                    </p>
                   )}
-                </button>
-                {openFaq === idx && (
-                  <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {faq.a}
-                  </p>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
