@@ -44,3 +44,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Form controls do not inherit the white body text.
+ *
+ * --foreground is white for the dark marketing site, and a control that sets no
+ * colour of its own inherits it — which on the light console chrome renders white
+ * text on a white field. A select looked like it had no options at all, because
+ * both the placeholder and the chosen label were invisible rather than missing.
+ *
+ * This sits in @layer base so any explicit text-* utility still wins, which is
+ * what the handful of controls drawn on dark backgrounds rely on.
+ */
+@layer base {
+  input,
+  select,
+  textarea,
+  option {
+    color: #0f172a;
+  }
+}
