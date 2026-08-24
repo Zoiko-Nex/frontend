@@ -322,13 +322,24 @@ export default function IntegrationTab() {
 function ProvidersTab() {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
-  const [selected, setSelected] = useState<Connector | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const q = useQuery({
     queryKey: ["integration", "connectors"],
     queryFn: () => api.get<{ connectors?: Connector[] }>("integration", "/v1/connectors"),
   });
   const connectors = q.data?.connectors ?? [];
+
+  /**
+   * The detail modal is keyed by id and re-derived from the list on every render,
+   * never held as a snapshot. A lifecycle action (activate/suspend/retire) only
+   * invalidates this query; if the modal owned a copy of the row it would keep
+   * rendering the pre-action status until it was closed and reopened, which reads
+   * as "the activation failed" when it in fact succeeded.
+   */
+  const selected = selectedId
+    ? connectors.find((c) => c.connector_id === selectedId) ?? null
+    : null;
 
   return (
     <>
@@ -417,7 +428,7 @@ function ProvidersTab() {
                 </tr>
               ) : (
                 connectors.map((c) => (
-                  <tr key={c.connector_id} onClick={() => setSelected(c)} className="hover:bg-slate-50/80 transition-colors cursor-pointer">
+                  <tr key={c.connector_id} onClick={() => setSelectedId(c.connector_id)} className="hover:bg-slate-50/80 transition-colors cursor-pointer">
                     <td className="px-4 py-3.5">
                       <div className="font-bold text-slate-900">{c.connector_name}</div>
                       <div className="text-[11px] text-slate-400 font-mono mt-0.5">{c.provider_name}</div>
@@ -434,7 +445,7 @@ function ProvidersTab() {
                     <td className="px-4 py-3.5"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3.5 text-right">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSelected(c); }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(c.connector_id); }}
                         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-all border border-slate-200 cursor-pointer"
                       >
                         Manage
@@ -461,7 +472,7 @@ function ProvidersTab() {
       {selected && (
         <ConnectorDetailModal
           connector={selected}
-          onClose={() => setSelected(null)}
+          onClose={() => setSelectedId(null)}
           onChanged={() => qc.invalidateQueries({ queryKey: ["integration", "connectors"] })}
         />
       )}
