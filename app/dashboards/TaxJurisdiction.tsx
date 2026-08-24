@@ -35,6 +35,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CountrySelect, CurrencySelect, JurisdictionInput, JurisdictionSelect } from "./CodeFields";
 
 interface Policy {
   policy_id: string;
@@ -812,11 +813,10 @@ export default function TaxJurisdiction() {
                   : undefined
               }
             >
-              <input
-                className={inputMonoClass}
+              <JurisdictionSelect
                 value={decisionForm.jurisdiction_code}
-                onChange={(e) => setDecisionForm({ ...decisionForm, jurisdiction_code: e.target.value.toUpperCase() })}
-                placeholder="GB"
+                onChange={(v) => setDecisionForm({ ...decisionForm, jurisdiction_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Tax category">
@@ -843,11 +843,10 @@ export default function TaxJurisdiction() {
               />
             </Field>
             <Field label="Currency">
-              <input
-                className={inputMonoClass}
+              <CurrencySelect
                 value={decisionForm.currency_code}
-                onChange={(e) => setDecisionForm({ ...decisionForm, currency_code: e.target.value.toUpperCase() })}
-                maxLength={3}
+                onChange={(v) => setDecisionForm({ ...decisionForm, currency_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Usage type">
@@ -887,20 +886,17 @@ export default function TaxJurisdiction() {
         >
           <div className="grid grid-cols-2 gap-3">
             <Field label="Jurisdiction code">
-              <input
-                className={inputMonoClass}
+              <JurisdictionInput
                 value={policyForm.jurisdiction_code}
-                onChange={(e) => setPolicyForm({ ...policyForm, jurisdiction_code: e.target.value.toUpperCase() })}
-                placeholder="US-CA"
+                onChange={(v) => setPolicyForm({ ...policyForm, jurisdiction_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Country code">
-              <input
-                className={inputMonoClass}
+              <CountrySelect
                 value={policyForm.country_code}
-                onChange={(e) => setPolicyForm({ ...policyForm, country_code: e.target.value.toUpperCase() })}
-                placeholder="US"
-                maxLength={2}
+                onChange={(v) => setPolicyForm({ ...policyForm, country_code: v })}
+                className={inputMonoClass}
               />
             </Field>
           </div>
@@ -921,11 +917,10 @@ export default function TaxJurisdiction() {
               />
             </Field>
             <Field label="Currency">
-              <input
-                className={inputMonoClass}
+              <CurrencySelect
                 value={policyForm.currency_code}
-                onChange={(e) => setPolicyForm({ ...policyForm, currency_code: e.target.value.toUpperCase() })}
-                maxLength={3}
+                onChange={(v) => setPolicyForm({ ...policyForm, currency_code: v })}
+                className={inputMonoClass}
               />
             </Field>
           </div>
@@ -981,7 +976,11 @@ export default function TaxJurisdiction() {
             <input className={inputClass} value={editForm.policy_version} onChange={(e) => setEditForm({ ...editForm, policy_version: e.target.value })} />
           </Field>
           <Field label="Currency code">
-            <input className={inputClass} value={editForm.currency_code} onChange={(e) => setEditForm({ ...editForm, currency_code: e.target.value.toUpperCase() })} />
+            <CurrencySelect
+              value={editForm.currency_code}
+              onChange={(v) => setEditForm({ ...editForm, currency_code: v })}
+              className={inputClass}
+            />
           </Field>
           <Field label="Tax category map (JSON)">
             <textarea
@@ -1052,10 +1051,10 @@ export default function TaxJurisdiction() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Jurisdiction code">
-              <input
-                className={inputMonoClass}
+              <JurisdictionSelect
                 value={exemptionForm.jurisdiction_code}
-                onChange={(e) => setExemptionForm({ ...exemptionForm, jurisdiction_code: e.target.value.toUpperCase() })}
+                onChange={(v) => setExemptionForm({ ...exemptionForm, jurisdiction_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Tax category" hint="Blank exempts every category in the jurisdiction.">

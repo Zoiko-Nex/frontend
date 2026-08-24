@@ -40,6 +40,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CurrencySelect } from "./CodeFields";
 
 interface CostLine {
   id: string;
@@ -758,7 +759,11 @@ export default function PartnerSettlement() {
           </div>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Currency">
-              <input className={inputMonoClass} maxLength={3} value={runForm.currency_code} onChange={(e) => setRunForm({ ...runForm, currency_code: e.target.value.toUpperCase() })} />
+              <CurrencySelect
+                value={runForm.currency_code}
+                onChange={(v) => setRunForm({ ...runForm, currency_code: v })}
+                className={inputMonoClass}
+              />
             </Field>
             <Field label="Period start">
               <input type="date" className={inputClass} value={runForm.period_start} onChange={(e) => setRunForm({ ...runForm, period_start: e.target.value })} />
@@ -817,7 +822,11 @@ export default function PartnerSettlement() {
               <input className={inputMonoClass} value={costForm.share_percentage} onChange={(e) => setCostForm({ ...costForm, share_percentage: e.target.value })} placeholder="12.50" />
             </Field>
             <Field label="Currency">
-              <input className={inputMonoClass} maxLength={3} value={costForm.currency_code} onChange={(e) => setCostForm({ ...costForm, currency_code: e.target.value.toUpperCase() })} />
+              <CurrencySelect
+                value={costForm.currency_code}
+                onChange={(v) => setCostForm({ ...costForm, currency_code: v })}
+                className={inputMonoClass}
+              />
             </Field>
           </div>
           <Field label="Settlement period" hint="Free text, e.g. 2026-08.">

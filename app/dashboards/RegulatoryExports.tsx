@@ -45,6 +45,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { JurisdictionSelect } from "./CodeFields";
 
 interface RegulatoryExport {
   export_id: string;
@@ -310,7 +311,11 @@ export default function RegulatoryExports() {
               </select>
             </Field>
             <Field label="Jurisdiction code">
-              <input className={inputMonoClass} value={form.jurisdiction_code} onChange={(e) => setForm({ ...form, jurisdiction_code: e.target.value.toUpperCase() })} />
+              <JurisdictionSelect
+                value={form.jurisdiction_code}
+                onChange={(v) => setForm({ ...form, jurisdiction_code: v })}
+                className={inputMonoClass}
+              />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">

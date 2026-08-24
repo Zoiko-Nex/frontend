@@ -45,6 +45,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CurrencySelect, JurisdictionSelect } from "./CodeFields";
 
 interface PaymentIntent {
   payment_intent_id: string;
@@ -761,18 +762,17 @@ export default function PaymentsManagement() {
               />
             </Field>
             <Field label="Currency">
-              <input
-                className={inputMonoClass}
+              <CurrencySelect
                 value={intentForm.currency_code}
-                onChange={(e) => setIntentForm({ ...intentForm, currency_code: e.target.value.toUpperCase() })}
-                maxLength={3}
+                onChange={(v) => setIntentForm({ ...intentForm, currency_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Jurisdiction">
-              <input
-                className={inputMonoClass}
+              <JurisdictionSelect
                 value={intentForm.jurisdiction_code}
-                onChange={(e) => setIntentForm({ ...intentForm, jurisdiction_code: e.target.value.toUpperCase() })}
+                onChange={(v) => setIntentForm({ ...intentForm, jurisdiction_code: v })}
+                className={inputMonoClass}
               />
             </Field>
           </div>
@@ -920,11 +920,10 @@ export default function PaymentsManagement() {
               />
             </Field>
             <Field label="Currency">
-              <input
-                className={inputMonoClass}
+              <CurrencySelect
                 value={settleForm.currency_code}
-                onChange={(e) => setSettleForm({ ...settleForm, currency_code: e.target.value.toUpperCase() })}
-                maxLength={3}
+                onChange={(v) => setSettleForm({ ...settleForm, currency_code: v })}
+                className={inputMonoClass}
               />
             </Field>
           </div>

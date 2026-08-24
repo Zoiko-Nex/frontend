@@ -38,6 +38,7 @@ import {
   inputClass,
   inputMonoClass,
 } from "@/components/admin/primitives";
+import { CurrencySelect, JurisdictionSelect } from "./CodeFields";
 
 interface Invoice {
   id: string;
@@ -667,11 +668,10 @@ export default function BillingManagement() {
           </Field>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Currency">
-              <input
-                className={inputMonoClass}
+              <CurrencySelect
                 value={invoiceForm.currency_code}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, currency_code: e.target.value.toUpperCase() })}
-                maxLength={3}
+                onChange={(v) => setInvoiceForm({ ...invoiceForm, currency_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Issue date">
@@ -1024,11 +1024,10 @@ export default function BillingManagement() {
               </select>
             </Field>
             <Field label="Jurisdiction code">
-              <input
-                className={inputMonoClass}
+              <JurisdictionSelect
                 value={cycleForm.jurisdiction_code}
-                onChange={(e) => setCycleForm({ ...cycleForm, jurisdiction_code: e.target.value.toUpperCase() })}
-                placeholder="GB"
+                onChange={(v) => setCycleForm({ ...cycleForm, jurisdiction_code: v })}
+                className={inputMonoClass}
               />
             </Field>
           </div>

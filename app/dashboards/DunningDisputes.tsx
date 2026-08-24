@@ -42,6 +42,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CurrencySelect, JurisdictionSelect } from "./CodeFields";
 
 interface DunningCase {
   id: string;
@@ -496,8 +497,16 @@ export default function DunningDisputes() {
           </div>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Overdue (minor)"><input type="number" className={inputMonoClass} value={caseForm.overdue_amount_minor_units} onChange={(e) => setCaseForm({ ...caseForm, overdue_amount_minor_units: Number(e.target.value) })} /></Field>
-            <Field label="Currency"><input className={inputMonoClass} maxLength={3} value={caseForm.currency_code} onChange={(e) => setCaseForm({ ...caseForm, currency_code: e.target.value.toUpperCase() })} /></Field>
-            <Field label="Jurisdiction" hint="Drives the notice rules that apply."><input className={inputMonoClass} value={caseForm.jurisdiction_code} onChange={(e) => setCaseForm({ ...caseForm, jurisdiction_code: e.target.value.toUpperCase() })} /></Field>
+            <Field label="Currency"><CurrencySelect
+                                      value={caseForm.currency_code}
+                                      onChange={(v) => setCaseForm({ ...caseForm, currency_code: v })}
+                                      className={inputMonoClass}
+                                    /></Field>
+            <Field label="Jurisdiction" hint="Drives the notice rules that apply."><JurisdictionSelect
+                                                                                     value={caseForm.jurisdiction_code}
+                                                                                     onChange={(v) => setCaseForm({ ...caseForm, jurisdiction_code: v })}
+                                                                                     className={inputMonoClass}
+                                                                                   /></Field>
           </div>
         </Modal>
       )}
@@ -527,7 +536,11 @@ export default function DunningDisputes() {
               </select>
             </Field>
             <Field label="Disputed (minor)"><input type="number" className={inputMonoClass} value={disputeForm.disputed_amount_minor_units} onChange={(e) => setDisputeForm({ ...disputeForm, disputed_amount_minor_units: Number(e.target.value) })} /></Field>
-            <Field label="Currency"><input className={inputMonoClass} maxLength={3} value={disputeForm.currency_code} onChange={(e) => setDisputeForm({ ...disputeForm, currency_code: e.target.value.toUpperCase() })} /></Field>
+            <Field label="Currency"><CurrencySelect
+                                      value={disputeForm.currency_code}
+                                      onChange={(v) => setDisputeForm({ ...disputeForm, currency_code: v })}
+                                      className={inputMonoClass}
+                                    /></Field>
           </div>
           <Field label="Description"><input className={inputClass} value={disputeForm.description} onChange={(e) => setDisputeForm({ ...disputeForm, description: e.target.value })} /></Field>
         </Modal>

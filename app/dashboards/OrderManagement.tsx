@@ -19,6 +19,7 @@ import {
   TableState,
   TransitionButtons,
 } from "@/components/admin/primitives";
+import { CurrencySelect } from "./CodeFields";
 
 /**
  * Orders, Provisioning & SIM lifecycle.
@@ -1223,13 +1224,9 @@ function PlaceOrderModal({
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-                  <input
+                  <CurrencySelect
                     value={newAccount.currency_code}
-                    onChange={(e) =>
-                      setNewAccount({ ...newAccount, currency_code: e.target.value.toUpperCase() })
-                    }
-                    placeholder="Currency (ISO 4217)"
-                    maxLength={3}
+                    onChange={(v) => setNewAccount({ ...newAccount, currency_code: v })}
                     className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 outline-none focus:border-sky-500 font-mono text-[11px]"
                   />
                   <button

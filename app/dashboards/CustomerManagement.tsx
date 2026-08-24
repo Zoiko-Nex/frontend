@@ -7,6 +7,7 @@ import { api, ApiException } from "@/lib/admin/client";
 import { ACCOUNT_TRANSITIONS, CUSTOMER_TRANSITIONS, KYC_DOCUMENT_TRANSITIONS } from "@/lib/admin/transitions";
 import { ENVELOPE, errMessage, listOf, shortId } from "@/lib/admin/envelope";
 import { StatusPill, TransitionButtons } from "@/components/admin/primitives";
+import { JurisdictionSelect } from "./CodeFields";
 
 /**
  * Fields here match the API exactly. Three of them did not, and each silently
@@ -764,10 +765,9 @@ export default function CustomerManagement() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Jurisdiction Code</label>
-                  <input
+                  <JurisdictionSelect
                     value={customerForm.jurisdiction_code}
-                    onChange={(e) => setCustomerForm({ ...customerForm, jurisdiction_code: e.target.value.toUpperCase() })}
-                    placeholder="GB"
+                    onChange={(v) => setCustomerForm({ ...customerForm, jurisdiction_code: v })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500 font-mono"
                   />
                 </div>

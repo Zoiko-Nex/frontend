@@ -34,6 +34,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CurrencySelect, JurisdictionSelect } from "./CodeFields";
 
 interface LedgerLine {
   ledger_line_id: string;
@@ -521,11 +522,10 @@ export default function FinanceLedger() {
           </Field>
           <div className="grid grid-cols-4 gap-3">
             <Field label="Currency">
-              <input
-                className={inputMonoClass}
+              <CurrencySelect
                 value={entryForm.currency_code}
-                onChange={(e) => setEntryForm({ ...entryForm, currency_code: e.target.value.toUpperCase() })}
-                maxLength={3}
+                onChange={(v) => setEntryForm({ ...entryForm, currency_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Ledger period">
@@ -537,10 +537,10 @@ export default function FinanceLedger() {
               />
             </Field>
             <Field label="Jurisdiction">
-              <input
-                className={inputMonoClass}
+              <JurisdictionSelect
                 value={entryForm.jurisdiction_code}
-                onChange={(e) => setEntryForm({ ...entryForm, jurisdiction_code: e.target.value.toUpperCase() })}
+                onChange={(v) => setEntryForm({ ...entryForm, jurisdiction_code: v })}
+                className={inputMonoClass}
               />
             </Field>
             <Field label="Policy version">

@@ -42,6 +42,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CurrencySelect } from "./CodeFields";
 
 // ─── usage-ingestion-mediation ────────────────────────────────────────────────
 
@@ -818,11 +819,10 @@ export default function UsageCharging() {
                   />
                 </Field>
                 <Field label="Currency">
-                  <input
-                    className={inputMonoClass}
-                    maxLength={3}
+                  <CurrencySelect
                     value={reserveForm.currency_code}
-                    onChange={(e) => setReserveForm({ ...reserveForm, currency_code: e.target.value.toUpperCase() })}
+                    onChange={(v) => setReserveForm({ ...reserveForm, currency_code: v })}
+                    className={inputMonoClass}
                   />
                 </Field>
               </div>
@@ -978,7 +978,11 @@ export default function UsageCharging() {
                 <input type="number" className={inputMonoClass} value={postpaidForm.amount_minor_units} onChange={(e) => setPostpaidForm({ ...postpaidForm, amount_minor_units: Number(e.target.value) })} />
               </Field>
               <Field label="Currency">
-                <input className={inputMonoClass} maxLength={3} value={postpaidForm.currency_code} onChange={(e) => setPostpaidForm({ ...postpaidForm, currency_code: e.target.value.toUpperCase() })} />
+                <CurrencySelect
+                  value={postpaidForm.currency_code}
+                  onChange={(v) => setPostpaidForm({ ...postpaidForm, currency_code: v })}
+                  className={inputMonoClass}
+                />
               </Field>
             </div>
 
@@ -1097,7 +1101,11 @@ export default function UsageCharging() {
               <input type="number" className={inputMonoClass} value={rateForm.rate_per_unit} onChange={(e) => setRateForm({ ...rateForm, rate_per_unit: Number(e.target.value) })} />
             </Field>
             <Field label="Currency">
-              <input className={inputMonoClass} maxLength={3} value={rateForm.currency_code} onChange={(e) => setRateForm({ ...rateForm, currency_code: e.target.value.toUpperCase() })} />
+              <CurrencySelect
+                value={rateForm.currency_code}
+                onChange={(v) => setRateForm({ ...rateForm, currency_code: v })}
+                className={inputMonoClass}
+              />
             </Field>
             <Field label="Tax category">
               <input className={inputMonoClass} value={rateForm.tax_category} onChange={(e) => setRateForm({ ...rateForm, tax_category: e.target.value.toUpperCase() })} />
@@ -1162,7 +1170,11 @@ export default function UsageCharging() {
               <input className={inputMonoClass} value={accountForm.brand_id} onChange={(e) => setAccountForm({ ...accountForm, brand_id: e.target.value })} />
             </Field>
             <Field label="Currency">
-              <input className={inputMonoClass} maxLength={3} value={accountForm.currency_code} onChange={(e) => setAccountForm({ ...accountForm, currency_code: e.target.value.toUpperCase() })} />
+              <CurrencySelect
+                value={accountForm.currency_code}
+                onChange={(v) => setAccountForm({ ...accountForm, currency_code: v })}
+                className={inputMonoClass}
+              />
             </Field>
             <Field label="Initial balance (minor)">
               <input type="number" className={inputMonoClass} value={accountForm.initial_balance} onChange={(e) => setAccountForm({ ...accountForm, initial_balance: Number(e.target.value) })} />

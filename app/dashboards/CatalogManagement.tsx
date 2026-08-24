@@ -7,6 +7,7 @@ import { api, ApiException } from "@/lib/admin/client";
 import { formatMoney } from "@/lib/admin/money";
 import { OFFER_TRANSITIONS, PRODUCT_TRANSITIONS } from "@/lib/admin/transitions";
 import { DetailToggle, RecordDetail, StatusPill, TransitionButtons } from "@/components/admin/primitives";
+import { CountrySelect, CurrencySelect, JurisdictionSelect } from "./CodeFields";
 
 interface Product {
   id: string;
@@ -584,10 +585,9 @@ export default function CatalogManagement() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Currency Code</label>
-                  <input
+                  <CurrencySelect
                     value={productForm.currency_code}
-                    onChange={(e) => setProductForm({ ...productForm, currency_code: e.target.value.toUpperCase() })}
-                    placeholder="GBP"
+                    onChange={(v) => setProductForm({ ...productForm, currency_code: v })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 outline-none focus:border-sky-500 transition font-mono"
                   />
                 </div>
@@ -775,12 +775,9 @@ export default function CatalogManagement() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Currency</label>
-                  <input
+                  <CurrencySelect
                     value={priceForm.currency_code}
-                    maxLength={3}
-                    onChange={(e) =>
-                      setPriceForm({ ...priceForm, currency_code: e.target.value.toUpperCase() })
-                    }
+                    onChange={(v) => setPriceForm({ ...priceForm, currency_code: v })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
                   />
                 </div>
@@ -823,21 +820,17 @@ export default function CatalogManagement() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Country</label>
-                  <input
+                  <CountrySelect
                     value={priceForm.country_code}
-                    maxLength={2}
-                    onChange={(e) => setPriceForm({ ...priceForm, country_code: e.target.value.toUpperCase() })}
+                    onChange={(v) => setPriceForm({ ...priceForm, country_code: v })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Jurisdiction</label>
-                  <input
+                  <JurisdictionSelect
                     value={priceForm.jurisdiction_code}
-                    maxLength={5}
-                    onChange={(e) =>
-                      setPriceForm({ ...priceForm, jurisdiction_code: e.target.value.toUpperCase() })
-                    }
+                    onChange={(v) => setPriceForm({ ...priceForm, jurisdiction_code: v })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
                   />
                 </div>
@@ -909,10 +902,9 @@ export default function CatalogManagement() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-slate-700 font-semibold">Currency</label>
-                  <input
+                  <CurrencySelect
                     value={priceForm.currency_code}
-                    maxLength={3}
-                    onChange={(e) => setPriceForm({ ...priceForm, currency_code: e.target.value.toUpperCase() })}
+                    onChange={(v) => setPriceForm({ ...priceForm, currency_code: v })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500 font-mono"
                   />
                 </div>

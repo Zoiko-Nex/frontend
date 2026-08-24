@@ -2958,6 +2958,37 @@ function InvocationsTab() {
   });
 
   /**
+   * The operation had to be typed from memory, and a typo produced a not-found
+   * error that reads as a provider problem rather than a spelling one. The
+   * allow-list is already addressable per connector, so offer it directly.
+   */
+  const invokeOpsQ = useQuery({
+    queryKey: ["integration", "operations", invokeForm.connector_id],
+    queryFn: () =>
+      api.get<{ operations?: Operation[] }>(
+        "integration",
+        `/v1/connectors/${invokeForm.connector_id}/operations`,
+      ),
+    enabled: !!invokeForm.connector_id,
+  });
+  const invokeOps = invokeOpsQ.data?.operations ?? [];
+  const invokeOp = invokeOps.find((o) => o.operation_name === invokeForm.operation) ?? null;
+
+  const selectOperation = (name: string) => {
+    const op = invokeOps.find((o) => o.operation_name === name);
+    const params = Array.from(op?.path_template?.matchAll(/\{(\w+)\}/g) ?? []).map((m) => m[1]);
+    setInvokeForm({
+      ...invokeForm,
+      operation: name,
+      // Seed exactly the placeholders the path template declares, so the JSON
+      // does not have to be transcribed from the template by hand.
+      path_params: params.length
+        ? JSON.stringify(Object.fromEntries(params.map((k) => [k, ""])), null, 2)
+        : "{}",
+    });
+  };
+
+  /**
    * A manual invoke is a real outbound call to a real partner, so it is behind
    * an explicit form rather than a one-click button on a row.
    */
@@ -3085,24 +3116,61 @@ function InvocationsTab() {
                 <select
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-sky-500"
                   value={invokeForm.connector_id}
-                  onChange={(e) => setInvokeForm({ ...invokeForm, connector_id: e.target.value })}
+                  onChange={(e) =>
+                    // Operations are per connector, so a stale name must not survive the change.
+                    setInvokeForm({ connector_id: e.target.value, operation: "", path_params: "{}" })
+                  }
                 >
                   <option value="">— select —</option>
-                  {(connectorsQ.data?.connectors ?? []).map((c) => (
-                    <option key={c.connector_id} value={c.connector_id}>
-                      {c.connector_name} · {c.status}
-                    </option>
-                  ))}
+                  {(connectorsQ.data?.connectors ?? []).map((c) => {
+                    const invocable = String(c.status).toUpperCase() === "ACTIVE";
+                    return (
+                      <option key={c.connector_id} value={c.connector_id} disabled={!invocable}>
+                        {c.connector_name} · {c.status}
+                        {invocable ? "" : " (not invocable)"}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
               <label className="flex flex-col gap-1.5">
                 <span className="text-slate-700 font-semibold">Operation</span>
-                <input
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono outline-none focus:border-sky-500"
+                <select
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-mono outline-none focus:border-sky-500 disabled:bg-slate-50"
                   value={invokeForm.operation}
-                  onChange={(e) => setInvokeForm({ ...invokeForm, operation: e.target.value })}
-                  placeholder="getBalance"
-                />
+                  onChange={(e) => selectOperation(e.target.value)}
+                  disabled={!invokeForm.connector_id || invokeOpsQ.isLoading}
+                >
+                  <option value="">
+                    {!invokeForm.connector_id
+                      ? "— select a connector first —"
+                      : invokeOpsQ.isLoading
+                        ? "loading…"
+                        : invokeOps.length
+                          ? "— select —"
+                          : "no operations on the allow-list"}
+                  </option>
+                  {invokeOps.map((o) => {
+                    // Only CERTIFIED is invocable while REQUIRE_CONNECTOR_CERTIFICATION is
+                    // on, which is its default; offering the rest silently sends the user
+                    // into a rejection whose cause is not visible from here.
+                    const invocable = o.certification_status === "CERTIFIED";
+                    return (
+                      <option key={o.operation_id} value={o.operation_name} disabled={!invocable}>
+                        {o.http_method} {o.operation_name}
+                        {invocable ? "" : ` (${o.certification_status} — certify to invoke)`}
+                      </option>
+                    );
+                  })}
+                </select>
+                {invokeOp && (
+                  <span className="text-[11px] text-slate-500 font-mono">{invokeOp.path_template}</span>
+                )}
+                {invokeForm.connector_id && !invokeOpsQ.isLoading && invokeOps.length === 0 && (
+                  <span className="text-[11px] text-amber-600">
+                    Register one under this connector&apos;s Permitted Operations tab first.
+                  </span>
+                )}
               </label>
               <label className="flex flex-col gap-1.5">
                 <span className="text-slate-700 font-semibold">Path params (JSON)</span>

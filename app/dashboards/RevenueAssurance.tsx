@@ -42,6 +42,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
+import { CurrencySelect } from "./CodeFields";
 
 interface ReconRun {
   id: string;
@@ -659,7 +660,11 @@ export default function RevenueAssurance() {
               <input type="number" className={inputMonoClass} value={caseForm.leakage_amount_minor_units} onChange={(e) => setCaseForm({ ...caseForm, leakage_amount_minor_units: Number(e.target.value) })} />
             </Field>
             <Field label="Currency">
-              <input className={inputMonoClass} maxLength={3} value={caseForm.currency_code} onChange={(e) => setCaseForm({ ...caseForm, currency_code: e.target.value.toUpperCase() })} />
+              <CurrencySelect
+                value={caseForm.currency_code}
+                onChange={(v) => setCaseForm({ ...caseForm, currency_code: v })}
+                className={inputMonoClass}
+              />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
