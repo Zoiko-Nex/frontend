@@ -184,17 +184,21 @@ const PlansAndPricing = () => {
                     consumption, jurisdictions, integrations, and support. Pay for what you need.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button className="px-8 h-12 bg-sky-600 hover:bg-sky-500 transition-colors text-white text-sm font-semibold rounded-md shadow-lg shadow-sky-600/10 cursor-pointer">
-                        Request Pricing Pack
-                    </button>
-                    <button className="px-8 h-12 rounded-md outline outline-1 outline-slate-800 hover:bg-white/5 transition-colors text-slate-300 text-sm font-semibold cursor-pointer">
-                        See Plans
-                    </button>
+                    <Link href="/register">
+                        <button className="px-8 h-12 bg-sky-600 hover:bg-sky-500 transition-colors text-white text-sm font-semibold rounded-md shadow-lg shadow-sky-600/10 cursor-pointer">
+                            Request Pricing Pack / Register
+                        </button>
+                    </Link>
+                    <a href="#pathways">
+                        <button className="px-8 h-12 rounded-md outline outline-1 outline-slate-800 hover:bg-white/5 transition-colors text-slate-300 text-sm font-semibold cursor-pointer">
+                            See Plans
+                        </button>
+                    </a>
                 </div>
             </section>
 
             {/* ─── PATHWAYS SECTION ─── */}
-            <section className="relative max-w-[1040px] mx-auto py-16 px-6 border-t border-slate-800/80">
+            <section id="pathways" className="relative max-w-[1040px] mx-auto py-16 px-6 border-t border-slate-800/80">
                 <div className="text-center mb-12">
                     <span className="text-slate-500 text-xs font-bold uppercase tracking-[0.15em] block mb-3">
                         Pathways
@@ -259,14 +263,16 @@ const PlansAndPricing = () => {
                                     </button>
                                 </Link>
                             ) : (
-                                <button
-                                    className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
-                                            ? 'bg-sky-600 hover:bg-sky-500 text-white'
-                                            : 'outline outline-1 outline-slate-800 text-slate-300 hover:bg-white/5'
-                                        }`}
-                                >
-                                    {path.buttonText}
-                                </button>
+                                <Link href={`/register?pathway=${encodeURIComponent(path.tag)}`} className="w-full">
+                                    <button
+                                        className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
+                                                ? 'bg-sky-600 hover:bg-sky-500 text-white'
+                                                : 'outline outline-1 outline-slate-800 text-slate-300 hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {path.buttonText}
+                                    </button>
+                                </Link>
                             )}
                         </div>
                     ))}

@@ -784,8 +784,44 @@ export default function PaymentsManagement() {
               className={inputMonoClass}
               value={intentForm.payment_method_token}
               onChange={(e) => setIntentForm({ ...intentForm, payment_method_token: e.target.value })}
-              placeholder="pm_visa_4242"
+              placeholder="pm_card_visa"
             />
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              <span className="text-[10px] text-slate-400 font-semibold">Test Tokens:</span>
+              <button
+                type="button"
+                onClick={() => setIntentForm((f) => ({ ...f, payment_method_token: "pm_card_visa" }))}
+                className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-mono rounded cursor-pointer transition"
+              >
+                pm_card_visa (Success)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIntentForm((f) => ({ ...f, payment_method_token: "pm_card_chargeCustomerFail" }))}
+                className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-mono rounded cursor-pointer transition border border-rose-200"
+              >
+                pm_card_chargeCustomerFail (Decline)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setIntentForm({
+                    invoice_id: "inv_" + Math.random().toString(36).substring(2, 8),
+                    account_id: "00000000-0000-0000-0000-000000000001",
+                    customer_id: "00000000-0000-0000-0000-000000000001",
+                    payment_rail: "CARD",
+                    provider_name: "STRIPE",
+                    amount_minor_units: 4999,
+                    currency_code: "USD",
+                    payment_method_token: "pm_card_visa",
+                    jurisdiction_code: "US-CA",
+                  })
+                }
+                className="ml-auto px-2 py-0.5 bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10px] font-bold rounded cursor-pointer transition border border-sky-200"
+              >
+                ⚡ Fill Test Stripe Data
+              </button>
+            </div>
           </Field>
           {intentForm.amount_minor_units > 0 && (
             <p className="text-[11px] text-slate-500">

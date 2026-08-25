@@ -562,14 +562,29 @@ const RegisterPage = () => {
                             {/* Bottom Actions */}
                             <div>
                                 <div className="w-[561px] h-px bg-slate-500/20 mb-[14px]" />
-                                <div className="flex items-center justify-center pt-2 pr-2.5">
+                                <div className="flex items-center justify-between pt-1 pr-2.5 gap-3">
                                     <Link 
-                                        href="/login" 
-                                        className="text-sky-600 hover:text-sky-700 text-xs font-bold flex items-center gap-1 transition-colors"
+                                        href="/dashboards?tab=payments" 
+                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
                                         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                     >
-                                        Approved! Sign in to continue <ArrowRight size={14} />
+                                        Setup Payments &amp; Checkout <ArrowRight size={14} />
                                     </Link>
+                                    <div className="flex items-center gap-3">
+                                        <Link 
+                                            href="/dashboards?tab=catalog" 
+                                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors border border-slate-200"
+                                        >
+                                            View Product Catalog
+                                        </Link>
+                                        <Link 
+                                            href="/login" 
+                                            className="text-sky-600 hover:text-sky-700 text-xs font-bold flex items-center gap-1 transition-colors"
+                                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                                        >
+                                            Sign in <ArrowRight size={14} />
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         </div>
