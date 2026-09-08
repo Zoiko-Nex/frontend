@@ -237,8 +237,8 @@ export default function RequestFormsPage() {
           leads is not something most people expect to be unauthenticated. */}
       <div
         style={{
-          background: "var(--bg-l)",
-          border: "1px solid var(--border)",
+          background: "var(--field-soft)",
+          border: "1px solid var(--line)",
           borderRadius: 12,
           padding: "12px 16px",
           fontSize: 11,

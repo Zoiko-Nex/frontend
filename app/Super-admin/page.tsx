@@ -930,7 +930,7 @@ export default function SuperAdminPage() {
                     <span>From sequence</span>
                     <input
                       className="mono"
-                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-l)", color: "inherit", width: 120 }}
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-strong)", background: "var(--field)", color: "inherit", width: 120 }}
                       value={verifyRange.from}
                       onChange={(e) => setVerifyRange({ ...verifyRange, from: e.target.value })}
                     />
@@ -939,7 +939,7 @@ export default function SuperAdminPage() {
                     <span>To sequence</span>
                     <input
                       className="mono"
-                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-l)", color: "inherit", width: 120 }}
+                      style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-strong)", background: "var(--field)", color: "inherit", width: 120 }}
                       value={verifyRange.to}
                       onChange={(e) => setVerifyRange({ ...verifyRange, to: e.target.value })}
                     />
@@ -1272,18 +1272,13 @@ function LabeledInput({
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 12 }}>
       <span style={{ fontWeight: 600 }}>{label}</span>
+      {/* Styling comes from `.modal-b input` in super-admin.css — every
+          LabeledInput lives in a modal body. An inline border here would win
+          over that rule, which is how the border went missing (ZN-3). */}
       <input
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        style={{
-          padding: "8px 10px",
-          borderRadius: 8,
-          border: "1px solid var(--border)",
-          background: "var(--bg-l)",
-          color: "inherit",
-          font: "inherit",
-        }}
       />
     </label>
   );

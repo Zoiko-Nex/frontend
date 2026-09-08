@@ -151,8 +151,11 @@ td.strong{color:var(--ink);font-weight:600}
 tbody tr.clickable{cursor:pointer}tbody tr.clickable:hover td{background:var(--field-soft)}
 
 /* KPI strip */
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
-@media(max-width:1240px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:680px){.kpis{grid-template-columns:1fr 1fr}}
+/* auto-fit, not a fixed count: .main sits between a 250px sidebar and a 322px
+   rail, so a viewport-width media query mis-sizes this grid by ~572px. Sizing
+   off the container also stops a module with 4 tiles leaving a dead 5th
+   column (ZN-6). */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;transition:border-color .14s}
 .kpi:hover{border-color:var(--blue)}
 .kpi .l{font-family:var(--mono);font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-faint)}
@@ -160,16 +163,19 @@ tbody tr.clickable{cursor:pointer}tbody tr.clickable:hover td{background:var(--f
 .kpi .v.sm{font-size:18px}
 .kpi .d{margin-top:6px}
 /* command panels */
-.panels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-@media(max-width:1240px){.panels{grid-template-columns:1fr 1fr}}@media(max-width:680px){.panels{grid-template-columns:1fr}}
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
 .panel h3{font-size:14px;display:flex;align-items:center;gap:9px;margin-bottom:12px}
 .panel h3 svg{width:16px;height:16px;stroke:var(--blue);fill:none;stroke-width:2}
-.kv{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
-.kv:last-of-type{border-bottom:0}.kv .k{color:var(--ink-soft)}.kv .v{font-weight:700}
+/* gap + wrap are load-bearing: with space-between and no gap, a long value
+   (e.g. UnavailablePanel's "Needed") shrinks to min-content and butts straight
+   into its key with no separation, which read as overlapping text (ZN-6). */
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.kv:last-of-type{border-bottom:0}.kv .k{color:var(--ink-soft);flex:none}
+.kv .v{font-weight:700;min-width:0;text-align:right;overflow-wrap:break-word}
 .kv .v.bad{color:var(--danger)}.kv .v.warn{color:var(--amber)}.kv .v.good{color:var(--green-deep)}
 .panel .btn{margin-top:12px;width:100%}
-.sectitle{font-size:13px;font-weight:800;margin:24px 0 12px;display:flex;align-items:center;gap:9px}
+.sectitle{font-size:13px;font-weight:800;margin:24px 0 12px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .sectitle .mono{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:600}
 /* standards / principles strip */
 .stdstrip{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:18px}
