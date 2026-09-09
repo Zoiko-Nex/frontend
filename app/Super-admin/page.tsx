@@ -42,7 +42,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { platformApi, probeHealth, CROSS_TENANT_SERVICES } from "@/lib/admin/platform/client";
 import { getPlatformSession, clearPlatformSession } from "@/lib/admin/platform/session";
@@ -524,10 +524,19 @@ export default function SuperAdminPage() {
   });
 
   const changeStatus = useMutation({
-    mutationFn: () =>
-      platformApi.patch("identity", `/v1/tenants/${statusFor!.tenant.tenant_id}`, { status: statusFor!.next }),
+    mutationFn: () => {
+      const currentStatus = (statusFor!.tenant.status ?? "").toUpperCase();
+      const action =
+        statusFor!.next === "SUSPENDED" || statusFor!.next === "SUSPEND"
+          ? "SUSPEND"
+          : currentStatus === "SUSPENDED"
+            ? "REACTIVATE"
+            : "ACTIVATE";
+
+      return platformApi.patch("identity", `/v1/tenants/${statusFor!.tenant.tenant_id}`, { action });
+    },
     onSuccess: () => {
-      toast.success(`${statusFor!.tenant.name} → ${statusFor!.next}`);
+      toast.success(`${statusFor!.tenant.name} status updated`);
       setStatusFor(null);
       qc.invalidateQueries({ queryKey: ["platform", "tenants"] });
     },
@@ -596,8 +605,6 @@ export default function SuperAdminPage() {
 
   return (
     <>
-      <Toaster position="bottom-right" richColors />
-
       <header className="top">
         <button className="hamb" aria-label="Menu" onClick={() => setSideOpen((v) => !v)}>
           <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
