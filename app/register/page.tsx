@@ -10,9 +10,9 @@ const RegisterPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [registrationDetails, setRegistrationDetails] = useState<{
-        partyId: string;
-        customerId: string;
-        accountNumber: string;
+        requestId: string;
+        organization: string;
+        email: string;
     } | null>(null);
 
     const [formData, setFormData] = useState({
@@ -48,103 +48,90 @@ const RegisterPage = () => {
         setStep(3);
     };
 
+    const OPERATOR_TYPE_MAP: Record<string, string> = {
+        'mno': 'tier-1-mno',
+        'mvno-mvne': 'mvno',
+        'system-integrator': 'strategic-partner',
+        'telecom-vendor': 'other',
+        'enterprise': 'enterprise-iot',
+        'other': 'other'
+    };
+
+    const COUNTRY_NAME_MAP: Record<string, string> = {
+        'US': 'United States',
+        'GB': 'United Kingdom',
+        'EU': 'European Union',
+        'IN': 'India',
+        'SG': 'Singapore',
+        'AU': 'Australia',
+        'JP': 'Japan',
+        'BR': 'Brazil',
+        'other': 'Global'
+    };
+
+    const ROLE_LABEL_MAP: Record<string, string> = {
+        'operator-exec': 'Operator CEO / Executive',
+        'network-architect': 'Network Architect / Engineer',
+        'product-manager': 'Product Manager',
+        'procurement': 'Procurement / Finance',
+        'integrator': 'System Integrator',
+        'other': 'Other Role'
+    };
+
     const handleStep3Submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            // Generate a secure client-side PII token (ZN-ADR-013 compliance)
-            const piiToken = typeof window !== 'undefined' && window.crypto?.randomUUID 
-                ? window.crypto.randomUUID() 
-                : "f2220099-0000-4000-8000-00000000" + Math.floor(1000 + Math.random() * 9000);
+            const fullName = `${formData.firstName} ${formData.lastName}`.trim() || 'New Member';
+            const organization = formData.company.trim() || 'Pending Organization';
+            const jobTitle = ROLE_LABEL_MAP[formData.role] || formData.role || 'Executive';
+            const country = COUNTRY_NAME_MAP[formData.country] || formData.country || 'United States';
+            const operatorType = OPERATOR_TYPE_MAP[formData.orgType] || 'other';
 
-            // 1. Create Party Profile
-            const partyRes = await fetch('/api/proxy', {
+            const requirementsSummary = [
+                `Primary Interest: ${formData.interest || 'N/A'}`,
+                `Deployment Preference: ${formData.deployment || 'N/A'}`,
+                `Subscriber/Device Scale: ${formData.scale || 'N/A'}`,
+                `Timeline: ${formData.timeline || 'N/A'}`,
+                `Target Jurisdiction: ${formData.jurisdiction || 'N/A'}`,
+                formData.goal ? `Evolution Goal: ${formData.goal}` : ''
+            ].filter(Boolean).join(' | ');
+
+            // Submit to public Request Forms service (port 8099 - unauthenticated by design)
+            const res = await fetch('/api/proxy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    port: 8081,
+                    port: 8099,
                     method: 'POST',
-                    path: '/v1/parties',
-                    headers: { 'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d' },
+                    path: '/v1/demo-requests',
                     body: {
-                        party_type: 'INDIVIDUAL',
-                        pii_token: piiToken,
-                        data_residency_region: 'us-east-1',
-                        jurisdiction_code: formData.country === 'US' ? 'US-CA' : formData.country || 'US-CA'
+                        full_name: fullName,
+                        work_email: formData.workEmail.trim(),
+                        organization: organization,
+                        job_title: jobTitle,
+                        country: country,
+                        operator_type: operatorType,
+                        project_requirements: requirementsSummary,
+                        source_page: '/register'
                     }
                 })
             });
 
-            const partyResult = await partyRes.json();
-            if (!partyRes.ok || partyResult.status !== 201) {
-                throw new Error(partyResult.data?.message || partyResult.error || 'Failed to create Party profile.');
+            const result = await res.json();
+            if (!res.ok || (result.status && result.status !== 200 && result.status !== 201)) {
+                throw new Error(result.data?.message || result.error || 'Failed to submit registration request.');
             }
 
-            const partyId = partyResult.data?.party_id;
-            if (!partyId) {
-                throw new Error('Party creation response did not include a party_id.');
-            }
-
-            // 2. Create Customer Profile
-            const customerRes = await fetch('/api/proxy', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    port: 8081,
-                    method: 'POST',
-                    path: '/v1/customers',
-                    headers: { 'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d' },
-                    body: {
-                        party_id: partyId,
-                        customer_type: 'RETAIL',
-                        status: 'ACTIVE'
-                    }
-                })
-            });
-
-            const customerResult = await customerRes.json();
-            if (!customerRes.ok || customerResult.status !== 201) {
-                throw new Error(customerResult.data?.message || customerResult.error || 'Failed to create Customer profile.');
-            }
-
-            const customerId = customerResult.data?.id;
-            if (!customerId) {
-                throw new Error('Customer creation response did not include a customer ID.');
-            }
-
-            // 3. Create Billing Account
-            const accountNumber = 'ACC-' + Math.floor(100000 + Math.random() * 900000);
-            const accountRes = await fetch('/api/proxy', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    port: 8081,
-                    method: 'POST',
-                    path: '/v1/accounts',
-                    headers: { 'X-Tenant-ID': '1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d' },
-                    body: {
-                        customer_id: customerId,
-                        account_number: accountNumber,
-                        account_type: 'RETAIL',
-                        currency_code: 'USD',
-                        credit_limit_minor_units: 100000,
-                        credit_limit_currency_code: 'USD'
-                    }
-                })
-            });
-
-            const accountResult = await accountRes.json();
-            if (!accountRes.ok || accountResult.status !== 201) {
-                throw new Error(accountResult.data?.message || accountResult.error || 'Failed to create Billing Account.');
-            }
+            const requestId = result.data?.demo_request_id || 'ZNX-REG-' + Math.floor(100000 + Math.random() * 900000);
 
             // Save details for UI rendering on Step 4
             setRegistrationDetails({
-                partyId,
-                customerId,
-                accountNumber
+                requestId,
+                organization,
+                email: formData.workEmail
             });
 
             setStep(4);
@@ -512,29 +499,29 @@ const RegisterPage = () => {
                                 <div className="w-12 h-12 bg-emerald-500/10 rounded-full border border-emerald-500 flex items-center justify-center mb-3">
                                     <Check size={24} className="text-emerald-500 stroke-[2.5]" />
                                 </div>
-                                <h4 className="text-slate-700 text-lg font-bold font-sans">Organization Provisioned!</h4>
+                                <h4 className="text-slate-700 text-lg font-bold font-sans">Organization Registered!</h4>
                                 <p className="text-slate-500 text-xs mt-1 max-w-[420px] leading-relaxed font-sans">
-                                    Your corporate profile, customer account, and billing ledger have been successfully provisioned in the backend database.
+                                    Your registration and onboarding request have been successfully submitted to ZoikoNex.
                                 </p>
                             </div>
 
-                            {/* Provisioned IDs */}
+                            {/* Provisioned Details */}
                             {registrationDetails && (
                                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 my-2 w-[553px] space-y-2 text-left">
                                     <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1.5 mb-2 font-sans uppercase tracking-wider">
-                                        BSS Provisioning Record Details
+                                        Onboarding Request Reference Details
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-sans">
-                                        <span className="text-slate-400">Party Profile ID:</span>
-                                        <code className="text-sky-700 font-mono font-semibold bg-sky-50 px-2 py-0.5 rounded">{registrationDetails.partyId}</code>
+                                        <span className="text-slate-400">Request Reference ID:</span>
+                                        <code className="text-sky-700 font-mono font-semibold bg-sky-50 px-2 py-0.5 rounded">{registrationDetails.requestId}</code>
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-sans">
-                                        <span className="text-slate-400">Customer Account ID:</span>
-                                        <code className="text-emerald-700 font-mono font-semibold bg-emerald-50 px-2 py-0.5 rounded">{registrationDetails.customerId}</code>
+                                        <span className="text-slate-400">Organization:</span>
+                                        <code className="text-emerald-700 font-mono font-semibold bg-emerald-50 px-2 py-0.5 rounded">{registrationDetails.organization}</code>
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-sans">
-                                        <span className="text-slate-400">Billing Account Number:</span>
-                                        <code className="text-purple-700 font-mono font-semibold bg-purple-50 px-2 py-0.5 rounded">{registrationDetails.accountNumber}</code>
+                                        <span className="text-slate-400">Contact Email:</span>
+                                        <code className="text-purple-700 font-mono font-semibold bg-purple-50 px-2 py-0.5 rounded">{registrationDetails.email}</code>
                                     </div>
                                 </div>
                             )}
@@ -546,7 +533,7 @@ const RegisterPage = () => {
                                         1
                                     </div>
                                     <p className="text-slate-600 text-[11px] leading-normal font-sans text-left">
-                                        Use your registered email to log in and access the subscriber dashboard.
+                                        Our provisioning team will verify your jurisdiction and configure your dedicated environment.
                                     </p>
                                 </div>
                                 <div className="flex gap-2.5">
@@ -554,7 +541,7 @@ const RegisterPage = () => {
                                         2
                                     </div>
                                     <p className="text-slate-600 text-[11px] leading-normal font-sans text-left">
-                                        Create custom products, commercial offers, and price rules under the Product Catalog module.
+                                        You will receive your tenant login credentials via email to access your subscriber dashboard.
                                     </p>
                                 </div>
                             </div>
@@ -564,19 +551,13 @@ const RegisterPage = () => {
                                 <div className="w-[561px] h-px bg-slate-500/20 mb-[14px]" />
                                 <div className="flex items-center justify-between pt-1 pr-2.5 gap-3">
                                     <Link 
-                                        href="/dashboards?tab=payments" 
+                                        href="/dashboards?tab=catalog" 
                                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
                                         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                                     >
-                                        Setup Payments &amp; Checkout <ArrowRight size={14} />
+                                        Explore Products &amp; Catalog <ArrowRight size={14} />
                                     </Link>
                                     <div className="flex items-center gap-3">
-                                        <Link 
-                                            href="/dashboards?tab=catalog" 
-                                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors border border-slate-200"
-                                        >
-                                            View Product Catalog
-                                        </Link>
                                         <Link 
                                             href="/login" 
                                             className="text-sky-600 hover:text-sky-700 text-xs font-bold flex items-center gap-1 transition-colors"
