@@ -262,3 +262,17 @@ tbody tr.clickable{cursor:pointer}tbody tr.clickable:hover td{background:var(--f
 .empty .ic{width:48px;height:48px;border-radius:13px;background:var(--green-soft);display:grid;place-items:center;margin:0 auto 12px}
 .empty .ic svg{width:24px;height:24px;stroke:var(--green-deep);fill:none;stroke-width:2}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* IAM subtabs & matrix */
+.subtabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+.subtab{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;border:1px solid transparent;background:none;color:var(--ink-soft);font-size:12.5px;font-weight:600;cursor:pointer;transition:.14s}
+.subtab:hover{background:var(--field-soft);color:var(--ink)}
+.subtab.active{background:var(--blue-soft);color:var(--blue);border-color:color-mix(in srgb,var(--blue) 28%,transparent)}
+.mat-cell{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:700;padding:0 4px}
+.mat-all{background:var(--green-soft);color:var(--green-deep);border:1px solid color-mix(in srgb,var(--green) 35%,transparent)}
+.mat-m{background:var(--blue-soft);color:var(--blue);border:1px solid color-mix(in srgb,var(--blue) 30%,transparent)}
+.mat-v{background:var(--field-soft);color:var(--ink-soft);border:1px solid var(--line-strong)}
+.mat-l{background:var(--amber-soft);color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 35%,transparent)}
+.mat-a{background:var(--violet-soft);color:var(--violet);border:1px solid color-mix(in srgb,var(--violet) 35%,transparent)}
+.mat-s{background:var(--cyan-soft);color:var(--cyan);border:1px solid color-mix(in srgb,var(--cyan) 35%,transparent)}
+.mat-none{color:var(--ink-faint);opacity:0.35}

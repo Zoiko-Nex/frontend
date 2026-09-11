@@ -676,12 +676,7 @@ export default function Header() {
           >
             Request a Demo
           </Link>
-          <Link
-            href="/register"
-            className="hidden md:inline-block px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-sky-700 transition"
-          >
-            Get Started
-          </Link>
+
 
           {/* Hamburger Mobile Menu Toggle Button Button */}
           <button
@@ -917,13 +912,7 @@ export default function Header() {
 
             {/* Direct Mobile CTAs placed at base of layout menu container panel */}
             <div className="pt-4 space-y-3">
-              <Link
-                href="/register"
-                onClick={closeAllMenus}
-                className="block md:hidden w-full text-center py-3 bg-sky-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-sky-700 transition"
-              >
-                Get Started
-              </Link>
+
               <Link
                 href="/request-a-demo"
                 onClick={closeAllMenus}
