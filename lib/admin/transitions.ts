@@ -11,6 +11,7 @@
  * that needs to change with it.
  *
  * Source of truth for each:
+ *   TENANT       services/identity-tenancy/internal/domain/tenant/tenant.go
  *   ORDER        services/order-management-provisioning/internal/domain/order/order.go
  *   PROVISIONING .../internal/domain/provisioning/provisioning.go
  *   SIM          .../internal/domain/sim/sim.go
@@ -33,6 +34,39 @@ export type Transition = {
 };
 
 export type TransitionTable = Record<string, Transition[]>;
+
+/**
+ * Tenant lifecycle: Provisioned → Active ⇄ Suspended → Archived.
+ *
+ * Keys are UPPERCASED here while the backend stores mixed case ("Provisioned",
+ * "Active", ...), so every lookup must uppercase the status first — see
+ * `tenantTransitionsFor`.
+ *
+ * Two edges are easy to get wrong and both strand a tenant:
+ *   - ARCHIVE is legal only from Suspended (Tenant.Archive), never straight
+ *     from Active.
+ *   - Archived is terminal. Offering "Activate" on an archived tenant — which
+ *     a plain "is it ACTIVE?" toggle does — sends an ACTIVATE the backend
+ *     rejects with 422 "invalid tenant state transition", every single time.
+ *
+ * Reactivating a Suspended tenant uses REACTIVATE, not ACTIVATE: the handler
+ * accepts both (Tenant.Activate also allows Suspended), but REACTIVATE is what
+ * emits the TenantReactivated audit event rather than TenantActivated.
+ */
+export const TENANT_TRANSITIONS: TransitionTable = {
+  PROVISIONED: [{ action: "ACTIVATE", label: "Activate" }],
+  ACTIVE: [{ action: "SUSPEND", label: "Suspend", destructive: true }],
+  SUSPENDED: [
+    { action: "REACTIVATE", label: "Reactivate" },
+    { action: "ARCHIVE", label: "Archive", destructive: true },
+  ],
+  ARCHIVED: [],
+};
+
+/** Tenant statuses arrive mixed-case from identity-tenancy; normalise first. */
+export function tenantTransitionsFor(status: string | undefined): Transition[] {
+  return transitionsFor(TENANT_TRANSITIONS, (status ?? "").toUpperCase());
+}
 
 /**
  * ACTIVE precedes COMPLETED. Reversing those two is not a cosmetic error: the only

@@ -18,6 +18,7 @@ import { platformApi, probeHealth, CROSS_TENANT_SERVICES } from "@/lib/admin/pla
 import { getPlatformSession, clearPlatformSession } from "@/lib/admin/platform/session";
 import { SERVICES, type ServiceKey } from "@/lib/admin/services";
 import { errMessage, shortId } from "@/lib/admin/envelope";
+import { tenantTransitionsFor, type Transition } from "@/lib/admin/transitions";
 import "./super-admin.css";
 
 // ─── Types (mirrored from the Go handlers) ────────────────────────────────────
@@ -493,6 +494,22 @@ function Modal({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+/**
+ * What each tenant lifecycle action actually does, shown on the confirmation
+ * modal. Keyed by the backend action string so a new transition added to
+ * TENANT_TRANSITIONS falls back to a generic line rather than showing the
+ * wrong one.
+ */
+const TENANT_ACTION_BLURB: Record<string, string> = {
+  ACTIVATE:
+    "Opens this tenant for business. Until now its users could not sign in — activation is what lets them.",
+  SUSPEND:
+    "Blocks sign-in for every user in this tenant, immediately and on their next token refresh. Existing data is untouched.",
+  REACTIVATE: "Restores sign-in for this tenant's users.",
+  ARCHIVE:
+    "Permanently retires this tenant. Archived is a terminal state — it cannot be activated again.",
+};
+
 export default function SuperAdminPage() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -507,7 +524,7 @@ export default function SuperAdminPage() {
   const [focusTenant, setFocusTenant] = useState<string>("");
 
   const [onboardOpen, setOnboardOpen] = useState(false);
-  const [statusFor, setStatusFor] = useState<{ tenant: Tenant; next: string } | null>(null);
+  const [statusFor, setStatusFor] = useState<{ tenant: Tenant; transition: Transition } | null>(null);
   const [credentials, setCredentials] = useState<string | null>(null);
   /** Chain-range verification inputs for the evidence module. */
   const [verifyRange, setVerifyRange] = useState({ from: "1", to: "100" });
@@ -794,20 +811,17 @@ export default function SuperAdminPage() {
     onError: (e) => toast.error(errMessage(e, "Could not onboard the tenant")),
   });
 
+  // The action is whatever TENANT_TRANSITIONS said was legal from the tenant's
+  // CURRENT status, not a guess derived from an is-it-active boolean. Deriving
+  // it here from a two-state toggle is what offered "Activate" on an archived
+  // tenant, and ACTIVATE out of Archived is rejected by the domain every time.
   const changeStatus = useMutation({
-    mutationFn: () => {
-      const currentStatus = (statusFor!.tenant.status ?? "").toUpperCase();
-      const action =
-        statusFor!.next === "SUSPENDED" || statusFor!.next === "SUSPEND"
-          ? "SUSPEND"
-          : currentStatus === "SUSPENDED"
-            ? "REACTIVATE"
-            : "ACTIVATE";
-
-      return platformApi.patch("identity", `/v1/tenants/${statusFor!.tenant.tenant_id}`, { action });
-    },
+    mutationFn: () =>
+      platformApi.patch("identity", `/v1/tenants/${statusFor!.tenant.tenant_id}`, {
+        action: statusFor!.transition.action,
+      }),
     onSuccess: () => {
-      toast.success(`${statusFor!.tenant.name} status updated`);
+      toast.success(`${statusFor!.tenant.name}: ${statusFor!.transition.label.toLowerCase()} applied`);
       setStatusFor(null);
       qc.invalidateQueries({ queryKey: ["platform", "tenants"] });
     },
@@ -1036,17 +1050,20 @@ export default function SuperAdminPage() {
                           >
                             Inspect
                           </button>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() =>
-                              setStatusFor({
-                                tenant: t,
-                                next: (t.status ?? "").toUpperCase() === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
-                              })
-                            }
-                          >
-                            {(t.status ?? "").toUpperCase() === "ACTIVE" ? "Suspend" : "Activate"}
-                          </button>
+                          {tenantTransitionsFor(t.status).map((tr) => (
+                            <button
+                              key={tr.action}
+                              className={`btn btn-sm ${tr.destructive ? "btn-danger" : "btn-ghost"}`}
+                              onClick={() => setStatusFor({ tenant: t, transition: tr })}
+                            >
+                              {tr.label}
+                            </button>
+                          ))}
+                          {tenantTransitionsFor(t.status).length === 0 && (
+                            <span style={{ fontSize: 12, paddingLeft: 8, color: "var(--ink-faint)" }}>
+                              No further action
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1727,23 +1744,20 @@ export default function SuperAdminPage() {
       {/* ─── Tenant status change ────────────────────────────────────────────── */}
       {statusFor && (
         <Modal
-          title={`${statusFor.next === "SUSPENDED" ? "Suspend" : "Activate"} ${statusFor.tenant.name}`}
-          subtitle={
-            statusFor.next === "SUSPENDED"
-              ? "Suspending blocks sign-in for every user in this tenant. Existing data is untouched."
-              : "Restores sign-in for this tenant's users."
-          }
+          title={`${statusFor.transition.label} ${statusFor.tenant.name}`}
+          subtitle={TENANT_ACTION_BLURB[statusFor.transition.action] ?? "Changes this tenant's lifecycle state."}
           onClose={() => setStatusFor(null)}
           footer={
             <button
-              className={`btn ${statusFor.next === "SUSPENDED" ? "btn-danger" : "btn-primary"}`}
+              className={`btn ${statusFor.transition.destructive ? "btn-danger" : "btn-primary"}`}
               disabled={changeStatus.isPending}
               onClick={() => changeStatus.mutate()}
             >
-              {changeStatus.isPending ? "Working…" : statusFor.next === "SUSPENDED" ? "Suspend tenant" : "Activate tenant"}
+              {changeStatus.isPending ? "Working…" : `${statusFor.transition.label} tenant`}
             </button>
           }
         >
+          <div className="kv"><span className="k">Current status</span><span className="v">{statusFor.tenant.status || "—"}</span></div>
           <div className="kv"><span className="k">Tenant ID</span><span className="v mono">{statusFor.tenant.tenant_id}</span></div>
           <div className="kv"><span className="k">Users affected</span><span className="v">{statusFor.tenant.user_count ?? 0}</span></div>
           <div className="kv"><span className="k">Domain</span><span className="v mono">{statusFor.tenant.domain_suffix || "—"}</span></div>
