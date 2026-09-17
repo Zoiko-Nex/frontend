@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { platformLogin } from "@/lib/admin/platform/auth";
+import { platformLogin, completePlatformMfa } from "@/lib/admin/platform/auth";
 import { ApiException } from "@/lib/admin/client";
 import { SUPER_ADMIN_HOST, isSuperAdminHost, superAdminLoginUrl } from "@/lib/admin/platform/host";
 
@@ -21,17 +21,46 @@ export default function SuperAdminLoginPage() {
   // Active state to draw green borders on focus
   const [focusEmail, setFocusEmail] = useState(false);
   const [focusPassword, setFocusPassword] = useState(false);
+  // Second-factor step: set once the password is accepted and a code is owed.
+  const [challenge, setChallenge] = useState<{ token: string; tenantId: string } | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await platformLogin(email, password);
+      const res = await platformLogin(email, password);
+      if (res.status === "mfa") {
+        setChallenge({ token: res.stepUpToken || "", tenantId: res.tenantId || "" });
+        setPassword("");
+        return;
+      }
       // Wait a tiny bit and redirect to /Super-admin
       router.push("/Super-admin");
     } catch (err) {
       setError(err instanceof ApiException ? err.message : "Sign-in failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await completePlatformMfa(challenge!.token, mfaCode, challenge!.tenantId, email);
+      router.push("/Super-admin");
+    } catch (err) {
+      // An expired or exhausted challenge cannot be retried, so the form goes
+      // back to the credential step rather than leaving the operator typing
+      // codes into something that can no longer accept one.
+      if (err instanceof ApiException && (err.code === "MFA_CHALLENGE_EXPIRED" || err.code === "MFA_TOO_MANY_ATTEMPTS")) {
+        setChallenge(null);
+        setMfaCode("");
+      }
+      setError(err instanceof ApiException ? err.message : "Verification failed.");
     } finally {
       setLoading(false);
     }
@@ -114,7 +143,60 @@ export default function SuperAdminLoginPage() {
           Sign in
         </h1>
 
-        {/* Form */}
+        {/* Second factor. Replaces the credential form rather than sitting
+            beside it, so there is only one field that can move sign-in on. */}
+        {challenge ? (
+          <form onSubmit={handleVerify} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <label style={{ display: "block" }}>
+              <span style={{ display: "block", fontSize: 12.5, color: "#374151", marginBottom: 6 }}>
+                Authentication code
+              </span>
+              <input
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                placeholder="123456"
+                required
+                style={{
+                  width: "100%", padding: "10px 12px", fontSize: 14, borderRadius: 6,
+                  border: "1px solid #d1d5db", fontFamily: "ui-monospace, monospace",
+                  letterSpacing: "0.25em", color: "#000000", backgroundColor: "#ffffff",
+                }}
+              />
+              <span style={{ display: "block", fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                Enter the current code from your authenticator app, or one of your recovery codes.
+              </span>
+            </label>
+
+            {error && (
+              <div style={{ fontSize: 12.5, color: "#b91c1c", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, padding: "8px 10px" }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !mfaCode.trim()}
+              style={{
+                width: "100%", marginTop: 4, backgroundColor: "#22c55e", color: "#000000",
+                fontWeight: 600, padding: "10px 14px", fontSize: 13.5, borderRadius: 6,
+                border: "none", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? "Verifying…" : "Verify and sign in"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setChallenge(null); setMfaCode(""); setError(null); }}
+              style={{ background: "none", border: "none", fontSize: 12, color: "#6b7280", cursor: "pointer" }}
+            >
+              Back to sign in
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <label style={{ display: "block" }}>
             <span
@@ -229,6 +311,7 @@ export default function SuperAdminLoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+        )}
 
         {/* Footer */}
         <div

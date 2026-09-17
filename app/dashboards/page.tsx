@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/admin/money";
 import { PermissionPicker, type PolicyRule } from "../components/admin/PermissionPicker";
 import { buildInvite, generatePassword } from "../components/admin/invite";
 import IntegrationTab from "./IntegrationTab";
+import MfaSecurity from "./MfaSecurity";
 import CatalogManagement from "./CatalogManagement";
 import CustomerManagement from "./CustomerManagement";
 import OrderManagement from "./OrderManagement";
@@ -28,6 +29,8 @@ import RegulatoryExports from "./RegulatoryExports";
 import AccessGroups from "./AccessGroups";
 import CustomerLifecycleKyc from "./CustomerLifecycleKyc";
 import EvidenceLedger from "./EvidenceLedger";
+import ScreenGuide from "./ScreenGuide";
+import { NAV_SECTIONS, NAV_ENTRIES, SECTION_BY_TAB } from "./navigation";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
@@ -835,6 +838,15 @@ export default function DashboardsPage() {
   // ── Navbar dynamic states ──
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+
+  // ── Sidebar navigation state ──
+  // `navQuery` filters the menu in place; `collapsed` holds the section
+  // headings the operator has folded away. 26 screens in one always-open list
+  // is a wall to read, and most roles work in two or three sections all day.
+  const [navQuery, setNavQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleSection = (section: string) =>
+    setCollapsed((prev) => ({ ...prev, [section]: !prev[section] }));
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -972,30 +984,37 @@ export default function DashboardsPage() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Searchable items from sidebar + services
-  const searchableItems = [
-    { label: "Dashboard", tabKey: "Dashboard", category: "Navigation" },
-    { label: "Services", tabKey: "Services", category: "Navigation" },
-    { label: "Deployment", tabKey: "Deployment", category: "Navigation" },
-    { label: "Sandbox / POC", tabKey: "Sandbox", category: "Navigation" },
-    { label: "Trust Vault", tabKey: "Trust", category: "Navigation" },
-    { label: "Documentation", tabKey: "Documentation", category: "Navigation" },
-    { label: "Support & Success", tabKey: "Support", category: "Navigation" },
-    { label: "Billing & Commercials", tabKey: "Billing", category: "Navigation" },
-    { label: "Integrations", tabKey: "Integration", category: "Navigation" },
-    { label: "Admin Settings", tabKey: "Settings", category: "Navigation" },
-    { label: "Product Catalog", tabKey: "Services", category: "Service" },
-    { label: "Real-Time Charging", tabKey: "Services", category: "Service" },
-    { label: "Billing & Invoice", tabKey: "Services", category: "Service" },
-    { label: "eSIM / SIM Management", tabKey: "Services", category: "Service" },
-    { label: "Evidence Ledger", tabKey: "Services", category: "Service" },
-    { label: "API Gateway", tabKey: "Services", category: "Service" },
-  ];
+  // Derived from the navigation registry rather than hand-listed. The previous
+  // literal covered 10 of the console's screens: searching "orders", "fraud",
+  // "tax" or "catalog" returned nothing at all, and four entries pointed at the
+  // Services tab instead of the screen they named, so the result opened the
+  // wrong place. Every screen is now searchable, by its own name and by the
+  // synonyms in the registry, and lands on itself.
+  const searchableItems = NAV_ENTRIES.map((e) => ({
+    label: e.label,
+    tabKey: e.tabKey,
+    category: SECTION_BY_TAB[e.tabKey] ?? "Navigation",
+    summary: e.summary,
+    keywords: e.keywords ?? [],
+  }));
 
-  const filteredSearch = searchQuery.trim()
-    ? searchableItems.filter(item =>
-      item.label.toLowerCase().includes(searchQuery.toLowerCase())
-    ).slice(0, 8)
+  const searchTerm = searchQuery.trim().toLowerCase();
+  const filteredSearch = searchTerm
+    ? searchableItems
+        .filter(
+          (item) =>
+            item.label.toLowerCase().includes(searchTerm) ||
+            item.summary.toLowerCase().includes(searchTerm) ||
+            item.keywords.some((k) => k.includes(searchTerm))
+        )
+        // A name match is what the operator meant; a description or synonym
+        // match is a fallback, so it ranks below.
+        .sort(
+          (a, b) =>
+            Number(b.label.toLowerCase().includes(searchTerm)) -
+            Number(a.label.toLowerCase().includes(searchTerm))
+        )
+        .slice(0, 8)
     : [];
 
   // Close all navbar dropdowns on outside click
@@ -1590,68 +1609,31 @@ export default function DashboardsPage() {
     }
   ];
 
-  // Sidebar items config
-  const sidebarItems = [
-    {
-      section: "WORKSPACE", items: [
-        { label: "Dashboard", tabKey: "Dashboard", iconPath: "/image/dashboard/dashboard-grid.svg" },
-        { label: "Services", tabKey: "Services", iconPath: "/image/dashboard/services.svg", badge: "18" },
-        { label: "Deployment", tabKey: "Deployment", iconPath: "/image/dashboard/checkbox-list.svg" }
-      ]
-    },
-    {
-      section: "EVALUATE & TRUST", items: [
-        { label: "Sandbox / POC", tabKey: "Sandbox", iconPath: "/image/dashboard/code-tags.svg" },
-        { label: "Trust Vault", tabKey: "Trust", iconPath: "/image/dashboard/shield.svg" },
-        { label: "Documentation", tabKey: "Documentation", iconPath: "/image/dashboard/document.svg" }
-      ]
-    },
-    {
-      section: "COMMERCIAL LIFECYCLE", items: [
-        { label: "Catalog Management", tabKey: "CatalogManagement", iconPath: "/image/dashboard/services.svg" },
-        { label: "Customer & Accounts", tabKey: "CustomerManagement", iconPath: "/image/dashboard/user-profile.svg" },
-        { label: "KYC Compliance", tabKey: "CustomerLifecycleKyc", iconPath: "/image/dashboard/shield-check.svg" },
-        { label: "Orders & Sagas", tabKey: "OrderManagement", iconPath: "/image/dashboard/checkbox-list.svg" },
-      ]
-    },
-    {
-      // Merging PR #88 brought a second navigation tree alongside this one, and
-      // the two overlapped: "Rating & Charging" and "Usage & Mediation" pointed
-      // at tabKeys with no render branch, so both were menu items that did
-      // nothing when clicked; Partner Settlement, Dunning & Disputes and KYC each
-      // appeared twice under different labels. One entry per screen now, in the
-      // section that owns it.
-      section: "MONETIZATION & CHARGING", items: [
-        { label: "Usage & Charging", tabKey: "UsageCharging", iconPath: "/image/dashboard/charging-lightning.svg" },
-        { label: "Billing & Invoice", tabKey: "BillingManagement", iconPath: "/image/dashboard/billing-document.svg" },
-        { label: "Payments", tabKey: "PaymentsManagement", iconPath: "/image/dashboard/credit-card.svg" },
-        { label: "Partner Settlement", tabKey: "PartnerSettlement", iconPath: "/image/dashboard/user-profile.svg" },
-        { label: "Dunning & Disputes", tabKey: "DunningDisputes", iconPath: "/image/dashboard/credit-card.svg" },
-      ]
-    },
-    {
-      section: "REVENUE & ASSURANCE", items: [
-        { label: "Finance Ledger", tabKey: "FinanceLedger", iconPath: "/image/dashboard/bar-chart.svg" },
-        { label: "Revenue Assurance", tabKey: "RevenueAssurance", iconPath: "/image/dashboard/shield.svg" },
-        { label: "Fraud & Risk", tabKey: "FraudRisk", iconPath: "/image/dashboard/shield.svg" },
-      ]
-    },
-    {
-      section: "ASSURE", items: [
-        { label: "Evidence Ledger", tabKey: "EvidenceLedger", iconPath: "/image/dashboard/document.svg" },
-        { label: "Regulatory Exports", tabKey: "RegulatoryExports", iconPath: "/image/dashboard/document.svg" },
-      ]
-    },
-    {
-      section: "OPERATE", items: [
-        { label: "Support & Success", tabKey: "Support", iconPath: "/image/dashboard/sidebar-notification.svg" },
-        { label: "Billing & Commercials", tabKey: "Billing", iconPath: "/image/dashboard/credit-card.svg" },
-        { label: "Integrations", tabKey: "Integration", iconPath: "/image/dashboard/api-braces.svg" },
-        { label: "Access Groups", tabKey: "AccessGroups", iconPath: "/image/dashboard/user-profile.svg" },
-        { label: "Admin Settings", tabKey: "Settings", iconPath: "/image/dashboard/settings-gear.svg" }
-      ]
-    }
-  ];
+  // The menu now comes from ./navigation, which is also what the top-bar search
+  // and the per-screen ScreenGuide read. It replaces a hand-kept list whose
+  // sections had stopped describing anything ("REVENUE & ASSURANCE" and
+  // "ASSURE" were two groups for one idea, "Billing & Invoice" and "Billing &
+  // Commercials" two entries a new operator could not tell apart) and which had
+  // simply lost Tax & Jurisdiction -- that screen is rendered below but was
+  // reachable only by finding its card on the Services tab. Sections are now
+  // ordered along the lifecycle the console actually operates: sell, charge,
+  // bill, collect, settle, assure, prove.
+  const sidebarItems = NAV_SECTIONS;
+
+  // Typing in the sidebar filter searches labels, summaries and keywords, so
+  // "vat" finds Tax & Jurisdiction and "cdr" finds Usage & Charging. While a
+  // filter is active every section that still has a match is force-expanded --
+  // a hit hidden inside a collapsed section is the same as no hit at all.
+  const navFilter = navQuery.trim().toLowerCase();
+  const matchesFilter = (item: (typeof NAV_ENTRIES)[number]) =>
+    !navFilter ||
+    item.label.toLowerCase().includes(navFilter) ||
+    item.summary.toLowerCase().includes(navFilter) ||
+    (item.keywords ?? []).some((k) => k.includes(navFilter));
+
+  const visibleSections = sidebarItems
+    .map((section) => ({ ...section, items: section.items.filter(matchesFilter) }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <div className="w-full bg-[#f8fafc] min-h-screen flex flex-col justify-start items-start font-sans">
@@ -1813,22 +1795,30 @@ export default function DashboardsPage() {
               {searchQuery.trim() === "" ? (
                 <div className="p-3">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 mb-2">Quick Navigation</div>
-                  {["Dashboard", "Services", "Billing & Commercials", "Trust Vault", "Admin Settings"].map(label => (
-                    <button key={label} onClick={() => { setCurrentTab(searchableItems.find(i => i.label === label)?.tabKey || "Dashboard"); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white rounded-lg transition flex items-center gap-2 cursor-pointer">
+                  {/* Keyed by tabKey, not by label. The old list looked its
+                      targets up by display name, so renaming a screen silently
+                      sent the shortcut to the Dashboard fallback instead. */}
+                  {["Dashboard", "Services", "OrderManagement", "BillingManagement", "Settings"].map(tabKey => (
+                    <button key={tabKey} onClick={() => { setCurrentTab(tabKey); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white rounded-lg transition flex items-center gap-2 cursor-pointer">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-slate-500" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                      {label}
+                      {searchableItems.find(i => i.tabKey === tabKey)?.label ?? tabKey}
                     </button>
                   ))}
                 </div>
               ) : (
                 <div className="p-2 max-h-64 overflow-y-auto">
                   {filteredSearch.map((item, i) => (
-                    <button key={i} onClick={() => { setCurrentTab(item.tabKey); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-center justify-between cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-sky-400" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        <span className="text-white text-xs font-medium">{item.label}</span>
+                    <button key={i} onClick={() => { setCurrentTab(item.tabKey); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-start justify-between gap-3 cursor-pointer">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-sky-400 mt-0.5 shrink-0" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <span className="min-w-0">
+                          <span className="block text-white text-xs font-medium">{item.label}</span>
+                          {/* The summary is what makes a result choosable when
+                              several screens sound alike. */}
+                          <span className="block text-slate-400 text-[10.5px] leading-4 mt-0.5 line-clamp-2">{item.summary}</span>
+                        </span>
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono">{item.category}</span>
+                      <span className="text-[10px] text-slate-500 font-mono shrink-0">{item.category}</span>
                     </button>
                   ))}
                 </div>
@@ -1992,21 +1982,71 @@ export default function DashboardsPage() {
         {/* Left Sidebar Section */}
         <aside className="w-64 h-[calc(100vh-3.5rem)] relative bg-white border-r-[0.80px] border-slate-200 overflow-y-auto shrink-0 select-none flex flex-col">
 
+          {/* Filter box. With 26 screens, scanning the menu is slower than
+              typing two letters, and it also gives the operator a way to find a
+              screen by what it does rather than by its official name. */}
+          <div className="px-3 pt-4 pb-1">
+            <div className="relative">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                value={navQuery}
+                onChange={(e) => setNavQuery(e.target.value)}
+                placeholder="Find a screen..."
+                aria-label="Filter navigation"
+                className="w-full h-8 pl-8 pr-7 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400 transition"
+              />
+              {navQuery && (
+                <button
+                  onClick={() => setNavQuery("")}
+                  aria-label="Clear navigation filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Sections headers and buttons (Mapped) */}
-          <div className="flex-1 flex flex-col gap-6 pt-4 px-3">
-            {sidebarItems.map((section, idx) => (
+          <div className="flex-1 flex flex-col gap-4 pt-3 px-3">
+            {visibleSections.length === 0 && (
+              <div className="px-3 py-6 text-center text-slate-400 text-xs font-['Plus_Jakarta_Sans']">
+                No screen matches &ldquo;{navQuery}&rdquo;.
+              </div>
+            )}
+            {visibleSections.map((section, idx) => {
+              // A filter result must never be hidden behind a fold, so an
+              // active query overrides whatever the operator had collapsed.
+              const folded = !navFilter && collapsed[section.section];
+              return (
               <div key={idx} className="flex flex-col gap-1">
-                <div className="px-3 pb-1.5 flex flex-col justify-start items-start">
-                  <div className="text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">{section.section}</div>
-                </div>
-                <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => toggleSection(section.section)}
+                  title={section.blurb}
+                  aria-expanded={!folded}
+                  className="px-3 pb-1.5 pt-0.5 flex justify-between items-center gap-2 group cursor-pointer"
+                >
+                  <span className="text-slate-500 group-hover:text-slate-800 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide transition-colors text-left">{section.section}</span>
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    className={`shrink-0 text-slate-300 group-hover:text-slate-500 transition-all duration-200 ${folded ? "-rotate-90" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div className={`flex flex-col gap-0.5 ${folded ? "hidden" : ""}`}>
                   {section.items.map(item => {
                     const locked = !canAccess(TAB_DOMAIN[item.tabKey]);
                     return (
                     <button
                       key={item.tabKey}
                       onClick={() => setCurrentTab(item.tabKey as any)}
-                      title={locked ? `Locked -- request access from your company admin` : undefined}
+                      // Every item now explains itself on hover. Locked items
+                      // still say why they are locked, which is the more useful
+                      // message when it applies.
+                      title={locked ? `${item.label} -- locked. Request access from your company admin.` : `${item.label} -- ${item.summary}`}
                       className={`w-full px-3 py-2.5 rounded-[10px] inline-flex justify-start items-center gap-2.5 transition-all ${
                         currentTab === item.tabKey
                           ? "bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold"
@@ -2020,18 +2060,21 @@ export default function DashboardsPage() {
                         className={`w-4 h-4 object-contain transition-all ${currentTab === item.tabKey ? "brightness-0 invert" : "opacity-60 grayscale hover:grayscale-0 hover:opacity-100"}`}
                         alt={item.label}
                       />
-                      <div className="justify-center text-sm">{item.label}</div>
+                      <div className="justify-center text-sm text-left">{item.label}</div>
                       {locked && (
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-slate-400">
                           <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
                         </svg>
                       )}
-                      {!locked && (item.tabKey === "Services" || item.badge) && (
+                      {/* Services carries the only badge in the menu: the live
+                          health count. The registry has no static `badge` field
+                          because the one that existed said a hardcoded "18". */}
+                      {!locked && item.tabKey === "Services" && (
                         <div className="flex-1 min-w-6 inline-flex flex-col justify-start items-end">
                           <div className={`px-1.5 py-px rounded-[20px] flex flex-col justify-start items-start ${currentTab === item.tabKey ? "bg-white/20 text-white backdrop-blur-sm" : "bg-slate-200 text-slate-500"}`}>
-                            <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">{item.tabKey === "Services"
-                                ? (onlineCount === null || serviceTotal === null ? "…" : `${onlineCount}/${serviceTotal}`)
-                                : item.badge}</div>
+                            <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">
+                              {onlineCount === null || serviceTotal === null ? "…" : `${onlineCount}/${serviceTotal}`}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2040,7 +2083,8 @@ export default function DashboardsPage() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Sidebar Footer */}
@@ -2067,6 +2111,12 @@ export default function DashboardsPage() {
         <main className="flex-1 px-7 pt-6 pb-14 flex flex-col justify-start items-start bg-slate-50 min-w-0">
 
           <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full">
+
+            {/* Orientation strip: which section you are in, what this screen is
+                for, and the steps to work it. Rendered once here rather than
+                inside each of the 26 screens so every screen gets it and the
+                wording lives in one file. */}
+            <ScreenGuide tabKey={currentTab} />
 
             {/* Dashboard Tab */}
             {currentTab === "Dashboard" && (
@@ -3532,6 +3582,13 @@ export default function DashboardsPage() {
                   </button>
                 </div>
 
+                {/* Two-factor authentication — real enrolment and policy, wired to
+                    identity-tenancy. The row that used to sit in the Single
+                    sign-on card was a hardcoded div showing "on" for everyone. */}
+                <div className="self-stretch pt-1">
+                  <MfaSecurity canManageTenantPolicy />
+                </div>
+
                 <div className="self-stretch pt-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Single Sign-on */}
                   <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
@@ -3546,15 +3603,6 @@ export default function DashboardsPage() {
                       <div className="px-2 py-1 bg-stone-200 rounded outline outline-1 outline-lime-500/30 flex items-center gap-1">
                         <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         <span className="text-slate-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">ON</span>
-                      </div>
-                    </div>
-                    <div className="py-3 flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-slate-800 text-xs font-bold leading-5">MFA enforcement</span>
-                        <span className="text-slate-500 text-xs leading-4">Required for admins</span>
-                      </div>
-                      <div className="w-10 h-6 bg-lime-600 rounded-full p-[3px] flex items-center justify-end cursor-pointer">
-                        <div className="size-4 bg-white rounded-full shadow-sm"></div>
                       </div>
                     </div>
                   </div>

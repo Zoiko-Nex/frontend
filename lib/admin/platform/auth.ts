@@ -73,7 +73,19 @@ async function resolvePlatformTenantId(): Promise<string> {
   return payload.data.tenant_id as string;
 }
 
-export async function platformLogin(email: string, password: string): Promise<void> {
+/**
+ * A super-admin sign-in either completes or stops at the second factor. The
+ * step-up token is the only link between the two halves, so it is returned to
+ * the caller rather than stashed in module state: a login page that remounts
+ * mid-flow should lose the challenge and start again, not silently resume one.
+ */
+export interface PlatformLoginResult {
+  status: "ok" | "mfa";
+  stepUpToken?: string;
+  tenantId?: string;
+}
+
+export async function platformLogin(email: string, password: string): Promise<PlatformLoginResult> {
   // Super-admin credentials may only ever be posted from the dedicated
   // super-admin host (see ./host.ts). middleware.ts already prevents the console
   // from being served elsewhere; this guard means a stale bundle or a spoofed
@@ -93,6 +105,14 @@ export async function platformLogin(email: string, password: string): Promise<vo
   });
 
   const body = payload.data || {};
+
+  // The password was accepted and a code is owed. Checked before the failure
+  // branch: this is a 401, and treating it as one would show the challenge
+  // prompt as a credential error.
+  if (payload.status === 401 && (body.code === "MFA_REQUIRED" || body.error === "MFA_REQUIRED")) {
+    return { status: "mfa", stepUpToken: body.step_up_token as string, tenantId };
+  }
+
   if (!payload.ok || !body.access_token) {
     throw new ApiException(payload.status, {
       code: body.code || body.error || "UNAUTHORIZED",
@@ -100,6 +120,47 @@ export async function platformLogin(email: string, password: string): Promise<vo
     });
   }
 
+  finishPlatformLogin(body, tenantId, email);
+  return { status: "ok" };
+}
+
+/**
+ * Completes a super-admin sign-in that stopped at the second factor.
+ *
+ * The platform-admin role check lives in finishPlatformLogin, which both paths
+ * go through, so an MFA sign-in cannot end up holding a platform session that
+ * an ordinary password sign-in would have refused.
+ */
+export async function completePlatformMfa(
+  stepUpToken: string,
+  mfaCode: string,
+  tenantId: string,
+  email: string,
+): Promise<void> {
+  if (!isSuperAdminHost()) {
+    throw new ApiException(403, {
+      code: "WRONG_DOMAIN",
+      message: `Platform super-admin sign-in is only available at https://${SUPER_ADMIN_HOST}.`,
+    });
+  }
+
+  const payload = await proxy("POST", "/v1/sessions/mfa", {
+    headers: { "x-tenant-id": tenantId },
+    body: { step_up_token: stepUpToken, mfa_code: mfaCode.trim() },
+  });
+
+  const body = payload.data || {};
+  if (!payload.ok || !body.access_token) {
+    throw new ApiException(payload.status, {
+      code: body.code || "MFA_FAILED",
+      message: body.message || "That code was not accepted.",
+    });
+  }
+
+  finishPlatformLogin(body, tenantId, email);
+}
+
+function finishPlatformLogin(body: Record<string, any>, tenantId: string, email: string): void {
   const claims = decodeJwt(body.access_token) || {};
   const roles = (claims.roles as string[]) || [];
   if (!roles.includes("role_platform_admin")) {

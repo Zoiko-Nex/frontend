@@ -3,7 +3,8 @@
 /**
  * Client-side auth flows against identity-tenancy, per its integration guide:
  *   POST /v1/sessions            → tokens, or 401 MFA_REQUIRED + step_up_token
- *   POST /v1/sessions/mfa        → tokens (MFA step-up; dev codes 123456 / 564890)
+ *   POST /v1/sessions/mfa        → tokens (TOTP step-up; the code comes from the
+ *                                   user's authenticator app, or a recovery code)
  *   POST /v1/sessions/refresh    → rotated tokens
  */
 
@@ -71,7 +72,9 @@ export async function login(
   }
 
   const body = proxyPayload.data || {};
-  if (proxyPayload.status === 401 && body.error === "MFA_REQUIRED") {
+  // The backend sends the platform error envelope (`code`); `error` is still
+  // read so an older deployed build of either side keeps working.
+  if (proxyPayload.status === 401 && (body.code === "MFA_REQUIRED" || body.error === "MFA_REQUIRED")) {
     return { status: "mfa", stepUpToken: body.step_up_token };
   }
   if (!proxyPayload.ok || !body.access_token) {

@@ -22,6 +22,11 @@ const LoginPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    // Second-factor step. A non-null token means the password was accepted and
+    // the sign-in is waiting on a code; the credential form is replaced rather
+    // than shown alongside, so there is only ever one thing to fill in.
+    const [stepUpToken, setStepUpToken] = useState<string | null>(null);
+    const [mfaCode, setMfaCode] = useState('');
 
     useEffect(() => {
         const initDomainResolution = async () => {
@@ -83,33 +88,94 @@ const LoginPage = () => {
             const payload = await res.json();
             const data = payload.data || {};
 
+            // The password was right and a second factor is owed. This is a
+            // 401 by design — nothing is authenticated yet — so it has to be
+            // handled before the generic failure branch below, which would
+            // otherwise show the challenge prompt as a login error and leave
+            // the user with no way forward.
+            if (payload.status === 401 && (data.code === 'MFA_REQUIRED' || data.error === 'MFA_REQUIRED')) {
+                setStepUpToken(data.step_up_token || null);
+                setPassword('');
+                setLoading(false);
+                return;
+            }
+
             if (!res.ok || !payload.ok || !data.access_token) {
                 throw new Error(
                     data.message || data.error_description || data.code || 'Authentication failed. Please check your credentials.'
                 );
             }
 
-            // Decode the JWT payload to extract user details (display only, not for authz)
-            const claims = decodeJwt(data.access_token) as Record<string, any>;
-
-            // Save session using the shared utility
-            setSession({
-                accessToken: data.access_token,
-                refreshToken: data.refresh_token || '',
-                expiresAt: Date.now() + (data.expires_in || 900) * 1000,
-                tenantId: claims?.tenant_id || tenantId,
-                brandId: claims?.brand_id || '',
-                email: claims?.email || email,
-                userId: claims?.sub || '',
-                roles: claims?.roles || [],
-            });
-
-            setSuccess('Login successful! Redirecting to Dashboard...');
-            setTimeout(() => {
-                router.push('/dashboards');
-            }, 800);
+            persistAndRedirect(data);
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Both the password-only path and the second-factor path end here, so a
+    // session minted after MFA is identical to one minted without it.
+    const persistAndRedirect = (data: Record<string, any>) => {
+        // Decode the JWT payload to extract user details (display only, not for authz)
+        const claims = decodeJwt(data.access_token) as Record<string, any>;
+
+        // Save session using the shared utility
+        setSession({
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token || '',
+            expiresAt: Date.now() + (data.expires_in || 900) * 1000,
+            tenantId: claims?.tenant_id || tenantId,
+            brandId: claims?.brand_id || '',
+            email: claims?.email || email,
+            userId: claims?.sub || '',
+            roles: claims?.roles || [],
+        });
+
+        setSuccess('Login successful! Redirecting to Dashboard...');
+        setTimeout(() => {
+            router.push('/dashboards');
+        }, 800);
+    };
+
+    const handleVerifyMfa = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            const res = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    port: 8080,
+                    method: 'POST',
+                    path: '/v1/sessions/mfa',
+                    headers: { 'x-tenant-id': tenantId },
+                    body: { step_up_token: stepUpToken, mfa_code: mfaCode.trim() },
+                }),
+            });
+
+            const payload = await res.json();
+            const data = payload.data || {};
+
+            if (!payload.ok || !data.access_token) {
+                // An expired or exhausted challenge cannot be retried with
+                // another code, so the form goes back to the password step
+                // rather than leaving the user typing into a dead prompt.
+                if (data.code === 'MFA_CHALLENGE_EXPIRED' || data.code === 'MFA_TOO_MANY_ATTEMPTS') {
+                    setStepUpToken(null);
+                    setMfaCode('');
+                }
+                throw new Error(data.message || 'That code was not accepted.');
+            }
+
+            if (data.used_recovery_code) {
+                setSuccess('Signed in with a recovery code — that code is now used up.');
+            }
+            persistAndRedirect(data);
+        } catch (err: any) {
+            setError(err.message || 'Verification failed.');
         } finally {
             setLoading(false);
         }
@@ -190,6 +256,50 @@ const LoginPage = () => {
                             </div>
                         )}
 
+                        {stepUpToken ? (
+                            /* Second factor. The credential form is replaced, not
+                               hidden alongside, so the only thing on screen is
+                               the one field that can move the sign-in forward. */
+                            <form className="space-y-4" onSubmit={handleVerifyMfa}>
+                                <div>
+                                    <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                        Authentication code <span className="text-red-500 font-bold">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        autoFocus
+                                        value={mfaCode}
+                                        onChange={(e) => setMfaCode(e.target.value)}
+                                        placeholder="123456"
+                                        className="w-full h-12 px-4 border border-slate-200 rounded-xl text-slate-800 text-base tracking-[0.3em] font-mono focus:outline-none focus:border-[#1664B1]"
+                                        required
+                                    />
+                                    <p className="mt-2 text-slate-500 text-xs leading-5">
+                                        Open your authenticator app and enter the current 6-digit code for this account.
+                                        You can also use one of your recovery codes.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading || !mfaCode.trim()}
+                                    className="w-full h-12 bg-[#1664B1] hover:bg-[#125394] transition-colors text-white text-base font-semibold rounded-xl mt-4 cursor-pointer disabled:bg-slate-400 flex items-center justify-center gap-2"
+                                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                                >
+                                    {loading ? 'Verifying...' : 'Verify and sign in'}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => { setStepUpToken(null); setMfaCode(''); setError(''); }}
+                                    className="w-full text-slate-500 hover:text-slate-700 text-xs font-semibold"
+                                >
+                                    Use a different account
+                                </button>
+                            </form>
+                        ) : (
                         <form className="space-y-4" onSubmit={handleLogin}>
                             <div>
                                 <label className="flex items-center gap-0.5 mb-2 text-slate-500 text-sm font-semibold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -323,6 +433,7 @@ const LoginPage = () => {
                                 ) : 'Login'}
                             </button>
                         </form>
+                        )}
                     </div>
                 </div>
             </div>
