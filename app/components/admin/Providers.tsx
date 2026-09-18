@@ -28,10 +28,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <Toaster
         theme="dark"
         position="bottom-right"
+        richColors
+        closeButton
+        style={{ zIndex: 99999 }}
         toastOptions={{
           style: {
-            background: "var(--ax-bg-overlay)", color: "var(--ax-text)",
-            border: "1px solid var(--ax-border-strong)", fontFamily: "var(--font-sans)",
+            background: "var(--navy, #0B3C63)",
+            color: "var(--ink, #FFFFFF)",
+            border: "1px solid var(--line-strong, #2A4D6C)",
+            fontFamily: "var(--sans, inherit)",
+            fontSize: "13px",
+            boxShadow: "0 10px 30px -10px rgba(0,0,0,0.5)",
           },
         }}
       />

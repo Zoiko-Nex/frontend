@@ -440,7 +440,7 @@ function UnavailablePanel({ title, service, reason }: { title: string; service: 
         <span className="k">Service</span>
         <span className="v mono">{service}</span>
       </div>
-      <div className="kv">
+      <div className="kv kv-stack">
         <span className="k">Needed</span>
         <span className="v">Platform-admin <span className="mono">X-Tenant-ID</span> override, as in order-management</span>
       </div>
@@ -524,6 +524,7 @@ export default function SuperAdminPage() {
   const [focusTenant, setFocusTenant] = useState<string>("");
 
   const [onboardOpen, setOnboardOpen] = useState(false);
+  const [onboardError, setOnboardError] = useState<string | null>(null);
   const [statusFor, setStatusFor] = useState<{ tenant: Tenant; transition: Transition } | null>(null);
   const [credentials, setCredentials] = useState<string | null>(null);
   /** Chain-range verification inputs for the evidence module. */
@@ -767,6 +768,7 @@ export default function SuperAdminPage() {
 
   const onboard = useMutation({
     mutationFn: async () => {
+      setOnboardError(null);
       const created = await platformApi.post<{ tenant_id: string; brand_id?: string }>("identity", "/v1/tenants", {
         name: form.name,
         domain_suffix: form.domain_suffix,
@@ -785,13 +787,16 @@ export default function SuperAdminPage() {
           });
           adminCreated = true;
         } catch (e) {
-          toast.error(`Tenant created, but the admin user failed: ${errMessage(e, "unknown error")}`);
+          const errMsg = `Tenant created, but the admin user failed: ${errMessage(e, "unknown error")}`;
+          setOnboardError(errMsg);
+          toast.error(errMsg);
         }
       }
       return { ...created, adminCreated };
     },
     onSuccess: (res) => {
       setOnboardOpen(false);
+      setOnboardError(null);
       qc.invalidateQueries({ queryKey: ["platform", "tenants"] });
       if (res.adminCreated) {
         setCredentials(
@@ -804,11 +809,15 @@ export default function SuperAdminPage() {
           ].join("\n"),
         );
       }
-      toast.success(`${form.name} onboarded`);
+      toast.success(`${form.name} onboarded successfully`);
       setForm({ name: "", domain_suffix: "", brand_name: "", brand_code: "", admin_email: "", admin_name: "", admin_password: "" });
       setTouched({});
     },
-    onError: (e) => toast.error(errMessage(e, "Could not onboard the tenant")),
+    onError: (e) => {
+      const msg = errMessage(e, "Could not onboard the tenant");
+      setOnboardError(msg);
+      toast.error(msg);
+    },
   });
 
   // The action is whatever TENANT_TRANSITIONS said was legal from the tenant's
@@ -1011,7 +1020,7 @@ export default function SuperAdminPage() {
                     counts are the service&apos;s own counts, not estimates.
                   </div>
                 </div>
-                <button className="btn btn-primary" onClick={() => setOnboardOpen(true)}>Onboard tenant</button>
+                <button className="btn btn-primary" onClick={() => { setOnboardError(null); setOnboardOpen(true); }}>Onboard tenant</button>
               </div>
 
               <div className="tablewrap">
@@ -1659,7 +1668,7 @@ export default function SuperAdminPage() {
         <Modal
           title="Onboard a tenant"
           subtitle="Provisions the tenant and its first brand, then creates the tenant admin user."
-          onClose={() => setOnboardOpen(false)}
+          onClose={() => { setOnboardError(null); setOnboardOpen(false); }}
           footer={
             <button
               className="btn btn-primary"
@@ -1671,6 +1680,14 @@ export default function SuperAdminPage() {
           }
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {onboardError && (
+              <div className="modal-alert modal-alert-error">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{onboardError}</span>
+              </div>
+            )}
             <LabeledInput label="Tenant name" value={form.name} onChange={onNameChange} placeholder="Nova Cellular" />
             <LabeledInput
               label="Domain suffix"
@@ -1847,8 +1864,19 @@ function LabeledInput({
 }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 12 }}>
-      <span style={{ fontWeight: 600 }}>{label}</span>
+      <span style={{ fontWeight: 600, color: "var(--ink, #0f172a)" }}>{label}</span>
       <input
+        style={{
+          border: "1.5px solid var(--line-strong, #cbd5e1)",
+          borderRadius: 9,
+          padding: "10px 12px",
+          background: "var(--field, #ffffff)",
+          color: "var(--ink, #0f172a)",
+          fontSize: 13,
+          fontFamily: "inherit",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
