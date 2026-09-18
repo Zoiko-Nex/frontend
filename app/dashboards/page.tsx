@@ -34,6 +34,17 @@ import { NAV_SECTIONS, NAV_ENTRIES, SECTION_BY_TAB } from "./navigation";
 
 interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
 
+interface AuditTrail {
+  id?: string;
+  tenant_id?: string;
+  event_type?: string;
+  actor_id?: string;
+  actor_type?: string;
+  client_ip?: string;
+  user_agent?: string;
+  timestamp?: string;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Maps this dashboard's own service-card ids and sidebar tabs to the real
@@ -247,6 +258,83 @@ function BrandsPanel() {
         </div>
       )}
     </>
+  );
+}
+
+function AuditLogPanel() {
+  const auditQ = useQuery({
+    queryKey: ["dash", "audit-trails"],
+    queryFn: () => api.get<{ audit_trails?: AuditTrail[] }>("identity", "/v1/audit-trails?limit=50"),
+  });
+  const auditLogs = auditQ.data?.audit_trails ?? [];
+
+  return (
+    <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+      <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+        <div>
+          <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Audit log</h3>
+          <p className="text-slate-500 text-xs mt-0.5">Authoritative tamper-evident event stream from identity-tenancy.</p>
+        </div>
+        <button
+          onClick={() => auditQ.refetch()}
+          disabled={auditQ.isFetching}
+          className="text-xs text-sky-600 hover:text-sky-800 font-semibold px-2 py-1 rounded transition disabled:opacity-50 cursor-pointer"
+        >
+          {auditQ.isFetching ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+          <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">TIME</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTOR</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">EVENT TYPE</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">CLIENT IP</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 font-sans">
+            {auditQ.isLoading ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-8 text-center text-xs text-slate-400">
+                  Loading authoritative audit events…
+                </td>
+              </tr>
+            ) : auditQ.isError ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-8 text-center text-xs text-red-500">
+                  {auditQ.error instanceof ApiException ? auditQ.error.message : "Unable to load audit logs from identity service."}
+                </td>
+              </tr>
+            ) : auditLogs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-8 text-center text-xs text-slate-400">
+                  No audit log entries recorded for this tenant yet.
+                </td>
+              </tr>
+            ) : (
+              auditLogs.map((log, idx) => (
+                <tr key={log.id || `${log.timestamp}-${idx}`} className="hover:bg-slate-50/50 transition">
+                  <td className="px-6 py-4 text-xs font-mono text-slate-500">
+                    {log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-semibold text-slate-700">
+                    {log.actor_id || "system"}
+                    {log.actor_type && <span className="ml-1.5 text-[10px] font-mono text-slate-400">({log.actor_type})</span>}
+                  </td>
+                  <td className="px-6 py-4 text-xs text-slate-600 font-mono">
+                    {log.event_type || "—"}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    {log.client_ip || "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -3656,50 +3744,8 @@ export default function DashboardsPage() {
 
                 <RolesPanel tenantUsers={tenantUsers} usersLoading={usersLoading} usersError={usersError} />
 
-                {/* Audit Log */}
-                <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
-                  <div className="px-5 py-4 border-b border-slate-200">
-                    <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Audit log</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                      <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
-                        <tr>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">TIME</th>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTOR</th>
-                          <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTION</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-sans">
-                        <tr>
-                          <td className="px-6 py-4 text-xs font-mono text-slate-500">09:42</td>
-                          <td className="px-6 py-4 text-xs font-semibold text-slate-700">Alex Mercer</td>
-                          <td className="px-6 py-4 text-xs text-slate-500">Enabled service: Notifications & Campaigns</td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 text-xs font-mono text-slate-500">09:38</td>
-                          <td className="px-6 py-4 text-xs font-semibold text-slate-700">Rhea Tan</td>
-                          <td className="px-6 py-4 text-xs text-slate-500">Rotated sandbox API key</td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 text-xs font-mono text-slate-500">Yesterday</td>
-                          <td className="px-6 py-4 text-xs font-semibold text-slate-700">Sam Okafor</td>
-                          <td className="px-6 py-4 text-xs text-slate-500">Generated evidence pack</td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 text-xs font-mono text-slate-500">Yesterday</td>
-                          <td className="px-6 py-4 text-xs font-semibold text-slate-700">Alex Mercer</td>
-                          <td className="px-6 py-4 text-xs text-slate-500">Invited user: Dana Hill (Viewer)</td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 text-xs font-mono text-slate-500">Jun 22</td>
-                          <td className="px-6 py-4 text-xs font-semibold text-slate-700">System</td>
-                          <td className="px-6 py-4 text-xs text-slate-500">SSO (Okta) connected</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                {/* Audit Log — Connected to GET /v1/audit-trails */}
+                <AuditLogPanel />
 
               </div>
             ) : (
