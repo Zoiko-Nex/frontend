@@ -35,6 +35,7 @@ import {
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
 import { CurrencySelect, JurisdictionSelect } from "./CodeFields";
+import { currentPeriod } from "@/lib/admin/dates";
 
 interface LedgerLine {
   ledger_line_id: string;
@@ -78,9 +79,6 @@ const ENTRY_TYPES = ["INVOICE", "PAYMENT", "REFUND", "SETTLEMENT", "ADJUSTMENT",
 const AGGREGATE_TYPES = ["INVOICE", "PAYMENT_INTENT", "REFUND", "SETTLEMENT", "BILL_CYCLE", "MANUAL"];
 
 /** "2026-08" — the ledger_period the service filters on. */
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
-}
 
 type DraftLine = {
   account_code: string;

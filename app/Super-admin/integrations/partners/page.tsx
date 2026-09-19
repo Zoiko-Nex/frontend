@@ -27,6 +27,7 @@ import {
   Radio
 } from 'lucide-react';
 
+import type { Connector } from "@/lib/admin/integration";
 interface Partner {
   id: string;
   name: string;
@@ -50,22 +51,6 @@ interface Partner {
 
 // ─── Backend record shapes (integration-ecosystem) ────────────────────────────
 
-interface Connector {
-  connector_id: string;
-  connector_name: string;
-  connector_type: string;
-  provider_name: string;
-  status: string;
-  auth_type: string;
-  base_url?: string;
-  rate_limit_per_minute?: number;
-  timeout_ms?: number;
-  tenancy_mode?: string;
-  contracting_entity?: string;
-  credential_scope?: string;
-  arrangement_version?: string;
-  created_at?: string;
-}
 
 interface IDD {
   idd_id?: string;

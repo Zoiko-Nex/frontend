@@ -46,6 +46,7 @@ import {
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
 import { JurisdictionSelect } from "./CodeFields";
+import { currentPeriod } from "@/lib/admin/dates";
 
 interface RegulatoryExport {
   export_id: string;
@@ -68,9 +69,6 @@ const EXPORT_TYPES = [
   "QOS_REPORT",
 ];
 
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
-}
 
 export default function RegulatoryExports() {
   const qc = useQueryClient();

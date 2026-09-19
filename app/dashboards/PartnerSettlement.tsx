@@ -41,6 +41,7 @@ import {
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
 import { CurrencySelect } from "./CodeFields";
+import { asRFC3339, monthStart, today } from "@/lib/admin/dates";
 
 interface CostLine {
   id: string;
@@ -88,16 +89,6 @@ interface PartnerDispute {
 
 const SETTLEMENT_TYPES = ["INTERCONNECT", "ROAMING", "REVENUE_SHARE", "COMMISSION", "WHOLESALE", "MVNA"];
 
-function today(): string {
-  return new Date().toISOString().split("T")[0];
-}
-function monthStart(): string {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().split("T")[0];
-}
-function asRFC3339(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toISOString();
-}
 
 export default function PartnerSettlement() {
   const qc = useQueryClient();

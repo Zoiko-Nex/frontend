@@ -23,6 +23,7 @@ import ActivationLifecycleModal from "./integrations/mvno/ActivationLifecycle";
 import OperationsCatalogueModal from "./integrations/mvno/OperationsCatalogue";
 import DocAnalyserModal from "./integrations/mvno/DocAnalyser";
 import "./super-admin.css";
+import type { Connector } from "@/lib/admin/integration";
 
 // ─── Types (mirrored from the Go handlers) ────────────────────────────────────
 
@@ -73,28 +74,6 @@ interface Order {
   created_at?: string;
 }
 
-interface Connector {
-  connector_id: string;
-  connector_name: string;
-  connector_type: string;
-  provider_name: string;
-  status: string;
-  auth_type: string;
-  base_url?: string;
-  brand_id?: string;
-  rate_limit_per_minute?: number;
-  timeout_ms?: number;
-  tenancy_mode?: string;
-  contracting_entity?: string;
-  credential_scope?: string;
-  funds_flow_mode?: string;
-  merchant_or_payee_role?: string;
-  regulated_role?: string;
-  data_processing_role?: string;
-  revenue_presentation?: string;
-  arrangement_version?: string;
-  created_at?: string;
-}
 
 interface ReadinessGateReport {
   connector_id: string;

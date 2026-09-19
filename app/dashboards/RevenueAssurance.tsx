@@ -43,6 +43,7 @@ import {
 } from "@/components/admin/primitives";
 import { SubTab, SummaryTile } from "./BillingManagement";
 import { CurrencySelect } from "./CodeFields";
+import { asRFC3339, monthStart, today } from "@/lib/admin/dates";
 
 interface ReconRun {
   id: string;
@@ -93,16 +94,6 @@ const LEAKAGE_TYPES = ["UNRATED_USAGE", "UNBILLED_CHARGE", "UNDER_CHARGED", "MIS
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 const RULE_TYPES = ["THRESHOLD", "COUNT_MATCH", "AMOUNT_MATCH", "COMPLETENESS", "DUPLICATE"];
 
-function today(): string {
-  return new Date().toISOString().split("T")[0];
-}
-function monthStart(): string {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().split("T")[0];
-}
-function asRFC3339(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toISOString();
-}
 
 export default function RevenueAssurance() {
   const qc = useQueryClient();

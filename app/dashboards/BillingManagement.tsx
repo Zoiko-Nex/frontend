@@ -39,6 +39,7 @@ import {
   inputMonoClass,
 } from "@/components/admin/primitives";
 import { CurrencySelect, JurisdictionSelect } from "./CodeFields";
+import { asRFC3339, today } from "@/lib/admin/dates";
 
 interface Invoice {
   id: string;
@@ -106,18 +107,12 @@ const NOTE_REASONS = [
   "TAX_CORRECTION",
 ];
 
-function today(): string {
-  return new Date().toISOString().split("T")[0];
-}
 
 function plusDays(n: number): string {
   return new Date(Date.now() + n * 86400000).toISOString().split("T")[0];
 }
 
 /** A date input gives "YYYY-MM-DD"; the Go handlers decode time.Time (RFC3339). */
-function asRFC3339(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toISOString();
-}
 
 export default function BillingManagement() {
   const qc = useQueryClient();

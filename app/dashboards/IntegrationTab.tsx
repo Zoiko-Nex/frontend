@@ -7,30 +7,11 @@ import { api, ApiException } from "@/lib/admin/client";
 import { getSession } from "@/lib/admin/session";
 import { errMessage } from "@/lib/admin/envelope";
 import { Field, Modal, ModalActions, inputClass, inputMonoClass } from "@/components/admin/primitives";
+import type { Connector } from "@/lib/admin/integration";
+export type { Connector };
 
 /* ───────── Types mirroring integration-ecosystem domain models ───────── */
 
-export interface Connector {
-  connector_id: string;
-  connector_name: string;
-  connector_type: string;
-  provider_name: string;
-  status: string;
-  auth_type: string;
-  base_url?: string;
-  rate_limit_per_minute?: number;
-  timeout_ms?: number;
-  tenancy_mode?: string;
-  contracting_entity?: string;
-  credential_scope?: string;
-  funds_flow_mode?: string;
-  merchant_or_payee_role?: string;
-  regulated_role?: string;
-  data_processing_role?: string;
-  revenue_presentation?: string;
-  arrangement_version?: string;
-  created_at?: string;
-}
 
 export interface Brand {
   id: string;
