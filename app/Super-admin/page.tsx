@@ -19,6 +19,9 @@ import { getPlatformSession, clearPlatformSession } from "@/lib/admin/platform/s
 import { SERVICES, type ServiceKey } from "@/lib/admin/services";
 import { errMessage, shortId } from "@/lib/admin/envelope";
 import { tenantTransitionsFor, type Transition } from "@/lib/admin/transitions";
+import ActivationLifecycleModal from "./integrations/mvno/ActivationLifecycle";
+import OperationsCatalogueModal from "./integrations/mvno/OperationsCatalogue";
+import DocAnalyserModal from "./integrations/mvno/DocAnalyser";
 import "./super-admin.css";
 
 // ─── Types (mirrored from the Go handlers) ────────────────────────────────────
@@ -157,6 +160,14 @@ type ModuleKey =
   | "platform"
   | "reference";
 
+/**
+ * Connector statuses that can still be driven through §10 activation.
+ * Mirrored from services/integration-ecosystem/internal/domain/connector:
+ * Activate() rejects DRAFT / CONTRACTED / SANDBOX, and only the §10 checker
+ * issues the CERTIFIED that makes activation reachable.
+ */
+const CONNECTOR_ACTIVATION_STATUSES = new Set(["DRAFT", "CONTRACTED", "SANDBOX", "CERTIFIED"]);
+
 const MODULE_NAMES: Record<ModuleKey, string> = {
   control: "Control Room",
   tenants: "Tenants & Operators",
@@ -197,171 +208,16 @@ const UNAVAILABLE_DOMAINS: { label: string; service: ServiceKey; note: string }[
 
 const SERVICE_KEYS = Object.keys(SERVICES) as ServiceKey[];
 
-// ─── Codebase Integrated MVNO Connectors (ZN-INT-IDD-001 Nexus / MVNOC) ─────────
+// This page previously carried a DEFAULT_CODEBASE_MVNOS array merged OVER the
+// backend response, so two Nexus connectors appeared whether or not they
+// existed and "Gates" / "SOCs" / "Vault" opened against ids the backend had
+// never heard of. The same array existed in the dedicated MVNO route, which is
+// how it survived being removed there. The table now shows only what
+// /v1/connectors returns.
 
-const DEFAULT_CODEBASE_MVNOS: Connector[] = [
-  {
-    connector_id: "c1000000-0000-4000-8000-000000000005",
-    connector_name: "Nexus MVNO Platform (T-Mobile US)",
-    connector_type: "MVNE_PLATFORM",
-    provider_name: "nexus",
-    status: "SANDBOX",
-    auth_type: "JWT_PASSWORD_GRANT",
-    base_url: "https://api.nexus.mvnoc.ai",
-    brand_id: "b1a2b3c4-d5e6-47a8-89c0-d1e2f3a4b5c6",
-    rate_limit_per_minute: 300,
-    timeout_ms: 8000,
-    tenancy_mode: "PROVIDER_SUBACCOUNT",
-    contracting_entity: "Zoiko Mobile Inc / MVNOC LLC",
-    credential_scope: "TENANT",
-    funds_flow_mode: "DIRECT_TO_TENANT",
-    merchant_or_payee_role: "MERCHANT_OF_RECORD",
-    regulated_role: "RESELLER_LIGHT_MVNO",
-    data_processing_role: "PROCESSOR",
-    revenue_presentation: "GROSS",
-    arrangement_version: "ARR-2026-NEXUS-001",
-    created_at: "2026-09-01T00:00:00Z",
-  },
-  {
-    connector_id: "c1000000-0000-4000-8000-000000000006",
-    connector_name: "DriverX Mobile — Nexus Carrier Hub",
-    connector_type: "MVNE_PLATFORM",
-    provider_name: "nexus",
-    status: "SANDBOX",
-    auth_type: "JWT_PASSWORD_GRANT",
-    base_url: "https://api.nexus.mvnoc.ai",
-    brand_id: "b2b2b2b2-2222-4222-8222-222222222222",
-    rate_limit_per_minute: 300,
-    timeout_ms: 8000,
-    tenancy_mode: "PROVIDER_SUBACCOUNT",
-    contracting_entity: "DriverX Mobile LLC",
-    credential_scope: "TENANT",
-    funds_flow_mode: "DIRECT_TO_TENANT",
-    merchant_or_payee_role: "MERCHANT_OF_RECORD",
-    regulated_role: "FLEET_IOT_MVNO",
-    data_processing_role: "PROCESSOR",
-    revenue_presentation: "GROSS",
-    arrangement_version: "ARR-2026-NEXUS-002",
-    created_at: "2026-09-02T00:00:00Z",
-  },
-];
 
-const DEFAULT_NEXUS_READINESS: ReadinessGateReport = {
-  connector_id: "c1000000-0000-4000-8000-000000000005",
-  provider_name: "nexus",
-  overall_readiness: "READY_TO_ASSESS",
-  credential_state: "ACTIVE",
-  operations_registered: 49,
-  operations_certified: 32,
-  gates: {
-    G1: {
-      status: "PARTIAL",
-      reason: "All 49 operations catalogued with method, path template & retryability. Canonical contract covers 32 core operations.",
-      blocker: "Provider response fixtures pending (testdata/ corpus empty). Result code taxonomy verification in progress.",
-    },
-    G2: {
-      status: "READY_TO_ASSESS",
-      reason: "JWT Password Grant authenticator active in Vault; 4-hour token refresh cached with 15-minute margin. Egress IP pinned to 136.114.16.250.",
-    },
-    G3: {
-      status: "READY_TO_ASSESS",
-      reason: "Outbound tenant token isolation verified with multi-brand scoped context (Zoiko Mobile & DriverX Mobile).",
-    },
-    G4: {
-      status: "PARTIAL",
-      reason: "Canonical provisioning contract, ACL, and Plan/SOC mapping registry implemented.",
-      blocker: "Production plan codes require second identity registration (Maker-Checker gate).",
-    },
-    G5: {
-      status: "READY_TO_ASSESS",
-      reason: "Non-retryable mutating operations enforce idempotency keys; OUTCOME_UNKNOWN taxonomy active (INT-API-016).",
-    },
-    G6: {
-      status: "PARTIAL",
-      reason: "3-way reconciliation engine (ZoikoNex vs Nexus HLR vs finance-fabric-ledger) active.",
-      blocker: "Ledger token configuration needed for full audit window.",
-    },
-    G7: {
-      status: "READY_TO_ASSESS",
-      reason: "Operations Runbook §8 published; kill-switch & per-operation revocation enabled.",
-    },
-    G8: {
-      status: "READY_TO_ASSESS",
-      reason: "Circuit breaker, exponential backoff, and DLQ pipeline operational.",
-    },
-  },
-};
 
-const DEFAULT_NEXUS_MAPPING_ENTRIES: MappingEntry[] = [
-  {
-    entry_id: "ent_tmobile_001",
-    mapping_id: "map_tmobile_v1",
-    canonical_code: "CANONICAL_MOBILE_UNLIMITED_5G",
-    provider_code: "TM_PLAN_UNL_5G",
-    description: "SOC: SOC_TMOB_UNL5G_P — T-Mobile 5G Ultra Unlimited Voice/Data",
-    status: "ACTIVE",
-    created_at: "2026-09-01T00:00:00Z",
-  },
-  {
-    entry_id: "ent_tmobile_002",
-    mapping_id: "map_tmobile_v1",
-    canonical_code: "CANONICAL_MOBILE_TALK_TEXT_ONLY",
-    provider_code: "TM_PLAN_TALK_TXT",
-    description: "SOC: SOC_TMOB_TT_BASIC — Nationwide Unlimited Talk & Text Base",
-    status: "ACTIVE",
-    created_at: "2026-09-01T00:00:00Z",
-  },
-  {
-    entry_id: "ent_tmobile_003",
-    mapping_id: "map_tmobile_v1",
-    canonical_code: "CANONICAL_ADDON_INTL_ROAMING_EU",
-    provider_code: "TM_SOC_ROAM_EU_15D",
-    description: "SOC: SOC_TMOB_ROAM_EU — Nexus International Roaming EU Pass",
-    status: "ACTIVE",
-    created_at: "2026-09-01T00:00:00Z",
-  },
-  {
-    entry_id: "ent_tmobile_004",
-    mapping_id: "map_tmobile_v1",
-    canonical_code: "CANONICAL_ADDON_HOTSPOT_10GB",
-    provider_code: "TM_SOC_MHS_10GB",
-    description: "SOC: SOC_TMOB_5G_DATA — Mobile Hotspot 10GB High-Speed Addon",
-    status: "ACTIVE",
-    created_at: "2026-09-01T00:00:00Z",
-  },
-  {
-    entry_id: "ent_tmobile_005",
-    mapping_id: "map_tmobile_v1",
-    canonical_code: "CANONICAL_ESIM_PROVISIONING",
-    provider_code: "TM_SOC_ESIM_ACTIVATION",
-    description: "SOC: SOC_TMOB_ESIM_ACT — Nexus Southbound eSIM RSP Activation",
-    status: "ACTIVE",
-    created_at: "2026-09-01T00:00:00Z",
-  },
-];
 
-const DEFAULT_VAULT_CREDENTIALS: CredentialItem[] = [
-  {
-    credential_id: "cred_nexus_sbx_01",
-    environment: "SANDBOX",
-    credential_type: "JWT_PASSWORD_GRANT",
-    fingerprint: "fp_nexus_sbx_9a4f21",
-    status: "ACTIVE",
-    submitted_by: "int_eng_01@zoikonex.com",
-    created_at: "2026-09-01T00:00:00Z",
-    expires_at: "2026-12-31T23:59:59Z",
-  },
-  {
-    credential_id: "cred_nexus_prod_01",
-    environment: "PRODUCTION",
-    credential_type: "JWT_PASSWORD_GRANT",
-    fingerprint: "fp_nexus_prd_7c8102",
-    status: "ACTIVE",
-    submitted_by: "sre_release@zoikonex.com",
-    created_at: "2026-09-02T00:00:00Z",
-    expires_at: "2026-12-31T23:59:59Z",
-  },
-];
 
 // ─── Small presentational helpers ─────────────────────────────────────────────
 
@@ -516,7 +372,13 @@ export default function SuperAdminPage() {
 
   const [authorised, setAuthorised] = useState<boolean | null>(null);
   const [session, setSession] = useState(() => (typeof window === "undefined" ? null : getPlatformSession()));
-  const [module, setModule] = useState<ModuleKey>("control");
+  // Deep-linkable: the retired /Super-admin/integrations/mvno route redirects to
+  // ?module=integrations, and a link to a module can be shared.
+  const [module, setModule] = useState<ModuleKey>(() => {
+    if (typeof window === "undefined") return "control";
+    const requested = new URLSearchParams(window.location.search).get("module");
+    return requested && requested in MODULE_NAMES ? (requested as ModuleKey) : "control";
+  });
   const [sideOpen, setSideOpen] = useState(false);
   const [clock, setClock] = useState("--:--:-- UTC");
 
@@ -526,6 +388,9 @@ export default function SuperAdminPage() {
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardError, setOnboardError] = useState<string | null>(null);
   const [statusFor, setStatusFor] = useState<{ tenant: Tenant; transition: Transition } | null>(null);
+  const [docAnalyserConnector, setDocAnalyserConnector] = useState<Connector | null>(null);
+  const [operationsConnector, setOperationsConnector] = useState<Connector | null>(null);
+  const [activationConnector, setActivationConnector] = useState<Connector | null>(null);
   const [credentials, setCredentials] = useState<string | null>(null);
   /** Chain-range verification inputs for the evidence module. */
   const [verifyRange, setVerifyRange] = useState({ from: "1", to: "100" });
@@ -683,20 +548,20 @@ export default function SuperAdminPage() {
 
   const backendConnectors = connectorsQ.data ?? [];
 
-  // Merge live backend connectors with codebase integrated MVNO carriers
-  const mvnoConnectors = useMemo(() => {
-    const liveMvnos = backendConnectors.filter(
-      (c) => (c.connector_type || "").toUpperCase() === "MVNE_PLATFORM"
-    );
-    const map = new Map<string, Connector>();
-    for (const def of DEFAULT_CODEBASE_MVNOS) {
-      map.set(def.connector_id, def);
-    }
-    for (const live of liveMvnos) {
-      map.set(live.connector_id, live);
-    }
-    return Array.from(map.values());
-  }, [backendConnectors]);
+  // Carrier connectors, exactly as the integration service reports them.
+  const mvnoConnectors = useMemo(
+    () => backendConnectors.filter((c) => (c.connector_type || "").toUpperCase() === "MVNE_PLATFORM"),
+    [backendConnectors],
+  );
+
+  const connectorProviders = useMemo(
+    () => Array.from(new Set(mvnoConnectors.map((c) => c.provider_name).filter(Boolean))) as string[],
+    [mvnoConnectors],
+  );
+  const connectorRegulatedRoles = useMemo(
+    () => Array.from(new Set(mvnoConnectors.map((c) => c.regulated_role).filter(Boolean))) as string[],
+    [mvnoConnectors],
+  );
 
   const otherConnectors = useMemo(() => {
     return backendConnectors.filter(
@@ -1298,6 +1163,15 @@ export default function SuperAdminPage() {
                     Every MVNO is backed by an auditable, credentialed <span className="mono">MVNE_PLATFORM</span> connector.
                   </div>
                 </div>
+                {/* These three routes were previously reachable only from the
+                    dedicated /integrations/mvno page. That page is now a
+                    redirect into this module, so its links live here — removing
+                    a duplicate must not orphan the pages it linked to. */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <a className="btn btn-ghost btn-sm" href="/Super-admin/integrations/partners">Partner Controls</a>
+                  <a className="btn btn-ghost btn-sm" href="/Super-admin/integrations/operations">Operations &amp; Trace</a>
+                  <a className="btn btn-ghost btn-sm" href="/Super-admin/communications/branding">Email System</a>
+                </div>
                 <button
                   className="btn btn-primary"
                   onClick={() => setOnboardMvnoOpen(true)}
@@ -1322,23 +1196,31 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
 
+                {/* Both tiles reported a fixed topology rather than the one in
+                    front of them: "NEXUS (T-MO) / 49 Southbound Telecom
+                    Operations" and "7 Regulatory Roles Validated at Genesis"
+                    rendered whether or not a single connector existed. */}
                 <div className="kpi">
                   <div className="l">Carrier Adapter Protocol</div>
-                  <div className="v sm" style={{ color: "var(--blue)" }}>
-                    NEXUS (T-MO)
+                  <div className="v sm" style={{ color: "var(--blue)", textTransform: "uppercase" }}>
+                    {connectorProviders.length > 0 ? connectorProviders.join(" · ") : "none"}
                   </div>
                   <div className="d mono" style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>
-                    49 Southbound Telecom Operations
+                    {connectorProviders.length > 0
+                      ? `${connectorProviders.length} adapter${connectorProviders.length === 1 ? "" : "s"} across ${mvnoConnectors.length} connector${mvnoConnectors.length === 1 ? "" : "s"}`
+                      : "No carrier adapter registered"}
                   </div>
                 </div>
 
                 <div className="kpi">
                   <div className="l">Commercial Topology</div>
                   <div className="v sm" style={{ color: "var(--violet)" }}>
-                    IMMUTABLE
+                    {connectorRegulatedRoles.length > 0 ? "IMMUTABLE" : "—"}
                   </div>
                   <div className="d mono" style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>
-                    7 Regulatory Roles Validated at Genesis
+                    {connectorRegulatedRoles.length > 0
+                      ? `${connectorRegulatedRoles.length} regulatory role${connectorRegulatedRoles.length === 1 ? "" : "s"} in use`
+                      : "No connector has declared a regulatory role yet"}
                   </div>
                 </div>
 
@@ -1508,16 +1390,55 @@ export default function SuperAdminPage() {
                                 Vault
                               </button>
                               <button
-                                className={`btn btn-sm ${status === "ACTIVE" ? "btn-danger" : "btn-primary"}`}
-                                onClick={() =>
-                                  handleToggleConnectorLifecycle(
-                                    c,
-                                    status === "ACTIVE" ? "suspend" : "activate"
-                                  )
-                                }
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setDocAnalyserConnector(c)}
+                                title="Analyse provider API documentation (proposes, never registers)"
                               >
-                                {status === "ACTIVE" ? "Suspend" : "Activate"}
+                                Docs
                               </button>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setOperationsConnector(c)}
+                                title="Capability Matrix (registered operations)"
+                              >
+                                Ops
+                              </button>
+                              {/* Lifecycle, mirroring Connector.Activate()'s guard in the Go
+                                  domain: DRAFT / CONTRACTED / SANDBOX are refused with
+                                  ErrNotCertified, and only the §10 checker path issues the
+                                  CERTIFIED that makes activation reachable. The direct
+                                  activate call this button used to make could therefore
+                                  only ever 422 from those states. */}
+                              {CONNECTOR_ACTIVATION_STATUSES.has(status) && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => setActivationConnector(c)}
+                                  title="Maker-checker activation (ED-2026-08 §10)"
+                                >
+                                  Activation
+                                </button>
+                              )}
+                              {/* Resuming a suspended connector is direct and rightly so:
+                                  it was already certified and approved, and a pause does
+                                  not revoke that. */}
+                              {status === "SUSPENDED" && (
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => handleToggleConnectorLifecycle(c, "activate")}
+                                  title="Resume this suspended connector"
+                                >
+                                  Resume
+                                </button>
+                              )}
+                              {status === "ACTIVE" && (
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleToggleConnectorLifecycle(c, "suspend")}
+                                  title="Emergency suspend"
+                                >
+                                  Suspend
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1807,6 +1728,38 @@ export default function SuperAdminPage() {
         <PlanSocMappingModal
           connector={mappingModalConnector}
           onClose={() => setMappingModalConnector(null)}
+        />
+      )}
+
+      {/* ─── MODAL: AI documentation analysis (proposal + review) ───────────── */}
+      {docAnalyserConnector && (
+        <DocAnalyserModal
+          connectorId={docAnalyserConnector.connector_id}
+          connectorName={docAnalyserConnector.connector_name}
+          providerName={docAnalyserConnector.provider_name}
+          onClose={() => setDocAnalyserConnector(null)}
+          onApplied={(msg) => toast.success(msg)}
+        />
+      )}
+
+      {/* ─── MODAL: Capability matrix (INT-ARC-012 / G1) ─────────────────────── */}
+      {operationsConnector && (
+        <OperationsCatalogueModal
+          connectorId={operationsConnector.connector_id}
+          connectorName={operationsConnector.connector_name}
+          providerName={operationsConnector.provider_name}
+          onClose={() => setOperationsConnector(null)}
+          onChanged={(msg) => toast.success(msg)}
+        />
+      )}
+
+      {/* ─── MODAL: Maker-checker activation (ED-2026-08 §10) ────────────────── */}
+      {activationConnector && (
+        <ActivationLifecycleModal
+          connectorId={activationConnector.connector_id}
+          connectorName={activationConnector.connector_name}
+          onClose={() => setActivationConnector(null)}
+          onChanged={(msg) => toast.success(msg)}
         />
       )}
 
@@ -2222,13 +2175,17 @@ function CertificationReadinessModal({
           `/v1/connectors/${connectorId}/certification-readiness`
         );
         return res;
-      } catch {
-        return DEFAULT_NEXUS_READINESS;
+      } catch (e) {
+        // Certification status decides whether a carrier may carry production
+        // traffic. A hardcoded report used to render here whenever the call
+        // failed, turning a reachability problem into gate verdicts nothing had
+        // measured.
+        throw e;
       }
     },
   });
 
-  const report = readinessQ.data ?? DEFAULT_NEXUS_READINESS;
+  const report = readinessQ.data;
 
   const GATE_TITLES: Record<string, string> = {
     G1: "G1 Contract & Capability Matrix",
@@ -2250,21 +2207,37 @@ function CertificationReadinessModal({
       footer={<button className="btn btn-primary" onClick={onClose}>Done</button>}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {readinessQ.isLoading && <div className="mono" style={{ opacity: 0.7 }}>Evaluating readiness…</div>}
+
+        {readinessQ.isError && (
+          <div className="card pad" style={{ background: "var(--danger-soft)" }}>
+            <div style={{ fontWeight: 700 }}>Readiness could not be read</div>
+            <div style={{ opacity: 0.75, marginTop: 4 }}>
+              {errMessage(readinessQ.error, "The integration service did not return a report.")}
+            </div>
+            <div style={{ opacity: 0.6, marginTop: 4, fontSize: 11 }}>
+              No gate status is shown, because none was measured.
+            </div>
+          </div>
+        )}
+
+        {report && (
+        <>
         {/* Top Summary Banner */}
         <div className="card pad" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, background: "var(--field-soft)" }}>
           <div>
             <div className="mono" style={{ fontSize: 10, textTransform: "uppercase", opacity: 0.6 }}>Computed Code Readiness</div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>{report.overall_readiness || "READY_TO_ASSESS"}</div>
-            <div className="mono" style={{ fontSize: 11, opacity: 0.65, marginTop: 2 }}>
-              49 Operations Catalogued · JWT Password Grant Authenticator
-            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>{report.overall_readiness || "UNKNOWN"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div className="mono" style={{ fontSize: 10, textTransform: "uppercase", opacity: 0.6 }}>Capabilities</div>
+            {/* "32 / 49" used to appear exactly when the real counts were unknown. */}
             <div className="mono" style={{ fontSize: 16, fontWeight: 700, color: "var(--blue)" }}>
-              {report.operations_certified ?? 32} / {report.operations_registered ?? 49}
+              {report.operations_registered == null
+                ? "—"
+                : `${report.operations_certified ?? 0} / ${report.operations_registered}`}
             </div>
-            <div style={{ marginTop: 2 }}><Chip tone="c-green">Gate Evaluation Active</Chip></div>
+            <div className="mono" style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>certified / registered</div>
           </div>
         </div>
 
@@ -2303,6 +2276,8 @@ function CertificationReadinessModal({
             );
           })}
         </div>
+        </>
+        )}
       </div>
     </Modal>
   );
@@ -2358,7 +2333,10 @@ function PlanSocMappingModal({
   });
 
   const liveEntries = entriesQ.data ?? [];
-  const entries = liveEntries.length > 0 ? liveEntries : DEFAULT_NEXUS_MAPPING_ENTRIES;
+  // Plan/SOC mappings translate a canonical product into the provider plan code
+  // an order provisions against. A hardcoded set used to appear when the live
+  // list was empty, so G4 could be signed off against entries that do not exist.
+  const entries = liveEntries;
 
   const handleAddEntry = async () => {
     if (!newCanonicalCode || !newProviderCode) {
@@ -2517,12 +2495,15 @@ function VaultCredentialModal({
         );
         return res.credentials ?? [];
       } catch {
-        return DEFAULT_VAULT_CREDENTIALS;
+        // An uncredentialed connector shows no credentials. Showing a stand-in
+        // pair made it look provisioned, and the operator would go on to request
+        // activation believing Vault held a secret that was never submitted.
+        return [] as CredentialItem[];
       }
     },
   });
 
-  const credentials = credsQ.data ?? DEFAULT_VAULT_CREDENTIALS;
+  const credentials = credsQ.data ?? [];
 
   const handleSubmit = async () => {
     if (!username || !password) {

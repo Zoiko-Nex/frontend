@@ -165,23 +165,23 @@ export default function ActivationLifecycleModal({
     open?.approvals?.find((a) => a.role === role);
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden text-xs animate-in fade-in zoom-in-95">
-        <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+    <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden text-xs animate-in fade-in zoom-in-95">
+        <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-white">
           <div>
             <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
               MAKER–CHECKER ACTIVATION · ED-2026-08 §10
             </div>
-            <h3 className="text-base font-extrabold text-white mt-0.5">{connectorName}</h3>
+            <h3 className="text-base font-extrabold text-slate-900 mt-0.5">{connectorName}</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-lg transition cursor-pointer">
+          <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg transition cursor-pointer">
             <XCircle className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex flex-col gap-5 text-slate-300">
+        <div className="p-6 overflow-y-auto flex flex-col gap-5 text-slate-700">
           {error && (
-            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-200">
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
               <span className="leading-relaxed">{error}</span>
             </div>
@@ -191,10 +191,10 @@ export default function ActivationLifecycleModal({
 
           {/* ── No open request: stage 1, the maker ─────────────────────────── */}
           {!activationsQ.isLoading && !open && (
-            <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col gap-4">
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col gap-4">
               <div>
-                <h4 className="text-sm font-bold text-white">Request activation</h4>
-                <p className="text-slate-400 mt-1 leading-relaxed">
+                <h4 className="text-sm font-bold text-slate-900">Request activation</h4>
+                <p className="text-slate-500 mt-1 leading-relaxed">
                   Stage 1 of 6. A production request is refused unless the connector&apos;s commercial topology is
                   complete, because the approver set is computed from those exact attributes — an incomplete topology
                   would silently shorten the approval list.
@@ -203,11 +203,11 @@ export default function ActivationLifecycleModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Environment</span>
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Environment</span>
                   <select
                     value={environment}
                     onChange={(e) => setEnvironment(e.target.value as 'SANDBOX' | 'PRODUCTION')}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
+                    className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:border-cyan-500"
                   >
                     <option value="SANDBOX">SANDBOX</option>
                     <option value="PRODUCTION">PRODUCTION</option>
@@ -215,29 +215,29 @@ export default function ActivationLifecycleModal({
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Adapter version <span className="text-slate-600">(optional)</span>
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    Adapter version <span className="text-slate-400">(optional)</span>
                   </span>
                   <input
                     value={adapterVersion}
                     onChange={(e) => setAdapterVersion(e.target.value)}
                     placeholder="e.g. nexus-v1.4.0"
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
+                    className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-mono text-slate-800 focus:outline-none focus:border-cyan-500"
                   />
                 </label>
               </div>
 
               {requiredApprovals.length > 0 && (
-                <div className="text-[11px] text-slate-400">
+                <div className="text-[11px] text-slate-500">
                   Approvals this connector will need:{' '}
-                  <span className="font-mono text-cyan-300">{requiredApprovals.join(' · ')}</span>
+                  <span className="font-mono text-cyan-700">{requiredApprovals.join(' · ')}</span>
                 </div>
               )}
 
               <button
                 onClick={requestActivation}
                 disabled={busy}
-                className="self-start px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition disabled:opacity-50 cursor-pointer"
+                className="self-start px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500/10 text-cyan-700 border border-cyan-500/30 hover:bg-cyan-500/20 transition disabled:opacity-50 cursor-pointer"
               >
                 {busy ? 'Working…' : 'Request activation'}
               </button>
@@ -250,7 +250,7 @@ export default function ActivationLifecycleModal({
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Open request</div>
-                  <div className="font-mono text-slate-300 mt-0.5">{open.activation_id}</div>
+                  <div className="font-mono text-slate-700 mt-0.5">{open.activation_id}</div>
                 </div>
                 <StateChip state={open.state} />
               </div>
@@ -262,9 +262,9 @@ export default function ActivationLifecycleModal({
                   ['Adapter', open.adapter_version || '—'],
                   ['Qualification', open.qualification_status],
                 ].map(([k, v]) => (
-                  <div key={k} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <div key={k} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wide">{k}</div>
-                    <div className="mt-1 font-mono text-slate-200 truncate" title={String(v)}>
+                    <div className="mt-1 font-mono text-slate-800 truncate" title={String(v)}>
                       {v}
                     </div>
                   </div>
@@ -272,7 +272,7 @@ export default function ActivationLifecycleModal({
               </div>
 
               {/* Stage 2 — qualification is an automated gate, not a human claim. */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-2">
                   {open.qualification_status === 'PASSED' ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -281,15 +281,15 @@ export default function ActivationLifecycleModal({
                   ) : (
                     <Clock className="w-4 h-4 text-amber-400" />
                   )}
-                  <h4 className="text-sm font-bold text-white">Stage 2 · Qualification</h4>
+                  <h4 className="text-sm font-bold text-slate-900">Stage 2 · Qualification</h4>
                 </div>
-                <p className="text-slate-400 mt-1.5 leading-relaxed">
+                <p className="text-slate-500 mt-1.5 leading-relaxed">
                   Recorded by the qualification service, not by an operator — a person asserting &quot;the tests
                   passed&quot; is exactly what this stage exists to replace. It is driven by the contract suite against
                   the provider fixture corpus.
                 </p>
                 {open.qualification_suite && (
-                  <div className="mt-2 font-mono text-[11px] text-slate-400">
+                  <div className="mt-2 font-mono text-[11px] text-slate-500">
                     {open.qualification_suite}
                     {open.qualification_digest ? ` · ${open.qualification_digest.slice(0, 16)}…` : ''}
                   </div>
@@ -297,8 +297,8 @@ export default function ActivationLifecycleModal({
               </div>
 
               {/* Stages 3–5 — one decision per required role. */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex flex-col gap-3">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col gap-3">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <UserCheck className="w-4 h-4 text-cyan-400" />
                   Stages 3–5 · Approvals
                 </h4>
@@ -313,17 +313,17 @@ export default function ActivationLifecycleModal({
                     return (
                       <div
                         key={role}
-                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800"
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
                       >
                         <div className="min-w-0">
-                          <div className="font-mono text-slate-200">{role}</div>
+                          <div className="font-mono text-slate-800">{role}</div>
                           {decision ? (
                             <div className="text-[11px] text-slate-500 truncate">
                               {decision.decision} · {decision.approver_identity || 'unknown'}
                               {decision.note ? ` — ${decision.note}` : ''}
                             </div>
                           ) : (
-                            <div className="text-[11px] text-slate-600">Awaiting decision</div>
+                            <div className="text-[11px] text-slate-400">Awaiting decision</div>
                           )}
                         </div>
 
@@ -342,14 +342,14 @@ export default function ActivationLifecycleModal({
                             <button
                               onClick={() => approve(role, 'APPROVED')}
                               disabled={busy}
-                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-950/40 text-emerald-300 border border-emerald-800/40 hover:bg-emerald-900/60 transition disabled:opacity-50 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-950/40 text-emerald-700 border border-emerald-800/40 hover:bg-emerald-900/60 transition disabled:opacity-50 cursor-pointer"
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => approve(role, 'REJECTED')}
                               disabled={busy}
-                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-950/40 text-rose-300 border border-rose-800/40 hover:bg-rose-900/60 transition disabled:opacity-50 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-950/40 text-rose-600 border border-rose-800/40 hover:bg-rose-900/60 transition disabled:opacity-50 cursor-pointer"
                             >
                               Reject
                             </button>
@@ -364,17 +364,17 @@ export default function ActivationLifecycleModal({
                   value={approvalNote}
                   onChange={(e) => setApprovalNote(e.target.value)}
                   placeholder="Note attached to your next decision (optional)"
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               {/* Stage 6 — the checker. */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   Stage 6 · Activate
                 </h4>
-                <p className="text-slate-400 mt-1.5 leading-relaxed">
+                <p className="text-slate-500 mt-1.5 leading-relaxed">
                   The only governed path that makes a connector live. The backend refuses this if you are the maker or
                   any approver, if qualification has not passed, or if a mandatory approval is missing — so a refusal
                   here is the control working, not a bug.
@@ -382,7 +382,7 @@ export default function ActivationLifecycleModal({
                 <button
                   onClick={activate}
                   disabled={busy}
-                  className="mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition disabled:opacity-50 cursor-pointer"
+                  className="mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/30 hover:bg-emerald-500/20 transition disabled:opacity-50 cursor-pointer"
                 >
                   {busy ? 'Working…' : 'Activate connector'}
                 </button>
@@ -397,10 +397,10 @@ export default function ActivationLifecycleModal({
               {history.map((a) => (
                 <div
                   key={a.activation_id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800"
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
                 >
                   <div className="min-w-0">
-                    <div className="font-mono text-slate-300 truncate">{a.activation_id}</div>
+                    <div className="font-mono text-slate-700 truncate">{a.activation_id}</div>
                     <div className="text-[11px] text-slate-500">
                       {a.environment} · maker {a.maker_identity}
                       {a.reject_reason ? ` · ${a.reject_reason}` : ''}
