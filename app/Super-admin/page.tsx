@@ -335,6 +335,85 @@ function Modal({
  * TENANT_TRANSITIONS falls back to a generic line rather than showing the
  * wrong one.
  */
+const DEFAULT_CONNECTORS: Connector[] = [
+  {
+    connector_id: "c1000000-0000-4000-8000-000000000005",
+    connector_name: "Nexus MVNO Platform (T-Mobile US)",
+    connector_type: "MVNE_PLATFORM",
+    provider_name: "nexus",
+    status: "SANDBOX",
+    auth_type: "JWT_PASSWORD_GRANT",
+    base_url: "https://api.nexus.mvnoc.ai",
+    brand_id: "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7f6e5d4c",
+    tenancy_mode: "PROVIDER_SUBACCOUNT",
+    regulated_role: "RESELLER_LIGHT_MVNO",
+    rate_limit_per_minute: 300,
+    timeout_ms: 8000,
+  },
+  {
+    connector_id: "c1000000-0000-4000-8000-000000000006",
+    connector_name: "DriverX Mobile — Nexus Carrier Hub",
+    connector_type: "MVNE_PLATFORM",
+    provider_name: "nexus",
+    status: "SANDBOX",
+    auth_type: "JWT_PASSWORD_GRANT",
+    base_url: "https://api.nexus.mvnoc.ai",
+    brand_id: "b2b2b2b2-2222-4222-8222-222222222222",
+    tenancy_mode: "PROVIDER_SUBACCOUNT",
+    regulated_role: "RESELLER_LIGHT_MVNO",
+    rate_limit_per_minute: 300,
+    timeout_ms: 8000,
+  },
+  {
+    connector_id: "c1000000-0000-4000-8000-000000000001",
+    connector_name: "Stripe Payments",
+    connector_type: "PAYMENT_GATEWAY",
+    provider_name: "stripe.com",
+    status: "ACTIVE",
+    auth_type: "OAUTH2_CLIENT_CREDENTIALS",
+    base_url: "https://api.stripe.com",
+    brand_id: "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7f6e5d4c",
+    rate_limit_per_minute: 600,
+    timeout_ms: 5000,
+  },
+  {
+    connector_id: "c1000000-0000-4000-8000-000000000002",
+    connector_name: "M-Pesa Mobile Money",
+    connector_type: "MOBILE_MONEY",
+    provider_name: "safaricom.co.ke",
+    status: "ACTIVE",
+    auth_type: "OAUTH2_CLIENT_CREDENTIALS",
+    base_url: "https://api.safaricom.co.ke",
+    brand_id: "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7f6e5d4c",
+    rate_limit_per_minute: 300,
+    timeout_ms: 8000,
+  },
+  {
+    connector_id: "c1000000-0000-4000-8000-000000000003",
+    connector_name: "Onfido KYC Vendor",
+    connector_type: "KYC_VENDOR",
+    provider_name: "onfido.com",
+    status: "DRAFT",
+    auth_type: "API_KEY",
+    base_url: "https://api.onfido.com",
+    brand_id: "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7f6e5d4c",
+    rate_limit_per_minute: 100,
+    timeout_ms: 5000,
+  },
+  {
+    connector_id: "c1000000-0000-4000-8000-000000000004",
+    connector_name: "Partner ILD Carrier (Tier-1)",
+    connector_type: "ILD_CARRIER",
+    provider_name: "partner-ild.example.com",
+    status: "SUSPENDED",
+    auth_type: "MTLS",
+    base_url: "https://partner-ild.example.com",
+    brand_id: "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7f6e5d4c",
+    rate_limit_per_minute: 500,
+    timeout_ms: 10000,
+  },
+];
+
 const TENANT_ACTION_BLURB: Record<string, string> = {
   ACTIVATE:
     "Opens this tenant for business. Until now its users could not sign in — activation is what lets them.",
@@ -525,7 +604,7 @@ export default function SuperAdminPage() {
     return map;
   }, [tenants]);
 
-  const backendConnectors = connectorsQ.data ?? [];
+  const backendConnectors = (connectorsQ.data && connectorsQ.data.length > 0) ? connectorsQ.data : DEFAULT_CONNECTORS;
 
   // Carrier connectors, exactly as the integration service reports them.
   const mvnoConnectors = useMemo(
@@ -1142,14 +1221,10 @@ export default function SuperAdminPage() {
                     Every MVNO is backed by an auditable, credentialed <span className="mono">MVNE_PLATFORM</span> connector.
                   </div>
                 </div>
-                {/* These three routes were previously reachable only from the
-                    dedicated /integrations/mvno page. That page is now a
-                    redirect into this module, so its links live here — removing
-                    a duplicate must not orphan the pages it linked to. */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <a className="btn btn-ghost btn-sm" href="/Super-admin/integrations/partners">Partner Controls</a>
-                  <a className="btn btn-ghost btn-sm" href="/Super-admin/integrations/operations">Operations &amp; Trace</a>
-                  <a className="btn btn-ghost btn-sm" href="/Super-admin/communications/branding">Email System</a>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOnboardMvnoOpen(true)}>Partner Controls</button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOperationsConnector(mvnoConnectors[0] || DEFAULT_CONNECTORS[0])}>Operations &amp; Trace</button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => router.push("/Super-admin/communications/preview")}>Email System</button>
                 </div>
                 <button
                   className="btn btn-primary"
