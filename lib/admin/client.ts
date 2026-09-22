@@ -9,7 +9,7 @@
  */
 
 import { getService, serviceBaseUrl, type ServiceDef } from "./services";
-import { getSession, setSession, clearSession, type AdminSession } from "./session";
+import { getSession, setSession, clearSession, decodeJwt, type AdminSession } from "./session";
 
 /** The platform's standard error envelope (CLAUDE.md §9). */
 export interface ApiError {
@@ -62,11 +62,26 @@ function buildHeaders(svc: ServiceDef, session: AdminSession | null, opts: ApiOp
 
   if (!opts.noAuth && session) {
     h.set("authorization", `Bearer ${session.accessToken}`);
-    if (svc.headerStyle === "tenant-header" || svc.headerStyle === "tenant-brand-idem") {
-      h.set("x-tenant-id", session.tenantId);
+
+    let tenantId = session.tenantId;
+    let brandId = session.brandId;
+    if ((!tenantId || !brandId) && session.accessToken) {
+      const claims = decodeJwt(session.accessToken) as Record<string, any> | null;
+      if (!tenantId && claims) {
+        tenantId = claims.tenant_id || claims.tid || claims.tenantId || claims.tenant;
+      }
+      if (!brandId && claims) {
+        brandId = claims.brand_id || claims.bid || claims.brandId || claims.brand;
+      }
     }
-    if (svc.headerStyle === "tenant-brand-idem" && session.brandId) {
-      h.set("x-brand-id", session.brandId);
+
+    if (svc.headerStyle === "tenant-header" || svc.headerStyle === "tenant-brand-idem") {
+      if (tenantId) {
+        h.set("x-tenant-id", tenantId);
+      }
+    }
+    if (svc.headerStyle === "tenant-brand-idem" && brandId) {
+      h.set("x-brand-id", brandId);
     }
   }
   return h;
@@ -130,6 +145,13 @@ async function request<T>(method: string, serviceKey: string, path: string, body
 
   const hasBody = body !== undefined;
   let session = opts.noAuth ? null : getSession();
+
+  if (!opts.noAuth && (!session || !session.accessToken)) {
+    throw new ApiException(401, {
+      code: "UNAUTHORIZED",
+      message: "Authentication required. Please sign in.",
+    });
+  }
 
   const doFetch = async (s: AdminSession | null) => {
     const headersObj: Record<string, string> = {};

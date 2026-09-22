@@ -307,6 +307,7 @@ function ProvidersTab() {
 
   const q = useQuery({
     queryKey: ["integration", "connectors"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
     queryFn: () => api.get<{ connectors?: Connector[] }>("integration", "/v1/connectors"),
   });
   const connectors = q.data?.connectors ?? [];
