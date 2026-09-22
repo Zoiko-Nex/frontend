@@ -154,6 +154,7 @@ function BrandsPanel() {
 
   const brandsQ = useQuery({
     queryKey: ["dash", "brands"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
     queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
   });
   const brands = brandsQ.data?.brands ?? [];
@@ -261,12 +262,138 @@ function BrandsPanel() {
   );
 }
 
+function SessionSecurityCard() {
+  const [idleTimeoutEnabled, setIdleTimeoutEnabled] = useState<boolean>(true);
+  const [reauthEnabled, setReauthEnabled] = useState<boolean>(true);
+  const [idleMinutes, setIdleMinutes] = useState<number>(30);
+
+  useEffect(() => {
+    try {
+      const storedIdle = localStorage.getItem("zx_session_idle_timeout");
+      if (storedIdle !== null) {
+        setIdleTimeoutEnabled(storedIdle === "true");
+      }
+      const storedMins = localStorage.getItem("zx_session_idle_minutes");
+      if (storedMins !== null) {
+        const parsed = parseInt(storedMins, 10);
+        if (!isNaN(parsed) && parsed > 0) setIdleMinutes(parsed);
+      }
+      const storedReauth = localStorage.getItem("zx_session_reauth_sensitive");
+      if (storedReauth !== null) {
+        setReauthEnabled(storedReauth === "true");
+      }
+    } catch {
+      // localStorage not accessible
+    }
+  }, []);
+
+  const toggleIdleTimeout = () => {
+    const nextVal = !idleTimeoutEnabled;
+    setIdleTimeoutEnabled(nextVal);
+    try {
+      localStorage.setItem("zx_session_idle_timeout", String(nextVal));
+    } catch {}
+    if (nextVal) {
+      toast.success(`Idle timeout enabled: auto-logout after ${idleMinutes} minutes of inactivity`);
+    } else {
+      toast.info("Idle timeout disabled");
+    }
+  };
+
+  const toggleReauth = () => {
+    const nextVal = !reauthEnabled;
+    setReauthEnabled(nextVal);
+    try {
+      localStorage.setItem("zx_session_reauth_sensitive", String(nextVal));
+    } catch {}
+    if (nextVal) {
+      toast.success("Re-authentication enabled for sensitive actions (key rotation, billing)");
+    } else {
+      toast.info("Re-authentication requirement disabled");
+    }
+  };
+
+  return (
+    <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+      <div className="pb-2.5">
+        <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Session security</h3>
+      </div>
+      <div className="py-3 border-b border-slate-200 flex justify-between items-center">
+        <div className="flex flex-col">
+          <span className="text-slate-800 text-xs font-bold leading-5">Idle timeout</span>
+          <span className="text-slate-500 text-xs leading-4">
+            {idleTimeoutEnabled ? `${idleMinutes} minutes` : "Disabled"}
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={idleTimeoutEnabled}
+          aria-label="Toggle idle timeout"
+          onClick={toggleIdleTimeout}
+          className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer flex items-center ${
+            idleTimeoutEnabled ? "bg-lime-600 justify-end" : "bg-slate-300 justify-start"
+          }`}
+        >
+          <div className="size-4 bg-white rounded-full shadow-md transform transition-transform duration-200" />
+        </button>
+      </div>
+      <div className="py-3 flex justify-between items-center">
+        <div className="flex flex-col">
+          <span className="text-slate-800 text-xs font-bold leading-5">Re-auth for sensitive actions</span>
+          <span className="text-slate-500 text-xs leading-4">
+            {reauthEnabled ? "Key rotation, billing" : "Disabled"}
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={reauthEnabled}
+          aria-label="Toggle re-authentication for sensitive actions"
+          onClick={toggleReauth}
+          className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer flex items-center ${
+            reauthEnabled ? "bg-lime-600 justify-end" : "bg-slate-300 justify-start"
+          }`}
+        >
+          <div className="size-4 bg-white rounded-full shadow-md transform transition-transform duration-200" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AuditLogPanel() {
   const auditQ = useQuery({
     queryKey: ["dash", "audit-trails"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
     queryFn: () => api.get<{ audit_trails?: AuditTrail[] }>("identity", "/v1/audit-trails?limit=50"),
   });
   const auditLogs = auditQ.data?.audit_trails ?? [];
+
+  const formatEventType = (type?: string) => {
+    if (!type) return { label: "System Event", color: "bg-slate-50 text-slate-700 border-slate-200" };
+    const map: Record<string, { label: string; color: string }> = {
+      UserCreated: { label: "User Created", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+      UserInvited: { label: "User Invited", color: "bg-sky-50 text-sky-700 border-sky-200" },
+      InviteAccepted: { label: "Invite Accepted", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+      RoleCreated: { label: "Role Created", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+      RoleAssigned: { label: "Role Assigned", color: "bg-blue-50 text-blue-700 border-blue-200" },
+      RoleMemberRemoved: { label: "Role Removed", color: "bg-amber-50 text-amber-700 border-amber-200" },
+      PermissionsUpdated: { label: "Permissions Updated", color: "bg-purple-50 text-purple-700 border-purple-200" },
+      GroupCreated: { label: "Group Created", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+      GroupMemberAdded: { label: "Group Member Added", color: "bg-blue-50 text-blue-700 border-blue-200" },
+      GroupMemberRemoved: { label: "Group Member Removed", color: "bg-amber-50 text-amber-700 border-amber-200" },
+      MFAPolicyUpdated: { label: "MFA Policy Updated", color: "bg-teal-50 text-teal-700 border-teal-200" },
+      MFAEnrolled: { label: "MFA Factor Enrolled", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+      MFADisabled: { label: "MFA Factor Disabled", color: "bg-rose-50 text-rose-700 border-rose-200" },
+      BrandCreated: { label: "Brand Added", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
+      LoginSuccess: { label: "Login Success", color: "bg-slate-50 text-slate-700 border-slate-200" },
+    };
+    return map[type] ?? {
+      label: type.replace(/([A-Z])/g, " $1").trim(),
+      color: "bg-slate-50 text-slate-700 border-slate-200",
+    };
+  };
 
   return (
     <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
@@ -278,8 +405,11 @@ function AuditLogPanel() {
         <button
           onClick={() => auditQ.refetch()}
           disabled={auditQ.isFetching}
-          className="text-xs text-sky-600 hover:text-sky-800 font-semibold px-2 py-1 rounded transition disabled:opacity-50 cursor-pointer"
+          className="text-xs text-sky-600 hover:text-sky-800 font-semibold px-2.5 py-1 rounded-md transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 border border-slate-200 hover:bg-slate-50"
         >
+          <svg className={`w-3.5 h-3.5 ${auditQ.isFetching ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
           {auditQ.isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </div>
@@ -287,9 +417,9 @@ function AuditLogPanel() {
         <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
           <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
             <tr>
-              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">TIME</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">TIME (UTC)</th>
               <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTOR</th>
-              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">EVENT TYPE</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTION / EVENT</th>
               <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">CLIENT IP</th>
             </tr>
           </thead>
@@ -297,7 +427,13 @@ function AuditLogPanel() {
             {auditQ.isLoading ? (
               <tr>
                 <td colSpan={4} className="px-6 py-8 text-center text-xs text-slate-400">
-                  Loading authoritative audit events…
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Loading authoritative audit events…
+                  </div>
                 </td>
               </tr>
             ) : auditQ.isError ? (
@@ -308,28 +444,45 @@ function AuditLogPanel() {
               </tr>
             ) : auditLogs.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-xs text-slate-400">
-                  No audit log entries recorded for this tenant yet.
+                <td colSpan={4} className="px-6 py-10 text-center">
+                  <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
+                    <svg className="w-7 h-7 text-slate-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-xs font-semibold text-slate-600">No audit log entries recorded for this tenant yet.</span>
+                    <span className="text-[11px] text-slate-400">Security, user, role, and authentication events will appear here in real time.</span>
+                  </div>
                 </td>
               </tr>
             ) : (
-              auditLogs.map((log, idx) => (
-                <tr key={log.id || `${log.timestamp}-${idx}`} className="hover:bg-slate-50/50 transition">
-                  <td className="px-6 py-4 text-xs font-mono text-slate-500">
-                    {log.timestamp ? new Date(log.timestamp).toLocaleString() : "—"}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-semibold text-slate-700">
-                    {log.actor_id || "system"}
-                    {log.actor_type && <span className="ml-1.5 text-[10px] font-mono text-slate-400">({log.actor_type})</span>}
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-600 font-mono">
-                    {log.event_type || "—"}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
-                    {log.client_ip || "—"}
-                  </td>
-                </tr>
-              ))
+              auditLogs.map((log, idx) => {
+                const eventInfo = formatEventType(log.event_type);
+                return (
+                  <tr key={log.id || `${log.timestamp}-${idx}`} className="hover:bg-slate-50/50 transition">
+                    <td className="px-6 py-4 text-xs font-mono text-slate-500">
+                      {log.timestamp ? new Date(log.timestamp).toUTCString().replace("GMT", "UTC") : "—"}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-700">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs text-slate-800">{log.actor_id ? (log.actor_id.length > 18 ? `${log.actor_id.substring(0, 8)}…` : log.actor_id) : "system"}</span>
+                        {log.actor_type && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-600 border border-slate-200">
+                            {log.actor_type}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-xs">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${eventInfo.color}`}>
+                        {eventInfo.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                      {log.client_ip || "—"}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -836,6 +989,7 @@ export default function DashboardsPage() {
 
   const brandsQ = useQuery({
     queryKey: ["dash", "brands"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
     queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
   });
   const brands = brandsQ.data?.brands ?? [];
@@ -1062,15 +1216,103 @@ export default function DashboardsPage() {
     }
   };
 
-  const [notifications] = useState([
-    { id: 1, type: "alert", title: "CDR ingestion spike detected", time: "2m ago", read: false },
-    { id: 2, type: "success", title: "Billing cycle completed", time: "18m ago", read: false },
-    { id: 3, type: "warning", title: "API rate limit at 85%", time: "1h ago", read: false },
-    { id: 4, type: "info", title: "New SDK version v4.2.1 available", time: "3h ago", read: true },
-    { id: 5, type: "success", title: "eSIM provisioning batch done", time: "5h ago", read: true },
-  ]);
+  interface DashboardNotification {
+    id: string | number;
+    type: "alert" | "success" | "warning" | "info";
+    title: string;
+    description?: string;
+    time: string;
+    read: boolean;
+    actionTab?: string;
+  }
+
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
+
+  // Load tenant-scoped notifications from localStorage or provide clean onboarding notifications
+  useEffect(() => {
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    const storageKey = `zx_notifications_${tenantId}`;
+    const raw = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setNotifications(parsed);
+          return;
+        }
+      } catch {}
+    }
+    // For a new tenant without stored notifications, present relevant onboarding notifications
+    const defaultNotifs: DashboardNotification[] = [
+      {
+        id: "notif-welcome",
+        type: "info",
+        title: "Welcome to ZoikoNex! Your workspace is ready.",
+        description: "Review your admin settings and service connections to get started.",
+        time: "Just now",
+        read: false,
+        actionTab: "Settings"
+      },
+      {
+        id: "notif-setup",
+        type: "warning",
+        title: "Account Setup: Configure your brand & single sign-on",
+        description: "Navigate to Admin settings to finalize tenant configuration.",
+        time: "Just now",
+        read: false,
+        actionTab: "Settings"
+      }
+    ];
+    setNotifications(defaultNotifs);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(storageKey, JSON.stringify(defaultNotifs));
+    }
+  }, [sessionData.tenantId]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify(updated));
+    }
+    toast.success("All notifications marked as read");
+  };
+
+  const handleToggleNotification = (id: string | number, actionTab?: string) => {
+    const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+    setNotifications(updated);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify(updated));
+    }
+    if (actionTab) {
+      setCurrentTab(actionTab);
+      setNotificationsOpen(false);
+    }
+  };
+
+  const handleDismissNotification = (id: string | number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = notifications.filter(n => n.id !== id);
+    setNotifications(updated);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify(updated));
+    }
+    toast.info("Notification dismissed");
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify([]));
+    }
+    toast.info("All notifications cleared");
+  };
 
   // Derived from the navigation registry rather than hand-listed. The previous
   // literal covered 10 of the console's screens: searching "orders", "fraud",
@@ -1630,6 +1872,39 @@ export default function DashboardsPage() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Real-time idle timeout listener (ZN 9)
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      if (typeof window === "undefined") return;
+
+      const isEnabled = localStorage.getItem("zx_session_idle_timeout") !== "false";
+      if (!isEnabled) return;
+
+      const mins = parseInt(localStorage.getItem("zx_session_idle_minutes") || "30", 10);
+      const timeoutMs = (mins > 0 ? mins : 30) * 60 * 1000;
+
+      timeoutId = setTimeout(() => {
+        if (getSession()?.accessToken) {
+          toast.warning(`Session expired due to ${mins > 0 ? mins : 30} minutes of inactivity`);
+          clearSession();
+          router.replace("/login?reason=idle_timeout");
+        }
+      }, timeoutMs);
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+    events.forEach((ev) => window.addEventListener(ev, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach((ev) => window.removeEventListener(ev, resetTimer));
+    };
+  }, [router]);
+
   // Helper to toggle domain active state
   const handleToggle = (id: string) => {
     setServices((prev) =>
@@ -1977,28 +2252,77 @@ export default function DashboardsPage() {
 
             {/* Notifications Dropdown */}
             {notificationsOpen && (
-              <div className="absolute top-[calc(100%+8px)] right-0 w-80 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+              <div className="absolute top-[calc(100%+8px)] right-0 w-84 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
                 <div className="p-4 border-b border-white/10 flex items-center justify-between">
                   <div>
                     <div className="text-white text-sm font-bold">Notifications</div>
-                    <div className="text-slate-400 text-[11px] mt-0.5">{unreadCount} unread</div>
+                    <div className="text-slate-400 text-[11px] mt-0.5">
+                      {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+                    </div>
                   </div>
-                  <button className="text-[10px] text-sky-400 font-semibold hover:text-sky-300 transition cursor-pointer">Mark all read</button>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[10px] text-sky-400 font-semibold hover:text-sky-300 transition cursor-pointer"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={handleClearAllNotifications}
+                        className="text-[10px] text-slate-400 font-semibold hover:text-slate-200 transition cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  {notifications.map(n => (
-                    <div key={n.id} className={`px-4 py-3 border-b border-white/5 hover:bg-white/[0.03] transition cursor-pointer flex items-start gap-3 ${!n.read ? "bg-sky-500/[0.04]" : ""}`}>
-                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === "alert" ? "bg-red-400" :
-                        n.type === "success" ? "bg-lime-400" :
-                          n.type === "warning" ? "bg-amber-400" : "bg-sky-400"
-                        }`} />
-                      <div className="min-w-0 flex-1">
-                        <div className={`text-xs font-medium leading-snug ${!n.read ? "text-white" : "text-slate-300"}`}>{n.title}</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">{n.time}</div>
+                  {notifications.length === 0 ? (
+                    <div className="py-8 px-4 text-center flex flex-col items-center justify-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                       </div>
-                      {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-sky-400 mt-1.5 shrink-0" />}
+                      <div className="text-white text-xs font-semibold">No notifications</div>
+                      <div className="text-slate-400 text-[11px] max-w-[200px] leading-relaxed">
+                        You&apos;re all caught up! Account alerts and system activity will appear here.
+                      </div>
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => handleToggleNotification(n.id, n.actionTab)}
+                        className={`group px-4 py-3 border-b border-white/5 hover:bg-white/[0.04] transition cursor-pointer flex items-start gap-3 ${!n.read ? "bg-sky-500/[0.05]" : ""}`}
+                      >
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === "alert" ? "bg-red-400" :
+                          n.type === "success" ? "bg-lime-400" :
+                            n.type === "warning" ? "bg-amber-400" : "bg-sky-400"
+                          }`} />
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-xs font-medium leading-snug ${!n.read ? "text-white font-semibold" : "text-slate-300"}`}>
+                            {n.title}
+                          </div>
+                          {n.description && (
+                            <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{n.description}</div>
+                          )}
+                          <div className="text-[10px] text-slate-500 mt-1">{n.time}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 mt-1">
+                          {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-sky-400" />}
+                          <button
+                            onClick={(e) => handleDismissNotification(n.id, e)}
+                            title="Dismiss notification"
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-red-400 transition cursor-pointer"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className="p-3 border-t border-white/10">
                   <button onClick={() => { setCurrentTab("Support"); setNotificationsOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">View All Notifications →</button>
@@ -2067,8 +2391,8 @@ export default function DashboardsPage() {
       </div>
 
       <div className="flex-1 flex w-full overflow-hidden relative">
-        {/* Left Sidebar Section */}
-        <aside className="w-64 h-[calc(100vh-3.5rem)] relative bg-white border-r-[0.80px] border-slate-200 overflow-y-auto shrink-0 select-none flex flex-col">
+        {/* Left Sidebar Section — static, no scroll */}
+        <aside className="w-64 h-[calc(100vh-3.5rem)] sticky top-[3.5rem] bg-white border-r-[0.80px] border-slate-200 overflow-y-auto shrink-0 select-none flex flex-col" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(0,0,0,0.08) transparent' }}>
 
           {/* Filter box. With 26 screens, scanning the menu is slower than
               typing two letters, and it also gives the operator a way to find a
@@ -2195,8 +2519,8 @@ export default function DashboardsPage() {
           </div>
         </aside>
 
-        {/* Main Panel Content Frame */}
-        <main className="flex-1 px-7 pt-6 pb-14 flex flex-col justify-start items-start bg-slate-50 min-w-0">
+        {/* Main Panel Content Frame — scrollable */}
+        <main className="flex-1 px-7 pt-6 pb-14 flex flex-col justify-start items-start bg-slate-50 min-w-0 overflow-y-auto h-[calc(100vh-3.5rem)]">
 
           <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full">
 
@@ -3702,7 +4026,7 @@ export default function DashboardsPage() {
                     </div>
                     <div className="py-2.5 border-b border-slate-200 flex justify-between items-center">
                       <span className="text-slate-600 text-xs leading-5">Tenant</span>
-                      <span className="text-slate-800 text-xs font-semibold leading-5">Helios Mobile</span>
+                      <span className="text-slate-800 text-xs font-semibold leading-5">{sessionData.tenantId ? (sessionData.tenantId.length > 20 ? "Acme Telecom Corporation" : sessionData.tenantId) : "Acme Telecom Corporation"}</span>
                     </div>
                     <div className="py-2.5 border-b border-slate-200 flex justify-between items-center">
                       <span className="text-slate-600 text-xs leading-5">Residency</span>
@@ -3710,34 +4034,12 @@ export default function DashboardsPage() {
                     </div>
                     <div className="py-2.5 flex justify-between items-center">
                       <span className="text-slate-600 text-xs leading-5">Brands</span>
-                      <span className="text-slate-800 text-xs font-semibold leading-5">2</span>
+                      <span className="text-slate-800 text-xs font-semibold leading-5">{brands.length || 1}</span>
                     </div>
                   </div>
 
                   {/* Session security */}
-                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                    <div className="pb-2.5">
-                      <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Session security</h3>
-                    </div>
-                    <div className="py-3 border-b border-slate-200 flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-slate-800 text-xs font-bold leading-5">Idle timeout</span>
-                        <span className="text-slate-500 text-xs leading-4">30 minutes</span>
-                      </div>
-                      <div className="w-10 h-6 bg-lime-600 rounded-full p-[3px] flex items-center justify-end cursor-pointer">
-                        <div className="size-4 bg-white rounded-full shadow-sm"></div>
-                      </div>
-                    </div>
-                    <div className="py-3 flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-slate-800 text-xs font-bold leading-5">Re-auth for sensitive actions</span>
-                        <span className="text-slate-500 text-xs leading-4">Key rotation, billing</span>
-                      </div>
-                      <div className="w-10 h-6 bg-lime-600 rounded-full p-[3px] flex items-center justify-end cursor-pointer">
-                        <div className="size-4 bg-white rounded-full shadow-sm"></div>
-                      </div>
-                    </div>
-                  </div>
+                  <SessionSecurityCard />
                 </div>
 
                 <BrandsPanel />

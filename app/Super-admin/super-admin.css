@@ -116,11 +116,11 @@ svg {
   position: sticky;
   top: 0;
   z-index: 50;
-  height: 58px;
+  height: 64px;
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 0 16px;
+  padding: 0 20px;
   background: var(--navy-deep);
   color: #EAF2FB;
   border-bottom: 1px solid rgba(255, 255, 255, .06)
@@ -132,7 +132,7 @@ svg {
 }
 
 .brand .logo {
-  height: 28px;
+  height: 44px;
   width: auto;
   display: block
 }
@@ -498,17 +498,40 @@ svg {
 /* ===== LAYOUT ===== */
 .body {
   display: grid;
-  grid-template-columns: var(--sb) 1fr var(--rail)
+  grid-template-columns: var(--sb) 1fr var(--rail);
+  height: calc(100vh - 64px - 34px);
+  overflow: hidden
 }
 
 .side {
   background: var(--card);
   border-right: 1px solid var(--line);
   padding: 14px 12px;
-  position: sticky;
-  top: 58px;
-  height: calc(100vh - 58px - 34px);
-  overflow: auto
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column
+}
+
+/* nav list inside sidebar — this scrolls, not the sidebar itself */
+.side-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 8px
+}
+
+.side-nav::-webkit-scrollbar {
+  width: 4px
+}
+
+.side-nav::-webkit-scrollbar-track {
+  background: transparent
+}
+
+.side-nav::-webkit-scrollbar-thumb {
+  background: var(--line-strong, #c7d4e2);
+  border-radius: 4px
 }
 
 .side .grp {
@@ -537,17 +560,29 @@ svg {
   font-size: 13px;
   font-weight: 600;
   text-align: left;
-  margin-bottom: 1px
+  margin-bottom: 1px;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+  cursor: pointer
 }
 
 .navi:hover {
   background: var(--field-soft);
-  color: var(--ink)
+  color: var(--ink);
+  transform: translateX(2px)
+}
+
+.navi:active {
+  transform: translateX(3px) scale(0.98)
 }
 
 .navi.active {
   background: var(--blue-soft);
-  color: var(--blue)
+  color: var(--blue);
+  box-shadow: inset 3px 0 0 var(--blue)
+}
+
+.navi.active svg {
+  stroke: var(--blue)
 }
 
 .navi svg {
@@ -556,7 +591,8 @@ svg {
   stroke: currentColor;
   fill: none;
   stroke-width: 1.9;
-  flex: none
+  flex: none;
+  transition: stroke 0.18s ease
 }
 
 .navi .cnt {
@@ -565,7 +601,8 @@ svg {
   font-size: 9.5px;
   font-weight: 700;
   border-radius: 20px;
-  padding: 1px 7px
+  padding: 1px 7px;
+  transition: background 0.18s ease
 }
 
 .navi .cnt.cr {
@@ -580,12 +617,15 @@ svg {
 
 .main {
   padding: 22px 26px 26px;
-  min-width: 0
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden
 }
 
 .scrim {
   position: fixed;
-  inset: 58px 0 0;
+  inset: 64px 0 0;
   background: rgba(8, 22, 38, .4);
   z-index: 44;
   display: none
@@ -599,10 +639,9 @@ svg {
 .queue {
   background: var(--card);
   border-left: 1px solid var(--line);
-  position: sticky;
-  top: 58px;
-  height: calc(100vh - 58px - 34px);
-  overflow: auto;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column
 }
@@ -1252,6 +1291,7 @@ tbody tr.clickable:hover td {
 
 .kv .v {
   font-weight: 700;
+  color: var(--ink);
   min-width: 0;
   text-align: right;
   overflow-wrap: break-word;
@@ -1839,18 +1879,38 @@ tbody tr.clickable:hover td {
   font-size: 13px;
   color: var(--ink);
   background: var(--field);
-  border: 1.5px solid var(--line-strong) !important;
+  border: 1.5px solid #94a3b8 !important;
   border-radius: 9px;
   padding: 10px 12px;
-  transition: border-color .15s, box-shadow .15s
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.modal-b input:hover,
+.modal-b select:hover,
+.modal-b textarea:hover {
+  border-color: #64748b !important;
 }
 
 .modal-b input:focus,
 .modal-b select:focus,
 .modal-b textarea:focus {
   outline: none;
-  border-color: var(--blue) !important;
-  box-shadow: 0 0 0 3px var(--blue-soft)
+  border-color: var(--blue, #0284c7) !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+.modal-b input.is-invalid,
+.modal-b select.is-invalid,
+.modal-b textarea.is-invalid {
+  border-color: #ef4444 !important;
+  background-color: #fff5f5 !important;
+}
+
+.modal-b input.is-invalid:focus,
+.modal-b select.is-invalid:focus,
+.modal-b textarea.is-invalid:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
 }
 
 .modal-b textarea {
