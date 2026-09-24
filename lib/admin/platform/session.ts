@@ -16,6 +16,8 @@ export interface PlatformSession {
   refreshToken: string;
   sessionId?: string;
   expiresAt: number; // epoch ms
+  loginTime?: number; // epoch ms when logged in
+  lastLoginAt?: string; // formatted date-time string
   tenantId: string; // the synthetic platform tenant's id
   email?: string;
   userId?: string;

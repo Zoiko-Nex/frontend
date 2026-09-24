@@ -43,7 +43,7 @@ import { getPlatformSession, setPlatformSession, clearPlatformSession, type Plat
  * to this list without checking the chain actually calls resolveTenantAndBrand
  * (or an equivalent), because the failure mode is silent.
  */
-export const CROSS_TENANT_SERVICES = new Set(["identity", "order"]);
+export const CROSS_TENANT_SERVICES = new Set(["identity", "order", "integration"]);
 
 export interface PlatformApiOpts {
   /**
