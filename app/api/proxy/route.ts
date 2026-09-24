@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       else if (path.startsWith('/v1/usage')) port = 8094;
       else if (path.startsWith('/v1/dunning')) port = 8095;
       else if (path.startsWith('/v1/payments') || path.startsWith('/v1/payment-intents')) port = 8096;
-      else if (path.startsWith('/v1/integration') || path.startsWith('/v1/mft') || path.startsWith('/v1/quarantine') || path.startsWith('/v1/reconciliation') || path.startsWith('/v1/egress')) port = 8097;
+      else if (path.startsWith('/v1/integration') || path.startsWith('/v1/connectors') || path.startsWith('/v1/activations') || path.startsWith('/v1/mappings') || path.startsWith('/v1/operations') || path.startsWith('/v1/doc-proposals') || path.startsWith('/v1/invocations') || path.startsWith('/v1/mft') || path.startsWith('/v1/quarantine') || path.startsWith('/v1/reconciliation') || path.startsWith('/v1/egress')) port = 8097;
       else if (path.startsWith('/v1/reporting')) port = 8098;
       else if (path.startsWith('/v1/demo-requests') || path.startsWith('/v1/contact-us') || path.startsWith('/v1/careers') || path.startsWith('/v1/press-media') || path.startsWith('/v1/terms-and-services')) port = 8099;
       else port = 8080;

@@ -170,11 +170,14 @@ function finishPlatformLogin(body: Record<string, any>, tenantId: string, email:
     });
   }
 
+  const now = new Date();
   const session: PlatformSession = {
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
     sessionId: body.session_id,
     expiresAt: Date.now() + (body.expires_in ?? 900) * 1000,
+    loginTime: Date.now(),
+    lastLoginAt: now.toUTCString(),
     tenantId,
     email: (claims.email as string) || email,
     userId: (claims.sub as string) || undefined,
