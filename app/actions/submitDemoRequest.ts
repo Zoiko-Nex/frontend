@@ -3,6 +3,7 @@
 import { render } from '@react-email/render';
 import DemoRequestReceivedEmail from '../../emails/templates/COM/DemoRequestReceived';
 import { CanonicalEmailPayload } from '../../emails/types/CanonicalEmail';
+import { sendMail } from '@/lib/email/mailer';
 import React from 'react'; // ensure React is in scope for JSX
 
 export interface DemoRequestFormInput {
@@ -95,26 +96,27 @@ export async function submitDemoRequest(data: DemoRequestFormInput) {
     };
 
     // 3. Render HTML
-    // We await render since it processes React components to string
     const htmlOutput = await render(React.createElement(DemoRequestReceivedEmail, { payload }));
 
-    // 4. Simulate Dispatch (or integrate Resend here)
-    console.log('--- DISPATCHING CANONICAL EMAIL ZNX-EM-COM-001 ---');
-    console.log(`To: ${data.work_email}`);
-    console.log(`Subject: We received your ZoikoNex demo request`);
-    console.log('HTML Payload:');
-    console.log(htmlOutput);
-    console.log('--------------------------------------------------');
+    // 4. Dispatch Email via multi-transport mailer
+    const mailResult = await sendMail({
+      to: data.work_email,
+      subject: "We received your ZoikoNex demo request",
+      html: htmlOutput,
+      text: `Hello ${data.full_name}, thank you for requesting a demo with ZoikoNex. We have received your inquiry for ${data.organization}.`,
+      metadata: {
+        organization: data.organization,
+        job_title: data.job_title,
+        country: data.country,
+        type: "DEMO_REQUEST",
+      },
+    });
 
-    // If using Resend:
-    // await resend.emails.send({
-    //   from: 'sales@zoikonex.com',
-    //   to: data.work_email,
-    //   subject: 'We received your ZoikoNex demo request',
-    //   html: htmlOutput
-    // });
-
-    return { success: true, message: 'Demo request submitted and email dispatched.' };
+    return {
+      success: true,
+      message: "Demo request submitted and confirmation email dispatched.",
+      messageId: mailResult.messageId,
+    };
   } catch (error: any) {
     console.error('Server Action Error:', error);
     return { success: false, error: error.message || 'An unexpected error occurred.' };

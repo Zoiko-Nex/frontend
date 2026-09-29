@@ -42,9 +42,6 @@ const PasswordResetPage = () => {
                                 <Link href="/login" className="text-slate-400 hover:text-slate-600 text-base font-medium transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                     Login
                                 </Link>
-                                <Link href="/register" className="text-slate-400 hover:text-slate-600 text-base font-medium transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                                    Register
-                                </Link>
                                 <Link href="/password-reset" className="text-cyan-700 text-base font-semibold border-b-2 border-cyan-700 pb-3 -mb-[13px] transition-colors" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                     Password Reset
                                 </Link>

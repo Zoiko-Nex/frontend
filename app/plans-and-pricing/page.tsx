@@ -184,9 +184,9 @@ const PlansAndPricing = () => {
                     consumption, jurisdictions, integrations, and support. Pay for what you need.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Link href="/register">
+                    <Link href="/request-a-demo">
                         <button className="px-8 h-12 bg-sky-600 hover:bg-sky-500 transition-colors text-white text-sm font-semibold rounded-md shadow-lg shadow-sky-600/10 cursor-pointer">
-                            Request Pricing Pack / Register
+                            Request Pricing Pack / Demo
                         </button>
                     </Link>
                     <a href="#pathways">
@@ -263,7 +263,7 @@ const PlansAndPricing = () => {
                                     </button>
                                 </Link>
                             ) : (
-                                <Link href={`/register?pathway=${encodeURIComponent(path.tag)}`} className="w-full">
+                                <Link href={`/request-a-demo?pathway=${encodeURIComponent(path.tag)}`} className="w-full">
                                     <button
                                         className={`w-full h-10 rounded-md text-xs font-semibold transition-colors cursor-pointer ${path.isPopular
                                                 ? 'bg-sky-600 hover:bg-sky-500 text-white'
