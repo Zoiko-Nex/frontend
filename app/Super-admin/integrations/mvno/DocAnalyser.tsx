@@ -89,12 +89,15 @@ function confidenceTone(c?: string): string {
 }
 
 export default function DocAnalyserModal({
+  tenant,
   connectorId,
   connectorName,
   providerName,
   onClose,
   onApplied,
 }: {
+  /** The tenant the connector belongs to; every call is made on its behalf. */
+  tenant: string;
   connectorId: string;
   connectorName: string;
   providerName: string;
@@ -128,7 +131,7 @@ export default function DocAnalyserModal({
     try {
       const p = await platformApi.post<Proposal>('integration', `/v1/connectors/${connectorId}/doc-proposals`, {
         document,
-      });
+      }, { asTenant: tenant, idempotencyKey: platformApi.uuid() });
       setProposal(p);
       // Deliberately empty: the reviewer opts in per operation.
       setSelected(new Set());
@@ -144,11 +147,15 @@ export default function DocAnalyserModal({
     setBusy(true);
     setError(null);
     try {
-      const res = await platformApi.post<ApplyResult>('integration', `/v1/doc-proposals/${proposal.proposal_id}/apply`, {
+      const raw = await platformApi.post<ApplyResult>('integration', `/v1/doc-proposals/${proposal.proposal_id}/apply`, {
         operation_ids: Array.from(selected),
-      });
+      }, { asTenant: tenant, idempotencyKey: platformApi.uuid() });
+      // The API sends `registered: null` when every selected operation failed
+      // (typically: already registered). Reading .length on it crashed the
+      // modal after the proposal had already been applied server-side.
+      const res: ApplyResult = { ...raw, registered: raw.registered ?? [] };
       setResult(res);
-      await qc.invalidateQueries({ queryKey: ['superadmin', 'operations', connectorId] });
+      await qc.invalidateQueries({ queryKey: ['integration', tenant, 'connector', connectorId] });
       onApplied(`${res.registered.length} operation${res.registered.length === 1 ? '' : 's'} registered, uncertified`);
     } catch (e) {
       setError(errMessage(e, 'The selected operations could not be registered.'));
@@ -161,7 +168,8 @@ export default function DocAnalyserModal({
     if (!proposal) return;
     setBusy(true);
     try {
-      await platformApi.post('integration', `/v1/doc-proposals/${proposal.proposal_id}/discard`, {});
+      await platformApi.post('integration', `/v1/doc-proposals/${proposal.proposal_id}/discard`, {},
+        { asTenant: tenant, idempotencyKey: platformApi.uuid() });
       setProposal(null);
       setSelected(new Set());
       setDocument('');

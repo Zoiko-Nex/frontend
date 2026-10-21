@@ -16,10 +16,10 @@
  * the same root: the screen a user navigates to and the screen being maintained
  * were different files.
  *
- * The console is canonical because that is where the sidebar goes. The modals
- * this page introduced (ActivationLifecycle, OperationsCatalogue, DocAnalyser)
- * remain in this directory and are imported by the console — they were always
- * single implementations and stay that way.
+ * The console is canonical because that is where the sidebar goes; its
+ * Integrations module lives in ../IntegrationsModule.tsx. Of the modals this
+ * page introduced only DocAnalyser remains here, opened from the Operations
+ * step.
  */
 
 import { useEffect } from 'react';

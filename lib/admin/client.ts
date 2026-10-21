@@ -26,6 +26,8 @@ export class ApiException extends Error {
   correlationId?: string;
   retryable: boolean;
   details?: Record<string, unknown>;
+  /** The full error body, for responses that carry more than the envelope. */
+  body?: unknown;
 
   constructor(status: number, body: Partial<ApiError>) {
     super(body.message || "Request failed");
@@ -35,6 +37,7 @@ export class ApiException extends Error {
     this.correlationId = body.correlation_id;
     this.retryable = body.retryable ?? false;
     this.details = body.details;
+    this.body = body;
   }
 }
 

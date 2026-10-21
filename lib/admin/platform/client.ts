@@ -213,6 +213,7 @@ export const platformApi = {
   put: <T>(svc: string, path: string, body?: unknown, opts?: PlatformApiOpts) => request<T>("PUT", svc, path, body, opts),
   patch: <T>(svc: string, path: string, body?: unknown, opts?: PlatformApiOpts) => request<T>("PATCH", svc, path, body, opts),
   del: <T>(svc: string, path: string, opts?: PlatformApiOpts) => request<T>("DELETE", svc, path, undefined, opts),
+  delWithBody: <T>(svc: string, path: string, body: unknown, opts?: PlatformApiOpts) => request<T>("DELETE", svc, path, body, opts),
   uuid: genUuid,
 };
 
