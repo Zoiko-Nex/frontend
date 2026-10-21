@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { errMessage } from "@/lib/admin/envelope";
 import { integrationApi, integrationKeys, type Connector } from "@/lib/admin/integration";
-import { Field, KV, Modal, PanelError, StatusChip, TableState, inputStyle } from "../console";
+import { Field, KV, Modal, PanelError, StatusChip, TableState, VocabSelect, inputStyle } from "../console";
 
 const TOPOLOGY: { key: keyof Connector; label: string }[] = [
   { key: "tenancy_mode", label: "Tenancy mode" },
@@ -97,7 +97,7 @@ export function CredentialsPanel({ tenant, connector }: { tenant: string; connec
   const creds = useQuery({ queryKey: key, queryFn: () => integrationApi.listCredentials(tenant, connector.connector_id) });
 
   const isJwt = connector.auth_type === "JWT_PASSWORD_GRANT";
-  const [form, setForm] = useState({ environment: "PRODUCTION", username: "", password: "", login_url: "", value: "" });
+  const [form, setForm] = useState({ environment: "", username: "", password: "", login_url: "", value: "" });
   const [revoke, setRevoke] = useState<{ id: string; compromised: boolean } | null>(null);
   const [note, setNote] = useState("");
 
@@ -126,7 +126,7 @@ export function CredentialsPanel({ tenant, connector }: { tenant: string; connec
     onError: (e) => toast.error(errMessage(e, "Could not revoke the credential")),
   });
 
-  const ready = isJwt ? form.username.trim() && form.password && /^https:\/\/\S+$/.test(form.login_url.trim()) : !!form.value;
+  const ready = !!form.environment && (isJwt ? !!form.username.trim() && !!form.password && /^https:\/\/\S+$/.test(form.login_url.trim()) : !!form.value);
 
   return (
     <div className="panel">
@@ -165,10 +165,7 @@ export function CredentialsPanel({ tenant, connector }: { tenant: string; connec
       <div className="sectitle" style={{ marginTop: 14 }}>Submit or rotate</div>
       <form onSubmit={(e) => { e.preventDefault(); if (ready) submit.mutate(); }} autoComplete="off">
         <Field label="Environment" hint={connector.uat_mode === "PRODUCTION_TEST_SUBSCRIBERS" ? "This provider has no sandbox: UAT uses the production credential." : undefined}>
-          <select style={inputStyle} value={form.environment} onChange={(e) => setForm({ ...form, environment: e.target.value })}>
-            <option value="PRODUCTION">PRODUCTION</option>
-            <option value="SANDBOX">SANDBOX</option>
-          </select>
+          <VocabSelect list="environments" style={inputStyle} value={form.environment} onChange={(v) => setForm({ ...form, environment: v })} />
         </Field>
         {isJwt ? (
           <>
@@ -190,7 +187,7 @@ export function CredentialsPanel({ tenant, connector }: { tenant: string; connec
         <Modal
           title={revoke.compromised ? "Mark credential compromised" : "Revoke credential"}
           subtitle={revoke.compromised ? "Revokes it now and starts the one-hour rotation clock (INT-LCM-005)." : "Calls using it stop immediately."}
-          onClose={() => setRevoke(null)}
+          onClose={() => { setRevoke(null); setNote(""); }}
           footer={<button type="button" className="btn btn-danger" disabled={!note.trim() || doRevoke.isPending} onClick={() => doRevoke.mutate()}>Confirm</button>}
         >
           <Field label="Note"><textarea style={inputStyle} rows={3} value={note} onChange={(e) => setNote(e.target.value)} /></Field>

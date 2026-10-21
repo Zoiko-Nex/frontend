@@ -1064,6 +1064,14 @@ svg {
   stroke-width: 2.2
 }
 
+/* A disabled action must look disabled: governance steps (approve, activate)
+   are disabled until their preconditions hold. */
+.btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn-primary {
   background: var(--blue);
   color: #fff
@@ -1897,6 +1905,29 @@ tbody tr.clickable:hover td {
   outline: none;
   border-color: var(--blue, #0284c7) !important;
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+/* Form controls inside console panels (integrations workspace): same look as
+   modal fields, but width is left to each control's layout. */
+.panel input:not([type=checkbox]):not([type=file]),
+.panel select,
+.panel textarea {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--field);
+  border: 1.5px solid #94a3b8;
+  border-radius: 9px;
+  padding: 8px 10px;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.panel input:not([type=checkbox]):not([type=file]):focus,
+.panel select:focus,
+.panel textarea:focus {
+  outline: none;
+  border-color: var(--blue, #0284c7);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
 .modal-b input.is-invalid,

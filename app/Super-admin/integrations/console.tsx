@@ -7,8 +7,10 @@
  * drift.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { errMessage } from "@/lib/admin/envelope";
+import { integrationApi, integrationKeys, type ConnectorVocabulary } from "@/lib/admin/integration";
 
 export function Chip({ tone, children }: { tone: string; children: React.ReactNode }) {
   return <span className={`chip ${tone}`}>{children}</span>;
@@ -98,6 +100,8 @@ export function Modal({
   children,
   footer,
   maxWidth,
+  dismissible = true,
+  closeLabel = "Cancel",
 }: {
   title: string;
   subtitle?: string;
@@ -105,16 +109,26 @@ export function Modal({
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: number | string;
+  /** False when closing loses something for good (a secret shown once): only the close button closes it. */
+  dismissible?: boolean;
+  closeLabel?: string;
 }) {
+  const dialog = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    dialog.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (!dismissible) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, dismissible]);
 
   return (
-    <div className="scrim2 show" onClick={onClose}>
+    <div className="scrim2 show" onClick={dismissible ? onClose : undefined}>
       <div
+        ref={dialog}
+        tabIndex={-1}
         className="modal"
         role="dialog"
         aria-modal="true"
@@ -130,7 +144,7 @@ export function Modal({
         </div>
         <div className="modal-b">{children}</div>
         <div className="modal-f">
-          <button type="button" className="btn btn-sec" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn btn-sec" onClick={onClose}>{closeLabel}</button>
           {footer}
         </div>
       </div>
@@ -201,3 +215,28 @@ export function PanelError({ error, fallback }: { error: unknown; fallback: stri
 }
 
 export const inputStyle: React.CSSProperties = { width: "100%" };
+
+/** The values integration-ecosystem accepts for its enumerated fields. Fetched once per session. */
+export function useVocabulary() {
+  return useQuery({ queryKey: integrationKeys.vocabulary(), queryFn: integrationApi.vocabulary, staleTime: Infinity });
+}
+
+/**
+ * A select whose options are one list from the backend vocabulary. It starts
+ * unselected: the operator chooses, nothing is defaulted on their behalf.
+ */
+export function VocabSelect({ list, value, onChange, label, style }: {
+  list: keyof ConnectorVocabulary;
+  value: string;
+  onChange: (v: string) => void;
+  label?: string;
+  style?: React.CSSProperties;
+}) {
+  const vocab = useVocabulary();
+  return (
+    <select aria-label={label} style={style} value={value} onChange={(e) => onChange(e.target.value)} disabled={!vocab.data}>
+      <option value="">{vocab.error ? "— could not load —" : "— select —"}</option>
+      {(vocab.data?.[list] ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}

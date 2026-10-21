@@ -12,8 +12,12 @@
  * Every call takes the tenant it acts for. Connectors live in a tenant (one per
  * parent brand), and a platform admin reads them with an `X-Tenant-ID`
  * override — without it the platform tenant's own, empty, data comes back and
- * looks like "no connectors". Every mutation sends an `Idempotency-Key`, so a
- * double click or a retried request does not register a connector twice.
+ * looks like "no connectors". Every mutation sends an `Idempotency-Key`, but
+ * today integration-ecosystem de-duplicates on it only for `POST …/invoke`; the
+ * other mutations ignore it, so screens disable their buttons while a request is
+ * in flight. `invoke` takes the key from its caller, which keeps one key per
+ * logical submission so retrying a call whose answer was lost replays it
+ * instead of sending a second provider write.
  */
 
 import { platformApi } from "./platform/client";
@@ -65,6 +69,7 @@ export interface ConnectorVocabulary {
   uat_modes: string[];
   approval_roles: string[];
   environments: string[];
+  subscriber_identifier_types: string[];
 }
 
 export interface Credential {
@@ -198,11 +203,21 @@ export interface BrandAuthorization {
   created_by: string;
 }
 
+/** POST …/operations/seed: PARTIAL when some operations failed to register. */
+export interface SeedResult {
+  status: "SEEDED" | "PARTIAL";
+  result?: { connector_id: string; registered: string[]; already_present: string[]; failed?: Record<string, string> };
+  note?: string;
+  error?: string;
+}
+
 export interface CallbackEndpoint {
   callback_endpoint_id: string;
   allowed_source_cidrs: string[];
   enforce_source_allowlist: boolean;
   port_out_unavailable_code: string;
+  /** Identical notifications without a transaction or batch id within this window are redeliveries. */
+  redelivery_window_seconds: number;
   url_path_template: string;
   created_at: string;
   created_by: string;
@@ -223,10 +238,22 @@ export interface ProviderCallback {
   batch_id?: string;
   result_code?: string;
   result_class?: string;
+  outcome?: string;
+  /** Whether this notification carried the operation's final word (holds and PENDING do not). */
+  outcome_final: boolean;
   matched_invocation_id?: string;
   status: string;
   answered_code?: string;
   received_at: string;
+  delivery_count: number;
+}
+
+/** A partial update: an absent field keeps its value; an empty list of sources accepts from nowhere. */
+export interface CallbackEndpointSettings {
+  allowed_source_cidrs?: string[];
+  enforce_source_allowlist?: boolean;
+  port_out_unavailable_code?: string;
+  redelivery_window_seconds?: number;
 }
 
 export interface Invocation {
@@ -287,8 +314,9 @@ export const integrationApi = {
   listConnectors: async (tenant: string) =>
     (await platformApi.get<{ connectors: Connector[] }>(SVC, "/v1/connectors", as(tenant))).connectors ?? [],
   getConnector: (tenant: string, id: string) => platformApi.get<Connector>(SVC, c(id), as(tenant)),
-  registerConnector: (tenant: string, body: Record<string, unknown>) =>
-    platformApi.post<{ connector_id: string }>(SVC, "/v1/connectors", body, mutate(tenant)),
+  /** One key per registration form, so a retry after a lost answer replays instead of creating a second DRAFT. */
+  registerConnector: (tenant: string, idempotencyKey: string, body: Record<string, unknown>) =>
+    platformApi.post<{ connector_id: string }>(SVC, "/v1/connectors", body, { asTenant: tenant, idempotencyKey }),
   suspendConnector: (tenant: string, id: string, reason: string) =>
     platformApi.post(SVC, `${c(id)}/suspend`, { reason }, mutate(tenant)),
 
@@ -304,7 +332,7 @@ export const integrationApi = {
   listOperations: async (tenant: string, id: string) =>
     (await platformApi.get<{ operations: Operation[] }>(SVC, `${c(id)}/operations`, as(tenant))).operations ?? [],
   seedOperations: (tenant: string, id: string) =>
-    platformApi.post<{ status: string; error?: string; registered?: number }>(SVC, `${c(id)}/operations/seed`, {}, mutate(tenant)),
+    platformApi.post<SeedResult>(SVC, `${c(id)}/operations/seed`, {}, mutate(tenant)),
   certifyOperation: (tenant: string, operationId: string, status: "SANDBOX_PASSED" | "CERTIFIED" | "REVOKED") =>
     platformApi.post(SVC, `/v1/operations/${encodeURIComponent(operationId)}/certify`, { status }, mutate(tenant)),
 
@@ -340,9 +368,10 @@ export const integrationApi = {
 
   getCallbackEndpoint: (tenant: string, id: string) =>
     platformApi.get<CallbackEndpoint>(SVC, `${c(id)}/callback-endpoints`, as(tenant)),
-  createCallbackEndpoint: (tenant: string, id: string, body: { allowed_source_cidrs: string[]; enforce_source_allowlist: boolean; port_out_unavailable_code?: string }) =>
+  /** Without `rotate`, creating while an endpoint is active is refused (409), so a retried request cannot kill the URL MVNOC holds. */
+  createCallbackEndpoint: (tenant: string, id: string, body: CallbackEndpointSettings & { rotate?: boolean }) =>
     platformApi.post<CreatedCallbackEndpoint>(SVC, `${c(id)}/callback-endpoints`, body, mutate(tenant)),
-  updateCallbackEndpoint: (tenant: string, id: string, endpointId: string, body: { allowed_source_cidrs: string[]; enforce_source_allowlist: boolean; port_out_unavailable_code?: string }) =>
+  updateCallbackEndpoint: (tenant: string, id: string, endpointId: string, body: CallbackEndpointSettings) =>
     platformApi.put<CallbackEndpoint>(SVC, `${c(id)}/callback-endpoints/${encodeURIComponent(endpointId)}`, body, mutate(tenant)),
   listCallbacks: async (tenant: string, id: string) =>
     (await platformApi.get<{ callbacks: ProviderCallback[] }>(SVC, `${c(id)}/callbacks?limit=50`, as(tenant))).callbacks ?? [],
@@ -369,9 +398,9 @@ export const integrationApi = {
    * are answers to show the operator — with the provider's code and remedy —
    * not exceptions. Only failures with no invocation behind them throw.
    */
-  invoke: async (tenant: string, id: string, operation: string, payload: unknown): Promise<InvokeResult> => {
+  invoke: async (tenant: string, id: string, operation: string, payload: unknown, idempotencyKey: string): Promise<InvokeResult> => {
     try {
-      return await platformApi.post<InvokeResult>(SVC, `${c(id)}/invoke`, { operation, payload }, mutate(tenant));
+      return await platformApi.post<InvokeResult>(SVC, `${c(id)}/invoke`, { operation, payload }, { asTenant: tenant, idempotencyKey });
     } catch (e) {
       const body = (e as { body?: unknown }).body as Partial<InvokeResult> | undefined;
       if (body && typeof body === "object" && typeof body.invocation_id === "string") return body as InvokeResult;

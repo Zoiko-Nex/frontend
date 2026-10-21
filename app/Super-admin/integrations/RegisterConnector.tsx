@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { errMessage } from "@/lib/admin/envelope";
-import { integrationApi, integrationKeys } from "@/lib/admin/integration";
-import { Field, Modal, PanelError, inputStyle } from "./console";
+import { integrationApi } from "@/lib/admin/integration";
+import { platformApi } from "@/lib/admin/platform/client";
+import { Field, Modal, PanelError, inputStyle, useVocabulary } from "./console";
 
 const EMPTY = {
   connector_name: "", provider_name: "", connector_type: "", auth_type: "", base_url: "", api_version: "",
@@ -26,15 +27,16 @@ export function RegisterConnectorModal({ tenant, tenantName, onClose, onCreated 
   onClose: () => void;
   onCreated: (connectorId: string) => void;
 }) {
-  const vocab = useQuery({ queryKey: integrationKeys.vocabulary(), queryFn: integrationApi.vocabulary, staleTime: Infinity });
+  const vocab = useVocabulary();
   const [f, setF] = useState(EMPTY);
+  const [registrationKey] = useState(() => platformApi.uuid());
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   const register = useMutation({
     mutationFn: () => {
       const body: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(f)) if (v.trim()) body[k] = k === "timeout_ms" ? Number(v) : v.trim();
-      return integrationApi.registerConnector(tenant, body);
+      return integrationApi.registerConnector(tenant, registrationKey, body);
     },
     onSuccess: (r) => { toast.success("Connector registered (DRAFT)"); onCreated(r.connector_id); },
     onError: (e) => toast.error(errMessage(e, "Registration refused")),

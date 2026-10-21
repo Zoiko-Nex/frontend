@@ -2669,6 +2669,9 @@ export default function SuperAdminPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#F1F5F9]">
+                          <TableState colSpan={5} loading={connectorsQ.isLoading} error={connectorsQ.error}
+                            empty={backendConnectors.length === 0}
+                            emptyLabel="Connectors are registered per tenant: open Integrations and choose a tenant." />
                           {backendConnectors.slice(0, 5).map((conn, idx) => {
                             const initial = (conn.connector_name || "C").charAt(0).toUpperCase();
                             const colors = [
@@ -3344,7 +3347,7 @@ export default function SuperAdminPage() {
               </section>
             )}
 
-            {module === "integrations" && <IntegrationsModule tenants={tenants} />}
+            {module === "integrations" && <IntegrationsModule tenants={tenants} tenantsLoading={tenantsQ.isLoading} tenantsError={tenantsQ.error} />}
 
             {/* ─── Platform health ───────────────────────────────────────────── */}
             {module === "platform" && (

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { errMessage } from "@/lib/admin/envelope";
 import { integrationApi, integrationKeys, type Connector } from "@/lib/admin/integration";
-import { Chip, Field, Modal, StatusChip, TableState, inputStyle } from "../console";
+import { Chip, Field, Modal, StatusChip, TableState, VocabSelect, inputStyle } from "../console";
 
 /** Reads a JSON file the operator picked (a provider reference document). */
 function useJsonFile(onLoaded: (doc: unknown, name: string) => void) {
@@ -160,7 +160,7 @@ function RatePolicies({ tenant, connector }: { tenant: string; connector: Connec
       </div>
       {confirm && (
         <Modal title="Remove rate policy" subtitle="The provider's limit stops being enforced." onClose={() => setConfirm(null)}
-          footer={<button type="button" className="btn btn-danger" onClick={() => { remove.mutate(confirm); setConfirm(null); }}>Remove</button>}>
+          footer={<button type="button" className="btn btn-danger" disabled={remove.isPending} onClick={() => { remove.mutate(confirm); setConfirm(null); }}>Remove</button>}>
           <p style={{ fontSize: 13 }}>Calls will no longer be held to this limit. Remove it only if the provider has withdrawn it.</p>
         </Modal>
       )}
@@ -172,7 +172,7 @@ function TestSubscribers({ tenant, connector }: { tenant: string; connector: Con
   const qc = useQueryClient();
   const key = integrationKeys.part(tenant, connector.connector_id, "test-subscribers");
   const subs = useQuery({ queryKey: key, queryFn: () => integrationApi.listTestSubscribers(tenant, connector.connector_id) });
-  const [form, setForm] = useState({ identifier_type: "MSISDN", identifier: "", label: "", expires_at: "" });
+  const [form, setForm] = useState({ identifier_type: "", identifier: "", label: "", expires_at: "" });
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: key });
     qc.invalidateQueries({ queryKey: integrationKeys.part(tenant, connector.connector_id, "readiness") });
@@ -181,7 +181,9 @@ function TestSubscribers({ tenant, connector }: { tenant: string; connector: Con
   const add = useMutation({
     mutationFn: () => integrationApi.addTestSubscriber(tenant, connector.connector_id, {
       identifier_type: form.identifier_type, identifier: form.identifier.trim(), label: form.label.trim(),
-      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : undefined,
+      // The end of the chosen day in the operator's own timezone. A bare
+      // date parses as UTC midnight, which in the Americas is the evening before.
+      expires_at: form.expires_at ? new Date(`${form.expires_at}T23:59:59`).toISOString() : undefined,
     }),
     onSuccess: () => { toast.success("Test SIM registered"); setForm({ ...form, identifier: "", label: "" }); invalidate(); },
     onError: (e) => toast.error(errMessage(e, "Could not register the test SIM")),
@@ -203,15 +205,12 @@ function TestSubscribers({ tenant, connector }: { tenant: string; connector: Con
         {" "}The number is stored as a keyed hash; only the last four digits are shown.
       </p>
       <form style={{ display: "grid", gridTemplateColumns: "120px 1fr 1fr 160px auto", gap: 8, alignItems: "end", marginBottom: 10 }}
-        onSubmit={(e) => { e.preventDefault(); if (form.identifier.trim() && form.label.trim()) add.mutate(); }}>
-        <select aria-label="Identifier type" value={form.identifier_type} onChange={(e) => setForm({ ...form, identifier_type: e.target.value })}>
-          <option value="MSISDN">MSISDN</option>
-          <option value="ICCID">ICCID</option>
-        </select>
+        onSubmit={(e) => { e.preventDefault(); if (form.identifier_type && form.identifier.trim() && form.label.trim()) add.mutate(); }}>
+        <VocabSelect list="subscriber_identifier_types" label="Identifier type" value={form.identifier_type} onChange={(v) => setForm({ ...form, identifier_type: v })} />
         <input aria-label="Identifier" placeholder="number" value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} />
         <input aria-label="Label" placeholder="label, e.g. UAT SIM 3" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
-        <input aria-label="Expires" type="date" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} />
-        <button type="submit" className="btn btn-primary btn-sm" disabled={!form.identifier.trim() || !form.label.trim() || add.isPending}>Register</button>
+        <input aria-label="Expires (end of day, your time)" title="Expires at the end of this day, your time" type="date" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} />
+        <button type="submit" className="btn btn-primary btn-sm" disabled={!form.identifier_type || !form.identifier.trim() || !form.label.trim() || add.isPending}>Register</button>
       </form>
       <div className="tablewrap">
         <table>
@@ -226,7 +225,7 @@ function TestSubscribers({ tenant, connector }: { tenant: string; connector: Con
                 <td>{s.label}</td>
                 <td className="mono">{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : "—"}</td>
                 <td>{s.created_by}</td>
-                <td style={{ textAlign: "right" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => remove.mutate(s.test_subscriber_id)}>Remove</button></td>
+                <td style={{ textAlign: "right" }}><button type="button" className="btn btn-ghost btn-sm" disabled={remove.isPending} aria-label={`Remove test SIM ${s.label}`} onClick={() => remove.mutate(s.test_subscriber_id)}>Remove</button></td>
               </tr>
             ))}
           </tbody>
@@ -253,10 +252,11 @@ function BrandAuthorizations({ tenant, connector, brands }: { tenant: string; co
   });
   const revoke = useMutation({
     mutationFn: (id: string) => integrationApi.revokeBrandAuthorization(tenant, connector.connector_id, id),
-    onSuccess: () => { toast.success("Approval revoked"); qc.invalidateQueries({ queryKey: key }); },
+    onSuccess: () => { toast.success("Approval revoked"); setConfirmRevoke(null); qc.invalidateQueries({ queryKey: key }); },
     onError: (e) => toast.error(errMessage(e, "Could not revoke")),
   });
   const ready = form.authorized_brand.trim() && form.authorization_reference.trim() && form.authorized_on;
+  const [confirmRevoke, setConfirmRevoke] = useState<{ id: string; brand: string } | null>(null);
 
   return (
     <div className="panel">
@@ -290,12 +290,18 @@ function BrandAuthorizations({ tenant, connector, brands }: { tenant: string; co
                 <td>{a.authorization_reference}</td>
                 <td className="mono">{a.authorized_on}</td>
                 <td className="mono">{a.expires_on ?? "—"}</td>
-                <td style={{ textAlign: "right" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => revoke.mutate(a.brand_authorization_id)}>Revoke</button></td>
+                <td style={{ textAlign: "right" }}><button type="button" className="btn btn-ghost btn-sm" aria-label={`Revoke approval for ${brandName(a.authorized_brand)}`} onClick={() => setConfirmRevoke({ id: a.brand_authorization_id, brand: brandName(a.authorized_brand) })}>Revoke</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {confirmRevoke && (
+        <Modal title={`Revoke approval for ${confirmRevoke.brand}`} subtitle="The sub-brand stops being able to provision through this connector immediately." onClose={() => setConfirmRevoke(null)}
+          footer={<button type="button" className="btn btn-danger" disabled={revoke.isPending} onClick={() => revoke.mutate(confirmRevoke.id)}>Revoke</button>}>
+          <p style={{ fontSize: 13 }}>Revoke only when the carrier has withdrawn its approval. Restoring it means recording the carrier&apos;s approval again.</p>
+        </Modal>
+      )}
     </div>
   );
 }

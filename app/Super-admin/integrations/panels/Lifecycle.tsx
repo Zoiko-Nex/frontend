@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { ApiException } from "@/lib/admin/client";
 import { errMessage } from "@/lib/admin/envelope";
+import { platformApi } from "@/lib/admin/platform/client";
 import { integrationApi, integrationKeys, type Activation, type Connector, type InvokeResult } from "@/lib/admin/integration";
-import { Field, KV, Modal, PanelError, StatusChip, TableState, inputStyle } from "../console";
+import { Field, KV, Modal, PanelError, StatusChip, TableState, VocabSelect, inputStyle } from "../console";
 
 /** Step 6 — what still stands between this connector and live service. */
 export function ReadinessPanel({ tenant, connector }: { tenant: string; connector: Connector }) {
@@ -61,7 +63,9 @@ export function ActivationPanel({ tenant, connector, approvalRoles }: { tenant: 
   const history = (acts.data?.activations ?? []).filter((a) => a !== open);
   const required = acts.data?.required_approvals ?? [];
 
-  const [env, setEnv] = useState(connector.uat_mode === "PRODUCTION_TEST_SUBSCRIBERS" && ["DRAFT", "CONTRACTED"].includes(connector.status) ? "SANDBOX" : "PRODUCTION");
+  // Chosen explicitly every time: which environments a request may target is
+  // the backend's rule, and a defaulted PRODUCTION is one click from live.
+  const [env, setEnv] = useState("");
   const [qual, setQual] = useState({ suite: "", digest: "", passed: true });
   const [decision, setDecision] = useState<{ role: string; decision: "APPROVED" | "REJECTED" } | null>(null);
   const [note, setNote] = useState("");
@@ -95,11 +99,8 @@ export function ActivationPanel({ tenant, connector, approvalRoles }: { tenant: 
               : "SANDBOX opens UAT. PRODUCTION puts the connector into live service."}
           </p>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <select aria-label="Environment" value={env} onChange={(e) => setEnv(e.target.value)}>
-              <option value="SANDBOX">SANDBOX (UAT)</option>
-              <option value="PRODUCTION">PRODUCTION</option>
-            </select>
-            <button type="button" className="btn btn-primary btn-sm" disabled={request.isPending} onClick={() => request.mutate()}>Request activation</button>
+            <VocabSelect list="environments" label="Environment" value={env} onChange={setEnv} />
+            <button type="button" className="btn btn-primary btn-sm" disabled={!env || request.isPending} onClick={() => request.mutate()}>Request activation</button>
           </div>
         </>
       ) : (
@@ -140,8 +141,8 @@ export function ActivationPanel({ tenant, connector, approvalRoles }: { tenant: 
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         {!d && qualified && (
                           <>
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setNote(""); setDecision({ role, decision: "APPROVED" }); }}>Approve</button>
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setNote(""); setDecision({ role, decision: "REJECTED" }); }}>Reject</button>
+                            <button type="button" className="btn btn-ghost btn-sm" aria-label={`Approve as ${role}`} onClick={() => { setNote(""); setDecision({ role, decision: "APPROVED" }); }}>Approve</button>
+                            <button type="button" className="btn btn-ghost btn-sm" aria-label={`Reject as ${role}`} onClick={() => { setNote(""); setDecision({ role, decision: "REJECTED" }); }}>Reject</button>
                           </>
                         )}
                       </td>
@@ -199,17 +200,33 @@ export function CallsPanel({ tenant, connector }: { tenant: string; connector: C
   const ops = useQuery({ queryKey: integrationKeys.part(tenant, connector.connector_id, "operations"),
     queryFn: () => integrationApi.listOperations(tenant, connector.connector_id) });
   const [operation, setOperation] = useState("");
-  const [payload, setPayload] = useState("{\n  \"msisdn\": \"\"\n}");
+  const [payload, setPayload] = useState("{}");
   const [result, setResult] = useState<InvokeResult | null>(null);
+  // One Idempotency-Key per logical call: pressing "Call provider" again after
+  // a lost answer replays the first call instead of sending a second provider
+  // write. A new key only once an answer arrived or the call itself changed.
+  const [callKey, setCallKey] = useState(() => platformApi.uuid());
+  const changeCall = (apply: () => void) => { apply(); setCallKey(platformApi.uuid()); };
 
   let parsed: unknown = null;
   let parseError = "";
   try { parsed = payload.trim() ? JSON.parse(payload) : {}; } catch { parseError = "Payload is not valid JSON."; }
 
   const invoke = useMutation({
-    mutationFn: () => integrationApi.invoke(tenant, connector.connector_id, operation, parsed),
-    onSuccess: (r) => { setResult(r); qc.invalidateQueries({ queryKey: key }); },
-    onError: (e) => toast.error(errMessage(e, "The call was refused before reaching the provider")),
+    mutationFn: () => integrationApi.invoke(tenant, connector.connector_id, operation, parsed, callKey),
+    onSuccess: (r) => { setResult(r); setCallKey(platformApi.uuid()); qc.invalidateQueries({ queryKey: key }); },
+    onError: (e) => {
+      // No status, a gateway error or a timeout means no answer came back: the
+      // call may have reached the provider. The key is kept, so "Call provider"
+      // again replays this call instead of sending a second write.
+      const status = e instanceof ApiException ? e.status : 0;
+      if (status === 0 || status === 502 || status === 503 || status === 504) {
+        toast.warning("No answer received — the call may have reached the provider. Check the ledger below before anything else; calling again replays this same call.");
+        qc.invalidateQueries({ queryKey: key });
+        return;
+      }
+      toast.error(errMessage(e, "The call was refused before reaching the provider"));
+    },
   });
 
   return (
@@ -217,7 +234,7 @@ export function CallsPanel({ tenant, connector }: { tenant: string; connector: C
       <h3>Calls</h3>
       <form onSubmit={(e) => { e.preventDefault(); if (operation && !parseError) invoke.mutate(); }}>
         <Field label="Operation">
-          <select style={inputStyle} value={operation} onChange={(e) => setOperation(e.target.value)}>
+          <select style={inputStyle} value={operation} onChange={(e) => { const v = e.target.value; changeCall(() => setOperation(v)); }}>
             <option value="">— select —</option>
             {(ops.data ?? []).filter((o) => o.certification_status !== "REVOKED").map((o) => (
               <option key={o.operation_id} value={o.operation_name}>{o.operation_name} ({o.certification_status})</option>
@@ -225,7 +242,7 @@ export function CallsPanel({ tenant, connector }: { tenant: string; connector: C
           </select>
         </Field>
         <Field label="Payload (JSON)" hint={connector.status === "SANDBOX" ? "UAT: every MSISDN/ICCID must be a registered test SIM." : undefined}>
-          <textarea style={{ ...inputStyle, fontFamily: "monospace" }} rows={5} value={payload} onChange={(e) => setPayload(e.target.value)} />
+          <textarea style={{ ...inputStyle, fontFamily: "monospace" }} rows={5} value={payload} onChange={(e) => { const v = e.target.value; changeCall(() => setPayload(v)); }} />
         </Field>
         {parseError && <p role="alert" style={{ color: "var(--danger)", fontSize: 12 }}>{parseError}</p>}
         <button type="submit" className="btn btn-primary btn-sm" disabled={!operation || !!parseError || invoke.isPending}>{invoke.isPending ? "Calling…" : "Call provider"}</button>

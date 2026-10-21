@@ -10,14 +10,16 @@
  * is chosen first, every list is real or says why it is not, and a connector's
  * setup is one page of ordered steps whose state comes from the backend.
  *
- * Deep-linkable: ?module=integrations&tenant=<id>&connector=<id>.
+ * Deep-linkable: ?module=integrations&tenant=<id>&connector=<id>&step=<step>.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ApiException } from "@/lib/admin/client";
+import { errMessage } from "@/lib/admin/envelope";
 import { integrationApi, integrationKeys, type Connector } from "@/lib/admin/integration";
-import { StatusChip, TableState, TenantPicker, type TenantOption } from "./console";
+import { StatusChip, TableState, TenantPicker, useVocabulary, type TenantOption } from "./console";
 import { RegisterConnectorModal } from "./RegisterConnector";
 import { TopologyPanel, CredentialsPanel } from "./panels/Setup";
 import { CarrierRulesPanel } from "./panels/CarrierRules";
@@ -25,28 +27,39 @@ import { CallbacksPanel } from "./panels/Callbacks";
 import { OperationsPanel } from "./panels/Operations";
 import { ReadinessPanel, ActivationPanel, CallsPanel } from "./panels/Lifecycle";
 
-function useUrlParam(name: string): [string, (v: string) => void] {
-  const read = () => (typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get(name) ?? "");
-  const [value, setValue] = useState(read);
-  useEffect(() => {
-    const onPop = () => setValue(read());
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- read is stable per name
-  }, [name]);
-  const update = useCallback((v: string) => {
-    const url = new URL(window.location.href);
+const readParam = (name: string) =>
+  typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get(name) ?? "";
+
+/** Sets or clears query parameters in one history entry. */
+function writeParams(values: Record<string, string>) {
+  const url = new URL(window.location.href);
+  for (const [name, v] of Object.entries(values)) {
     if (v) url.searchParams.set(name, v);
     else url.searchParams.delete(name);
-    window.history.pushState(null, "", url);
-    setValue(v);
-  }, [name]);
-  return [value, update];
+  }
+  window.history.pushState(null, "", url);
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-export default function IntegrationsModule({ tenants }: { tenants: TenantOption[] }) {
-  const [tenant, setTenant] = useUrlParam("tenant");
-  const [connectorId, setConnectorId] = useUrlParam("connector");
+/** A query parameter as state, kept in step with Back/Forward. */
+function useUrlParam(name: string): string {
+  const [value, setValue] = useState(() => readParam(name));
+  useEffect(() => {
+    const onPop = () => setValue(readParam(name));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [name]);
+  return value;
+}
+
+export default function IntegrationsModule({ tenants, tenantsLoading, tenantsError }: {
+  tenants: TenantOption[];
+  tenantsLoading?: boolean;
+  tenantsError?: unknown;
+}) {
+  const tenant = useUrlParam("tenant");
+  const connectorId = useUrlParam("connector");
+  const openConnector = useCallback((id: string) => writeParams({ connector: id, step: "" }), []);
   const [registerOpen, setRegisterOpen] = useState(false);
   const qc = useQueryClient();
 
@@ -54,7 +67,7 @@ export default function IntegrationsModule({ tenants }: { tenants: TenantOption[
   const connectors = useQuery({
     queryKey: integrationKeys.connectors(tenant),
     queryFn: () => integrationApi.listConnectors(tenant),
-    enabled: !!tenant,
+    enabled: !!tenantInfo,
   });
 
   return (
@@ -66,27 +79,33 @@ export default function IntegrationsModule({ tenants }: { tenants: TenantOption[
           <div className="psub">Carrier and provider connectors, per tenant. Each one is set up in order: credentials, the carrier&apos;s rules, callbacks, operations, then governed activation.</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <TenantPicker tenants={tenants} value={tenant} onChange={(v) => { setConnectorId(""); setTenant(v); }} />
-          {tenant && !connectorId && (
+          <TenantPicker tenants={tenants} value={tenant} onChange={(v) => writeParams({ tenant: v, connector: "", step: "" })} />
+          {tenantInfo && !connectorId && (
             <button type="button" className="btn btn-primary" onClick={() => setRegisterOpen(true)}>+ Register connector</button>
           )}
         </div>
       </div>
 
-      {!tenant ? (
+      {tenantsError ? (
+        <div className="empty" role="alert">{errMessage(tenantsError, "Could not load the tenant list from identity-tenancy.")}</div>
+      ) : tenantsLoading ? (
+        <div className="empty">Loading tenants…</div>
+      ) : !tenant ? (
         <div className="empty">Select the tenant whose connectors you want to manage. Each parent brand (e.g. Zoiko Mobile, DriverX) has its own.</div>
+      ) : !tenantInfo ? (
+        <div className="empty" role="alert">The tenant in this link is not one you can see. Choose a tenant above.</div>
       ) : connectorId ? (
-        <ConnectorWorkspace tenant={tenant} connectorId={connectorId} brands={tenantInfo?.brands ?? []} onBack={() => setConnectorId("")} />
+        <ConnectorWorkspace tenant={tenant} connectorId={connectorId} brands={tenantInfo.brands ?? []} onBack={() => writeParams({ connector: "", step: "" })} />
       ) : (
         <div className="tablewrap">
           <table>
             <thead><tr><th>Connector</th><th>Provider</th><th>Type</th><th>UAT mode</th><th>Status</th></tr></thead>
             <tbody>
               <TableState colSpan={5} loading={connectors.isLoading} error={connectors.error}
-                empty={(connectors.data ?? []).length === 0} emptyLabel={`No connectors in ${tenantInfo?.name ?? "this tenant"} yet.`} />
+                empty={(connectors.data ?? []).length === 0} emptyLabel={`No connectors in ${tenantInfo.name} yet.`} />
               {(connectors.data ?? []).map((c) => (
-                <tr key={c.connector_id} style={{ cursor: "pointer" }} onClick={() => setConnectorId(c.connector_id)}>
-                  <td className="strong"><button type="button" className="linkish" onClick={() => setConnectorId(c.connector_id)}>{c.connector_name}</button></td>
+                <tr key={c.connector_id}>
+                  <td className="strong"><button type="button" className="linkish" onClick={() => openConnector(c.connector_id)}>{c.connector_name}</button></td>
                   <td className="mono">{c.provider_name}</td>
                   <td className="mono">{c.connector_type}</td>
                   <td className="mono">{c.uat_mode}</td>
@@ -98,15 +117,15 @@ export default function IntegrationsModule({ tenants }: { tenants: TenantOption[
         </div>
       )}
 
-      {registerOpen && tenant && (
+      {registerOpen && tenantInfo && (
         <RegisterConnectorModal
           tenant={tenant}
-          tenantName={tenantInfo?.name ?? tenant}
+          tenantName={tenantInfo.name}
           onClose={() => setRegisterOpen(false)}
           onCreated={(id) => {
             setRegisterOpen(false);
             qc.invalidateQueries({ queryKey: integrationKeys.connectors(tenant) });
-            setConnectorId(id);
+            openConnector(id);
           }}
         />
       )}
@@ -133,32 +152,30 @@ function ConnectorWorkspace({ tenant, connectorId, brands, onBack }: {
   brands: { id: string; name: string }[];
   onBack: () => void;
 }) {
-  const [step, setStep] = useUrlParam("step");
-  const current: StepId = (STEPS.find((s) => s.id === step)?.id ?? "connector") as StepId;
+  const step = useUrlParam("step");
+  const current: StepId = STEPS.find((s) => s.id === step)?.id ?? "connector";
 
   const connector = useQuery({
     queryKey: integrationKeys.connector(tenant, connectorId),
     queryFn: () => integrationApi.getConnector(tenant, connectorId),
+    // A 404 (wrong tenant, deleted connector) will not fix itself on retry.
+    retry: (count, e) => !(e instanceof ApiException && e.status === 404) && count < 2,
   });
-  const vocab = useQuery({ queryKey: integrationKeys.vocabulary(), queryFn: integrationApi.vocabulary, staleTime: Infinity });
+  const vocab = useVocabulary();
   const readiness = useQuery({
     queryKey: integrationKeys.part(tenant, connectorId, "readiness"),
     queryFn: () => integrationApi.readiness(tenant, connectorId),
     retry: false,
   });
-
-  // Which steps the readiness report says are blocked, by gate.
-  const blockedGates = useMemo(() => new Set((readiness.data?.readiness.gates ?? [])
-    .filter((g) => (g.blockers?.length ?? 0) > 0).map((g) => g.id)), [readiness.data]);
-  const stepGates: Partial<Record<StepId, string[]>> = {
-    credentials: ["G2"], rules: ["G1", "G5", "G7"], callbacks: ["G3"], operations: ["G1"],
-  };
+  // How many gates the readiness report says are blocked. Which step clears a
+  // gate is the report's business, so the count is shown on Readiness only.
+  const blockedGates = (readiness.data?.readiness.gates ?? []).filter((g) => (g.blockers?.length ?? 0) > 0).length;
 
   if (connector.isLoading) return <div className="panel"><p style={{ fontSize: 12, opacity: 0.6 }}>Loading connector…</p></div>;
   if (connector.error || !connector.data) {
     return (
       <div className="panel">
-        <p role="alert" style={{ color: "var(--danger)" }}>This connector could not be loaded in the selected tenant.</p>
+        <p role="alert" style={{ color: "var(--danger)" }}>{errMessage(connector.error, "This connector could not be loaded in the selected tenant.")}</p>
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>← All connectors</button>
       </div>
     );
@@ -171,16 +188,18 @@ function ConnectorWorkspace({ tenant, connectorId, brands, onBack }: {
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: 8 }}>← All connectors</button>
         <div className="strong" style={{ marginBottom: 4 }}>{c.connector_name}</div>
         <div style={{ marginBottom: 10 }}><StatusChip status={c.status} /></div>
-        {STEPS.map((s) => {
-          const blocked = (stepGates[s.id] ?? []).some((g) => blockedGates.has(g));
-          return (
-            <button key={s.id} type="button" onClick={() => setStep(s.id)} aria-current={current === s.id ? "step" : undefined}
-              className={`btn btn-sm ${current === s.id ? "btn-primary" : "btn-ghost"}`}
-              style={{ display: "flex", width: "100%", justifyContent: "space-between", marginBottom: 4 }}>
-              <span>{s.label}</span>{blocked && <span title="Readiness reports a blocker here" aria-label="has blockers">●</span>}
-            </button>
-          );
-        })}
+        {STEPS.map((s) => (
+          <button key={s.id} type="button" onClick={() => writeParams({ step: s.id })} aria-current={current === s.id ? "step" : undefined}
+            className={`btn btn-sm ${current === s.id ? "btn-primary" : "btn-ghost"}`}
+            style={{ display: "flex", width: "100%", justifyContent: "space-between", marginBottom: 4 }}>
+            <span>{s.label}</span>
+            {s.id === "readiness" && blockedGates > 0 && (
+              <span className="chip c-amber" style={{ fontSize: 10 }}>
+                {blockedGates}<span className="sr-only"> gates blocked</span>
+              </span>
+            )}
+          </button>
+        ))}
       </nav>
       <div>
         {current === "connector" && <TopologyPanel tenant={tenant} connector={c} />}
