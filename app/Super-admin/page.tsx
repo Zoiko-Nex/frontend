@@ -24,6 +24,7 @@ import { Chip, Modal, StatusChip, TableState, TenantPicker } from "./integration
 import { sendTenantOnboardingEmail } from "@/app/actions/sendTenantOnboardingEmail";
 import "./super-admin.css";
 import type { Connector } from "@/lib/admin/integration";
+import { analyzeVeritasQuery, type VeritasContextPayload } from "@/lib/admin/veritas-ai";
 
 // ─── Types (mirrored from the Go handlers) ────────────────────────────────────
 
@@ -352,7 +353,21 @@ export default function SuperAdminPage() {
   const [timeRangeDropdownOpen, setTimeRangeDropdownOpen] = useState(false);
   const [customiseModalOpen, setCustomiseModalOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("zx_theme");
+    return saved === "dark" || document.documentElement.getAttribute("data-theme") === "dark";
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.removeAttribute("data-theme");
+    }
+  }, [isDarkMode]);
   const [useLocalTime, setUseLocalTime] = useState(false);
   const [notifFilter, setNotifFilter] = useState<"all" | "unread" | "critical">("all");
 
@@ -420,7 +435,7 @@ export default function SuperAdminPage() {
         if (session?.email && typeof window !== "undefined") {
           try {
             localStorage.setItem(`zx_superadmin_notifs_${session.email}`, JSON.stringify(next));
-          } catch {}
+          } catch { }
         }
         return next;
       });
@@ -456,10 +471,12 @@ export default function SuperAdminPage() {
         document.documentElement.classList.add("dark");
         document.documentElement.setAttribute("data-theme", "dark");
         toast.info("Switched to Dark Mode");
+        try { localStorage.setItem("zx_theme", "dark"); } catch { }
       } else {
         document.documentElement.classList.remove("dark");
         document.documentElement.removeAttribute("data-theme");
         toast.info("Switched to Light Mode");
+        try { localStorage.setItem("zx_theme", "light"); } catch { }
       }
       return next;
     });
@@ -488,6 +505,7 @@ export default function SuperAdminPage() {
 
   /** The tenant every cross-tenant panel reads on behalf of. */
   const [focusTenant, setFocusTenant] = useState<string>("");
+  const initialTenantSetRef = React.useRef(false);
 
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [onboardError, setOnboardError] = useState<string | null>(null);
@@ -560,7 +578,10 @@ export default function SuperAdminPage() {
   const tenants = useMemo(() => tenantsQ.data ?? [], [tenantsQ.data]);
 
   useEffect(() => {
-    if (!focusTenant && tenants.length > 0) setFocusTenant(tenants[0].tenant_id);
+    if (!initialTenantSetRef.current && !focusTenant && tenants.length > 0) {
+      initialTenantSetRef.current = true;
+      setFocusTenant(tenants[0].tenant_id);
+    }
   }, [focusTenant, tenants]);
 
   const healthQ = useQuery({
@@ -628,12 +649,12 @@ export default function SuperAdminPage() {
   });
 
   const evidenceQ = useQuery({
-    queryKey: ["platform", "evidence"],
-    enabled: enabled && module === "evidence",
+    queryKey: ["platform", "evidence", focusTenant],
+    enabled: enabled && module === "evidence" && !!focusTenant,
     queryFn: async () => {
       const res = await platformApi.get<{ items?: EvidenceRecord[]; records?: EvidenceRecord[] }>(
         "evidence",
-        "/v1/evidence?limit=50",
+        `/v1/evidence?aggregate_type=tenant&aggregate_id=${encodeURIComponent(focusTenant)}&limit=50`,
       );
       return res.items ?? res.records ?? [];
     },
@@ -980,8 +1001,8 @@ export default function SuperAdminPage() {
       rawSubscribers >= 1_000_000
         ? `${(rawSubscribers / 1_000_000).toFixed(1)}M`
         : rawSubscribers >= 1_000
-        ? `${(rawSubscribers / 1_000).toFixed(1)}K`
-        : `${rawSubscribers}`;
+          ? `${(rawSubscribers / 1_000).toFixed(1)}K`
+          : `${rawSubscribers}`;
     const subscribersGrowth = activeTenants > 0 ? "100" : "0";
 
     // Real Revenue computed from active enterprise tenants & users
@@ -991,8 +1012,8 @@ export default function SuperAdminPage() {
       periodRevenue >= 1_000_000
         ? `$${(periodRevenue / 1_000_000).toFixed(2)}M`
         : periodRevenue >= 1_000
-        ? `$${(periodRevenue / 1_000).toFixed(1)}K`
-        : `$${periodRevenue.toFixed(2)}`;
+          ? `$${(periodRevenue / 1_000).toFixed(1)}K`
+          : `$${periodRevenue.toFixed(2)}`;
     const revenueGrowth = activeTenants > 0 ? "100" : "0";
 
     // Real Microservice Health Probes
@@ -1025,8 +1046,8 @@ export default function SuperAdminPage() {
       ordersReceived > 0
         ? ((activated / ordersReceived) * 100).toFixed(2)
         : activeTenants > 0
-        ? "100.00"
-        : "0.00";
+          ? "100.00"
+          : "0.00";
     const activationGrowth = "0.00";
 
     const validatedPct = ordersReceived > 0 ? ((validated / ordersReceived) * 100).toFixed(1) : "0.0";
@@ -1045,8 +1066,8 @@ export default function SuperAdminPage() {
       rawRatedUsageGB >= 1000
         ? `${(rawRatedUsageGB / 1000).toFixed(2)} TB`
         : rawRatedUsageGB >= 1
-        ? `${rawRatedUsageGB.toFixed(1)} GB`
-        : `${(rawRatedUsageGB * 1024).toFixed(0)} MB`;
+          ? `${rawRatedUsageGB.toFixed(1)} GB`
+          : `${(rawRatedUsageGB * 1024).toFixed(0)} MB`;
     const ratedUsageGrowth = activeTenants > 0 ? "0.0" : "0.0";
     const upcomingBillRuns = activeTenants;
     const paymentFailures = 0;
@@ -1171,12 +1192,11 @@ export default function SuperAdminPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-row font-['Plus_Jakarta_Sans',sans-serif] text-[#0F172A]">
+      <div className="sa-shell min-h-screen bg-[#F8FAFC] dark:bg-[#05101D] flex flex-row font-['Plus_Jakarta_Sans',sans-serif] text-[#0F172A] dark:text-[#EAF2FA]">
         {/* ─── Sidebar ──────────────────────────────────────────────────────── */}
         <aside
-          className={`w-64 h-screen bg-[#071D36] text-white flex flex-col shrink-0 fixed lg:sticky top-0 z-50 transition-transform duration-200 ${
-            sideOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          }`}
+          className={`w-64 h-screen bg-[#071D36] text-white flex flex-col shrink-0 fixed lg:sticky top-0 z-50 transition-transform duration-200 ${sideOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+            }`}
         >
           {/* Logo Header */}
           <div className="h-16 px-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#071D36]">
@@ -1222,13 +1242,12 @@ export default function SuperAdminPage() {
                         setSideOpen(false);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium mb-0.5 transition-all duration-150 relative cursor-pointer ${
-                        isActive
-                          ? "bg-white text-[#0A192F] font-bold shadow-[0_4px_14px_rgba(0,0,0,0.25)]"
-                          : isVeritas
-                            ? "text-[#A5B4FC] hover:text-white hover:bg-white/8 hover:translate-x-0.5"
-                            : "text-[#94A3B8] hover:text-white hover:bg-white/8 hover:translate-x-0.5"
-                      }`}
+                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium mb-0.5 transition-all duration-150 relative cursor-pointer ${isActive
+                        ? "bg-white text-[#0A192F] font-bold shadow-[0_4px_14px_rgba(0,0,0,0.25)]"
+                        : isVeritas
+                          ? "text-[#A5B4FC] hover:text-white hover:bg-white/8 hover:translate-x-0.5"
+                          : "text-[#94A3B8] hover:text-white hover:bg-white/8 hover:translate-x-0.5"
+                        }`}
                       style={isActive ? { boxShadow: '0 4px 14px rgba(0,0,0,0.25)', borderLeft: '3px solid #38BDF8' } : { borderLeft: '3px solid transparent', transition: 'all 0.15s ease' }}
                     >
                       <span className="shrink-0">{getModuleIcon(k, isActive)}</span>
@@ -1278,7 +1297,7 @@ export default function SuperAdminPage() {
                   <path d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              
+
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <img src="/image/super/icon-search-lens.svg" className="w-4 h-4" alt="" />
@@ -1471,9 +1490,8 @@ export default function SuperAdminPage() {
                             setEnvDropdownOpen(false);
                             toast.success(`Switched environment to ${env.label}`);
                           }}
-                          className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center justify-between transition cursor-pointer ${
-                            envSelected === env.id ? "bg-[#F8FAFC] font-bold border border-[#E2E8F0]" : "hover:bg-slate-50"
-                          }`}
+                          className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center justify-between transition cursor-pointer ${envSelected === env.id ? "bg-[#F8FAFC] font-bold border border-[#E2E8F0]" : "hover:bg-slate-50"
+                            }`}
                         >
                           <div className="flex items-center gap-2.5">
                             <span className={`w-2.5 h-2.5 rounded-full ${env.color} ${envSelected === env.id ? "ring-2 ring-offset-1 ring-emerald-500" : ""}`} />
@@ -1605,23 +1623,21 @@ export default function SuperAdminPage() {
                             tab === "all"
                               ? notifications.length
                               : tab === "unread"
-                              ? unreadCount
-                              : notifications.filter((n) => n.type === "critical").length;
+                                ? unreadCount
+                                : notifications.filter((n) => n.type === "critical").length;
                           return (
                             <button
                               key={tab}
                               onClick={() => setNotifFilter(tab)}
-                              className={`pb-2 px-2 text-xs capitalize transition border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                                notifFilter === tab
-                                  ? "border-[#2563EB] text-[#2563EB] font-bold"
-                                  : "border-transparent hover:text-[#0F172A]"
-                              }`}
+                              className={`pb-2 px-2 text-xs capitalize transition border-b-2 cursor-pointer flex items-center gap-1.5 ${notifFilter === tab
+                                ? "border-[#2563EB] text-[#2563EB] font-bold"
+                                : "border-transparent hover:text-[#0F172A]"
+                                }`}
                             >
                               <span>{tab}</span>
                               {tabCount > 0 && (
-                                <span className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-full ${
-                                  notifFilter === tab ? "bg-[#2563EB] text-white" : "bg-slate-100 text-slate-600"
-                                }`}>
+                                <span className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-full ${notifFilter === tab ? "bg-[#2563EB] text-white" : "bg-slate-100 text-slate-600"
+                                  }`}>
                                   {tabCount}
                                 </span>
                               )}
@@ -1653,8 +1669,8 @@ export default function SuperAdminPage() {
                                   {notifFilter === "unread"
                                     ? "No unread alerts to display."
                                     : notifFilter === "critical"
-                                    ? "No critical alerts found."
-                                    : "All clear! There are no platform alerts at this time."}
+                                      ? "No critical alerts found."
+                                      : "All clear! There are no platform alerts at this time."}
                                 </p>
                               </div>
                             );
@@ -1665,17 +1681,16 @@ export default function SuperAdminPage() {
                               notif.type === "critical"
                                 ? "bg-rose-100 text-rose-700"
                                 : notif.type === "warning"
-                                ? "bg-amber-100 text-amber-700"
-                                : notif.type === "info"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-emerald-100 text-emerald-700";
+                                  ? "bg-amber-100 text-amber-700"
+                                  : notif.type === "info"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-emerald-100 text-emerald-700";
 
                             return (
                               <div
                                 key={notif.id}
-                                className={`p-3.5 hover:bg-slate-50 transition flex flex-col gap-1.5 ${
-                                  !notif.read ? "bg-[#F0F7FF]/40" : ""
-                                }`}
+                                className={`p-3.5 hover:bg-slate-50 transition flex flex-col gap-1.5 ${!notif.read ? "bg-[#F0F7FF]/40" : ""
+                                  }`}
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-2">
@@ -1841,7 +1856,7 @@ export default function SuperAdminPage() {
                           }}
                           className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] hover:bg-slate-100 flex items-center gap-2.5 transition cursor-pointer"
                         >
-                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
                           <span>Platform Administration</span>
                         </button>
                         <button
@@ -1851,7 +1866,7 @@ export default function SuperAdminPage() {
                           }}
                           className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] hover:bg-slate-100 flex items-center gap-2.5 transition cursor-pointer"
                         >
-                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                           <span>Security &amp; MFA Controls</span>
                         </button>
                         <button
@@ -1861,7 +1876,7 @@ export default function SuperAdminPage() {
                           }}
                           className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] hover:bg-slate-100 flex items-center gap-2.5 transition cursor-pointer"
                         >
-                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                           <span>Evidence Ledger &amp; Audit Logs</span>
                         </button>
                         <button
@@ -1871,7 +1886,7 @@ export default function SuperAdminPage() {
                           }}
                           className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] hover:bg-slate-100 flex items-center gap-2.5 transition cursor-pointer"
                         >
-                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                          <svg className="w-4 h-4 text-[#64748B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
                           <span>API Gateway &amp; Connectors</span>
                         </button>
                         <div className="pt-1.5 border-t border-[#F1F5F9] mt-1">
@@ -1882,7 +1897,7 @@ export default function SuperAdminPage() {
                             }}
                             className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#EF4444] hover:bg-[#FEF2F2] flex items-center gap-2.5 transition cursor-pointer"
                           >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                             <span>Sign Out Console</span>
                           </button>
                         </div>
@@ -1945,9 +1960,8 @@ export default function SuperAdminPage() {
                                   setTimeRangeDropdownOpen(false);
                                   toast.info(`Updated analytics time window to: ${tr}`);
                                 }}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between cursor-pointer ${
-                                  timeRange === tr ? "bg-[#EFF6FF] text-[#2563EB] font-bold" : "hover:bg-slate-50 text-[#0F172A]"
-                                }`}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between cursor-pointer ${timeRange === tr ? "bg-[#EFF6FF] text-[#2563EB] font-bold" : "hover:bg-slate-50 text-[#0F172A]"
+                                  }`}
                               >
                                 <span>{tr}</span>
                                 {timeRange === tr && <span>✓</span>}
@@ -2284,356 +2298,355 @@ export default function SuperAdminPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
                   {/* Panel 1: Tenants & Operators (5 cols) */}
                   {widgetVisibility.tenantsTable && (
-                  <div className="xl:col-span-5 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-sm flex flex-col min-w-0">
-                    <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-extrabold text-[#0F172A]">Tenants &amp; Operators</h2>
-                        <span className="px-2 py-0.5 bg-[#EFF6FF] text-[#2563EB] text-[10px] font-mono font-bold rounded-full">
-                          {tenants.length}
-                        </span>
+                    <div className="xl:col-span-5 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-sm flex flex-col min-w-0">
+                      <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-sm font-extrabold text-[#0F172A]">Tenants &amp; Operators</h2>
+                          <span className="px-2 py-0.5 bg-[#EFF6FF] text-[#2563EB] text-[10px] font-mono font-bold rounded-full">
+                            {tenants.length}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setModule("tenants")}
+                          className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>View all</span>
+                          <img src="/image/super/icon-arrow-view-all.svg" className="w-3 h-3" alt="" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setModule("tenants")}
-                        className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>View all</span>
-                        <img src="/image/super/icon-arrow-view-all.svg" className="w-3 h-3" alt="" />
-                      </button>
-                    </div>
 
-                    <div className="overflow-x-auto mt-2">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="text-[9px] font-mono uppercase text-[#64748B] tracking-wider border-b border-[#F1F5F9]">
-                            <th className="py-2.5 font-semibold">Tenant / Brand</th>
-                            <th className="py-2.5 font-semibold">Domain</th>
-                            <th className="py-2.5 font-semibold">Users</th>
-                            <th className="py-2.5 font-semibold text-center">Charging</th>
-                            <th className="py-2.5 font-semibold text-center">Prov.</th>
-                            <th className="py-2.5 font-semibold">Status</th>
-                            <th className="py-2.5"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#F1F5F9]">
-                          {tenantsQ.isLoading && (
-                            <tr>
-                              <td colSpan={7} className="py-6 text-center text-[#64748B]">
-                                Loading live tenant directory…
-                              </td>
+                      <div className="overflow-x-auto mt-2">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="text-[9px] font-mono uppercase text-[#64748B] tracking-wider border-b border-[#F1F5F9]">
+                              <th className="py-2.5 font-semibold">Tenant / Brand</th>
+                              <th className="py-2.5 font-semibold">Domain</th>
+                              <th className="py-2.5 font-semibold">Users</th>
+                              <th className="py-2.5 font-semibold text-center">Charging</th>
+                              <th className="py-2.5 font-semibold text-center">Prov.</th>
+                              <th className="py-2.5 font-semibold">Status</th>
+                              <th className="py-2.5"></th>
                             </tr>
-                          )}
-                          {!tenantsQ.isLoading && tenants.length === 0 && (
-                            <tr>
-                              <td colSpan={7} className="py-6 text-center text-[#64748B]">
-                                No tenants registered yet.
-                              </td>
-                            </tr>
-                          )}
-                          {tenants.slice(0, 6).map((t, idx) => {
-                            const initial = (t.name || "T").charAt(0).toUpperCase();
-                            const colors = [
-                              "bg-[#0284C7]",
-                              "bg-[#6366F1]",
-                              "bg-[#84CC16]",
-                              "bg-[#0F172A]",
-                              "bg-[#EF4444]",
-                              "bg-[#8B5CF6]",
-                              "bg-[#0D9488]",
-                              "bg-[#D97706]",
-                            ];
-                            const color = colors[idx % colors.length];
-                            const isAct = (t.status || "").toUpperCase() === "ACTIVE";
-                            const isProv = (t.status || "").toUpperCase() === "PROVISIONED";
-                            const isSusp = (t.status || "").toUpperCase() === "SUSPENDED";
-
-                            return (
-                              <tr
-                                key={t.tenant_id}
-                                className="hover:bg-slate-50 transition cursor-pointer"
-                                onClick={() => {
-                                  setFocusTenant(t.tenant_id);
-                                  setModule("tenants");
-                                }}
-                              >
-                                <td className="py-2.5 font-bold text-[#0F172A] flex items-center gap-2">
-                                  <span className={`w-6 h-6 rounded-md ${color} text-white font-extrabold text-xs flex items-center justify-center shrink-0`}>
-                                    {initial}
-                                  </span>
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="leading-tight truncate max-w-[120px]">{t.name}</span>
-                                    <span className="text-[10px] font-mono text-[#94A3B8] truncate">{shortId(t.tenant_id)}</span>
-                                  </div>
-                                </td>
-                                <td className="py-2.5 text-[#64748B] font-mono text-[11px] truncate max-w-[100px]">
-                                  {t.domain_suffix || "—"}
-                                </td>
-                                <td className="py-2.5 text-[#0F172A] font-medium">{t.user_count ?? 1}</td>
-                                <td className="py-2.5 text-center">
-                                  <span className={`inline-block w-2 h-2 rounded-full ${isAct ? "bg-[#16A34A]" : isSusp ? "bg-[#EF4444]" : "bg-[#F59E0B]"}`} />
-                                </td>
-                                <td className="py-2.5 text-center">
-                                  <span className={`inline-block w-2 h-2 rounded-full ${isAct || isProv ? "bg-[#16A34A]" : "bg-[#94A3B8]"}`} />
-                                </td>
-                                <td className="py-2.5">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                                    isAct ? "bg-[#F0FDF4] text-[#16A34A]" : isSusp ? "bg-[#FEF2F2] text-[#EF4444]" : "bg-[#FFFBEB] text-[#D97706]"
-                                  }`}>
-                                    {t.status}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 text-right">
-                                  <img src="/image/super/icon-table-arrow.svg" className="w-3.5 h-3.5 inline opacity-40 group-hover:opacity-100" alt="" />
+                          </thead>
+                          <tbody className="divide-y divide-[#F1F5F9]">
+                            {tenantsQ.isLoading && (
+                              <tr>
+                                <td colSpan={7} className="py-6 text-center text-[#64748B]">
+                                  Loading live tenant directory…
                                 </td>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                            )}
+                            {!tenantsQ.isLoading && tenants.length === 0 && (
+                              <tr>
+                                <td colSpan={7} className="py-6 text-center text-[#64748B]">
+                                  No tenants registered yet.
+                                </td>
+                              </tr>
+                            )}
+                            {tenants.slice(0, 6).map((t, idx) => {
+                              const initial = (t.name || "T").charAt(0).toUpperCase();
+                              const colors = [
+                                "bg-[#0284C7]",
+                                "bg-[#6366F1]",
+                                "bg-[#84CC16]",
+                                "bg-[#0F172A]",
+                                "bg-[#EF4444]",
+                                "bg-[#8B5CF6]",
+                                "bg-[#0D9488]",
+                                "bg-[#D97706]",
+                              ];
+                              const color = colors[idx % colors.length];
+                              const isAct = (t.status || "").toUpperCase() === "ACTIVE";
+                              const isProv = (t.status || "").toUpperCase() === "PROVISIONED";
+                              const isSusp = (t.status || "").toUpperCase() === "SUSPENDED";
+
+                              return (
+                                <tr
+                                  key={t.tenant_id}
+                                  className="hover:bg-slate-50 transition cursor-pointer"
+                                  onClick={() => {
+                                    setFocusTenant(t.tenant_id);
+                                    setModule("tenants");
+                                  }}
+                                >
+                                  <td className="py-2.5 font-bold text-[#0F172A] flex items-center gap-2">
+                                    <span className={`w-6 h-6 rounded-md ${color} text-white font-extrabold text-xs flex items-center justify-center shrink-0`}>
+                                      {initial}
+                                    </span>
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="leading-tight truncate max-w-[120px]">{t.name}</span>
+                                      <span className="text-[10px] font-mono text-[#94A3B8] truncate">{shortId(t.tenant_id)}</span>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 text-[#64748B] font-mono text-[11px] truncate max-w-[100px]">
+                                    {t.domain_suffix || "—"}
+                                  </td>
+                                  <td className="py-2.5 text-[#0F172A] font-medium">{t.user_count ?? 1}</td>
+                                  <td className="py-2.5 text-center">
+                                    <span className={`inline-block w-2 h-2 rounded-full ${isAct ? "bg-[#16A34A]" : isSusp ? "bg-[#EF4444]" : "bg-[#F59E0B]"}`} />
+                                  </td>
+                                  <td className="py-2.5 text-center">
+                                    <span className={`inline-block w-2 h-2 rounded-full ${isAct || isProv ? "bg-[#16A34A]" : "bg-[#94A3B8]"}`} />
+                                  </td>
+                                  <td className="py-2.5">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${isAct ? "bg-[#F0FDF4] text-[#16A34A]" : isSusp ? "bg-[#FEF2F2] text-[#EF4444]" : "bg-[#FFFBEB] text-[#D97706]"
+                                      }`}>
+                                      {t.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 text-right">
+                                    <img src="/image/super/icon-table-arrow.svg" className="w-3.5 h-3.5 inline opacity-40 group-hover:opacity-100" alt="" />
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
                   )}
 
                   {/* Panel 2: Provisioning & Service Fulfilment (4 cols) */}
                   {widgetVisibility.fulfilmentGauge && (
-                  <div className="xl:col-span-4 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-sm flex flex-col justify-between min-w-0">
-                    <div>
-                      <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
-                        <h2 className="text-sm font-extrabold text-[#0F172A] leading-tight">
-                          Provisioning &amp; Service<br />Fulfilment
-                        </h2>
-                        <button
+                    <div className="xl:col-span-4 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-sm flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+                          <h2 className="text-sm font-extrabold text-[#0F172A] leading-tight">
+                            Provisioning &amp; Service<br />Fulfilment
+                          </h2>
+                          <button
+                            onClick={() => {
+                              setModule("orders");
+                              toast.info("Viewing Provisioning & Order Fulfilment Details");
+                            }}
+                            className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 text-right shrink-0 cursor-pointer"
+                          >
+                            <span>View details</span>
+                            <img src="/image/super/icon-arrow-view-all.svg" className="w-3 h-3" alt="" />
+                          </button>
+                        </div>
+
+                        {/* Circular Gauge */}
+                        <div
                           onClick={() => {
                             setModule("orders");
-                            toast.info("Viewing Provisioning & Order Fulfilment Details");
+                            toast.info(`Activation Success Rate: ${dynamicMetrics.successRate}% across all carrier feeds`);
                           }}
-                          className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 text-right shrink-0 cursor-pointer"
+                          className="py-3 flex items-center gap-4 cursor-pointer hover:bg-slate-50/70 p-2 rounded-xl transition group select-none"
+                          title="Click to view activation analytics"
                         >
-                          <span>View details</span>
-                          <img src="/image/super/icon-arrow-view-all.svg" className="w-3 h-3" alt="" />
-                        </button>
-                      </div>
-
-                      {/* Circular Gauge */}
-                      <div
-                        onClick={() => {
-                          setModule("orders");
-                          toast.info(`Activation Success Rate: ${dynamicMetrics.successRate}% across all carrier feeds`);
-                        }}
-                        className="py-3 flex items-center gap-4 cursor-pointer hover:bg-slate-50/70 p-2 rounded-xl transition group select-none"
-                        title="Click to view activation analytics"
-                      >
-                        <div className="relative w-24 h-24 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
-                          <svg className="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
-                            <path
-                              className="text-[#F1F5F9]"
-                              strokeWidth="3.5"
-                              stroke="currentColor"
-                              fill="none"
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            />
-                            <path
-                              className="text-[#22C55E]"
-                              strokeDasharray={`${dynamicMetrics.successRate}, 100`}
-                              strokeWidth="3.5"
-                              strokeLinecap="round"
-                              stroke="currentColor"
-                              fill="none"
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            />
-                          </svg>
-                          <div className="absolute flex flex-col items-center justify-center text-center">
-                            <span className="text-base font-extrabold text-[#0F172A] leading-tight">{dynamicMetrics.successRate}%</span>
-                            <span className="text-[8px] text-[#64748B] leading-tight">Activation<br />Success</span>
+                          <div className="relative w-24 h-24 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <svg className="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
+                              <path
+                                className="text-[#F1F5F9]"
+                                strokeWidth="3.5"
+                                stroke="currentColor"
+                                fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              />
+                              <path
+                                className="text-[#22C55E]"
+                                strokeDasharray={`${dynamicMetrics.successRate}, 100`}
+                                strokeWidth="3.5"
+                                strokeLinecap="round"
+                                stroke="currentColor"
+                                fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              />
+                            </svg>
+                            <div className="absolute flex flex-col items-center justify-center text-center">
+                              <span className="text-base font-extrabold text-[#0F172A] leading-tight">{dynamicMetrics.successRate}%</span>
+                              <span className="text-[8px] text-[#64748B] leading-tight">Activation<br />Success</span>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-[#16A34A]">↑ +{dynamicMetrics.activationGrowth}%</div>
+                            <div className="text-[11px] text-[#64748B]">{dynamicMetrics.periodLabel}</div>
+                            <div className="text-[10px] text-[#2563EB] font-semibold mt-1 group-hover:underline">View Pipeline →</div>
                           </div>
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-[#16A34A]">↑ +{dynamicMetrics.activationGrowth}%</div>
-                          <div className="text-[11px] text-[#64748B]">{dynamicMetrics.periodLabel}</div>
-                          <div className="text-[10px] text-[#2563EB] font-semibold mt-1 group-hover:underline">View Pipeline →</div>
-                        </div>
                       </div>
-                    </div>
 
-                    {/* Breakdown List */}
-                    <div className="space-y-1 text-xs divide-y divide-[#F1F5F9]">
-                      <div
-                        onClick={() => {
-                          setModule("orders");
-                          toast.info(`Filtered: ${dynamicMetrics.ordersReceived.toLocaleString()} total orders received`);
-                        }}
-                        className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
-                        title="Click to view all received orders"
-                      >
-                        <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">Orders received</span>
-                        <span className="font-bold text-[#0F172A] font-mono group-hover:text-[#2563EB]">{dynamicMetrics.ordersReceived.toLocaleString()}</span>
-                      </div>
-                      <div
-                        onClick={() => {
-                          setModule("orders");
-                          toast.info(`Filtered: ${dynamicMetrics.validated.toLocaleString()} validated orders (${dynamicMetrics.validatedPct}%)`);
-                        }}
-                        className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
-                        title="Click to view validated orders"
-                      >
-                        <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">Validated</span>
-                        <div className="flex items-center gap-1.5 font-mono">
-                          <span className="font-bold text-[#0F172A] group-hover:text-[#2563EB]">{dynamicMetrics.validated.toLocaleString()}</span>
-                          <span className="text-[#64748B] text-[11px]">{dynamicMetrics.validatedPct}%</span>
+                      {/* Breakdown List */}
+                      <div className="space-y-1 text-xs divide-y divide-[#F1F5F9]">
+                        <div
+                          onClick={() => {
+                            setModule("orders");
+                            toast.info(`Filtered: ${dynamicMetrics.ordersReceived.toLocaleString()} total orders received`);
+                          }}
+                          className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
+                          title="Click to view all received orders"
+                        >
+                          <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">Orders received</span>
+                          <span className="font-bold text-[#0F172A] font-mono group-hover:text-[#2563EB]">{dynamicMetrics.ordersReceived.toLocaleString()}</span>
                         </div>
-                      </div>
-                      <div
-                        onClick={() => {
-                          setModule("orders");
-                          toast.info(`Filtered: ${dynamicMetrics.simProvisioned.toLocaleString()} SIM / eSIM provisioned items (${dynamicMetrics.simProvisionedPct}%)`);
-                        }}
-                        className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
-                        title="Click to view provisioned SIMs"
-                      >
-                        <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">SIM / eSIM provisioned</span>
-                        <div className="flex items-center gap-1.5 font-mono">
-                          <span className="font-bold text-[#0F172A] group-hover:text-[#2563EB]">{dynamicMetrics.simProvisioned.toLocaleString()}</span>
-                          <span className="text-[#64748B] text-[11px]">{dynamicMetrics.simProvisionedPct}%</span>
+                        <div
+                          onClick={() => {
+                            setModule("orders");
+                            toast.info(`Filtered: ${dynamicMetrics.validated.toLocaleString()} validated orders (${dynamicMetrics.validatedPct}%)`);
+                          }}
+                          className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
+                          title="Click to view validated orders"
+                        >
+                          <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">Validated</span>
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <span className="font-bold text-[#0F172A] group-hover:text-[#2563EB]">{dynamicMetrics.validated.toLocaleString()}</span>
+                            <span className="text-[#64748B] text-[11px]">{dynamicMetrics.validatedPct}%</span>
+                          </div>
                         </div>
-                      </div>
-                      <div
-                        onClick={() => {
-                          setModule("orders");
-                          toast.info(`Filtered: ${dynamicMetrics.activated.toLocaleString()} successfully activated services (${dynamicMetrics.activatedPct}%)`);
-                        }}
-                        className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
-                        title="Click to view activated orders"
-                      >
-                        <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">Activated</span>
-                        <div className="flex items-center gap-1.5 font-mono">
-                          <span className="font-bold text-[#0F172A] group-hover:text-[#16A34A]">{dynamicMetrics.activated.toLocaleString()}</span>
-                          <span className="text-[#64748B] text-[11px]">{dynamicMetrics.activatedPct}%</span>
+                        <div
+                          onClick={() => {
+                            setModule("orders");
+                            toast.info(`Filtered: ${dynamicMetrics.simProvisioned.toLocaleString()} SIM / eSIM provisioned items (${dynamicMetrics.simProvisionedPct}%)`);
+                          }}
+                          className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
+                          title="Click to view provisioned SIMs"
+                        >
+                          <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">SIM / eSIM provisioned</span>
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <span className="font-bold text-[#0F172A] group-hover:text-[#2563EB]">{dynamicMetrics.simProvisioned.toLocaleString()}</span>
+                            <span className="text-[#64748B] text-[11px]">{dynamicMetrics.simProvisionedPct}%</span>
+                          </div>
                         </div>
-                      </div>
-                      <div
-                        onClick={() => {
-                          setModule("orders");
-                          toast.warning(`Filtered: ${dynamicMetrics.failedRetried.toLocaleString()} failed / retried orders (${dynamicMetrics.failedPct}%)`);
-                        }}
-                        className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-red-50/50 cursor-pointer transition select-none group"
-                        title="Click to investigate failed and retried orders"
-                      >
-                        <span className="text-[#475569] group-hover:text-[#EF4444] font-medium">Failed / Retried</span>
-                        <div className="flex items-center gap-1.5 font-mono">
-                          <span className="font-bold text-[#EF4444] group-hover:scale-105 transition-transform">{dynamicMetrics.failedRetried.toLocaleString()}</span>
-                          <span className="text-[#EF4444] text-[11px] font-semibold">{dynamicMetrics.failedPct}%</span>
+                        <div
+                          onClick={() => {
+                            setModule("orders");
+                            toast.info(`Filtered: ${dynamicMetrics.activated.toLocaleString()} successfully activated services (${dynamicMetrics.activatedPct}%)`);
+                          }}
+                          className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-slate-50 cursor-pointer transition select-none group"
+                          title="Click to view activated orders"
+                        >
+                          <span className="text-[#475569] group-hover:text-[#0F172A] font-medium">Activated</span>
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <span className="font-bold text-[#0F172A] group-hover:text-[#16A34A]">{dynamicMetrics.activated.toLocaleString()}</span>
+                            <span className="text-[#64748B] text-[11px]">{dynamicMetrics.activatedPct}%</span>
+                          </div>
+                        </div>
+                        <div
+                          onClick={() => {
+                            setModule("orders");
+                            toast.warning(`Filtered: ${dynamicMetrics.failedRetried.toLocaleString()} failed / retried orders (${dynamicMetrics.failedPct}%)`);
+                          }}
+                          className="pt-1.5 pb-1 px-2 -mx-2 rounded-lg flex items-center justify-between hover:bg-red-50/50 cursor-pointer transition select-none group"
+                          title="Click to investigate failed and retried orders"
+                        >
+                          <span className="text-[#475569] group-hover:text-[#EF4444] font-medium">Failed / Retried</span>
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <span className="font-bold text-[#EF4444] group-hover:scale-105 transition-transform">{dynamicMetrics.failedRetried.toLocaleString()}</span>
+                            <span className="text-[#EF4444] text-[11px] font-semibold">{dynamicMetrics.failedPct}%</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                   )}
 
                   {/* Panel 3: Charging & Billing (3 cols) */}
                   {widgetVisibility.chargingSparklines && (
-                  <div className="xl:col-span-3 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-sm flex flex-col justify-between min-w-0">
-                    <div>
-                      <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
-                        <h2 className="text-sm font-extrabold text-[#0F172A]">Charging &amp; Billing</h2>
-                        <button
-                          onClick={() => {
-                            setModule("billing");
-                            toast.info("Viewing Charging & Billing Dashboard");
-                          }}
-                          className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
-                        >
-                          <span>View details</span>
-                          <img src="/image/super/icon-arrow-view-all.svg" className="w-3 h-3" alt="" />
-                        </button>
+                    <div className="xl:col-span-3 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-sm flex flex-col justify-between min-w-0">
+                      <div>
+                        <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+                          <h2 className="text-sm font-extrabold text-[#0F172A]">Charging &amp; Billing</h2>
+                          <button
+                            onClick={() => {
+                              setModule("billing");
+                              toast.info("Viewing Charging & Billing Dashboard");
+                            }}
+                            className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                          >
+                            <span>View details</span>
+                            <img src="/image/super/icon-arrow-view-all.svg" className="w-3 h-3" alt="" />
+                          </button>
+                        </div>
+
+                        {/* 2 Sparkline metric boxes */}
+                        <div className="grid grid-cols-2 gap-2.5 my-3">
+                          <div
+                            onClick={() => {
+                              setModule("billing");
+                              toast.info(`Rated Usage breakdown: ${dynamicMetrics.ratedUsage} (+${dynamicMetrics.ratedUsageGrowth}%)`);
+                            }}
+                            className="p-3 border border-[#E2E8F0] hover:border-[#2563EB]/60 hover:shadow-sm rounded-xl flex flex-col justify-between cursor-pointer transition select-none group"
+                            title="Click to view Rated Usage analytics"
+                          >
+                            <div>
+                              <div className="text-[11px] text-[#64748B] group-hover:text-[#2563EB] transition-colors">Rated Usage</div>
+                              <div className="text-base font-extrabold text-[#0F172A] mt-0.5">{dynamicMetrics.ratedUsage}</div>
+                              <div className="text-[11px] font-bold text-[#16A34A]">↑ +{dynamicMetrics.ratedUsageGrowth}%</div>
+                            </div>
+                            {/* Dynamic Blue Sparkline SVG */}
+                            <div className="h-6 mt-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
+                              <svg className="w-full h-full text-[#2563EB]" viewBox="0 0 100 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d={dynamicMetrics.usageSparklineD} strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => {
+                              setModule("billing");
+                              toast.info(`Billable Revenue breakdown: ${dynamicMetrics.revenueFormatted} (+${dynamicMetrics.revenueGrowth}%)`);
+                            }}
+                            className="p-3 border border-[#E2E8F0] hover:border-[#16A34A]/60 hover:shadow-sm rounded-xl flex flex-col justify-between cursor-pointer transition select-none group"
+                            title="Click to view Billable Revenue ledger"
+                          >
+                            <div>
+                              <div className="text-[11px] text-[#64748B] leading-tight group-hover:text-[#16A34A] transition-colors">Billable Revenue<br />({dynamicMetrics.timeUnit})</div>
+                              <div className="text-base font-extrabold text-[#0F172A] mt-0.5">{dynamicMetrics.revenueFormatted}</div>
+                              <div className="text-[11px] font-bold text-[#16A34A]">↑ +{dynamicMetrics.revenueGrowth}%</div>
+                            </div>
+                            {/* Dynamic Green Sparkline SVG */}
+                            <div className="h-6 mt-1 overflow-hidden group-hover:scale-105 transition-transform">
+                              <svg className="w-full h-full text-[#16A34A]" viewBox="0 0 100 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d={dynamicMetrics.revenueSparklineD} strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* 2 Sparkline metric boxes */}
-                      <div className="grid grid-cols-2 gap-2.5 my-3">
+                      {/* 3 Bottom mini cards */}
+                      <div className="grid grid-cols-3 gap-2 text-center">
                         <div
                           onClick={() => {
                             setModule("billing");
-                            toast.info(`Rated Usage breakdown: ${dynamicMetrics.ratedUsage} (+${dynamicMetrics.ratedUsageGrowth}%)`);
+                            toast.info(`Upcoming bill runs: ${dynamicMetrics.upcomingBillRuns}. Next scheduled on ${dynamicMetrics.nextBillDate}`);
                           }}
-                          className="p-3 border border-[#E2E8F0] hover:border-[#2563EB]/60 hover:shadow-sm rounded-xl flex flex-col justify-between cursor-pointer transition select-none group"
-                          title="Click to view Rated Usage analytics"
+                          className="p-2 border border-[#E2E8F0] hover:border-[#2563EB]/60 hover:bg-slate-50/80 rounded-xl flex flex-col justify-between items-center cursor-pointer transition select-none group"
+                          title="Click to view bill run scheduler"
                         >
-                          <div>
-                            <div className="text-[11px] text-[#64748B] group-hover:text-[#2563EB] transition-colors">Rated Usage</div>
-                            <div className="text-base font-extrabold text-[#0F172A] mt-0.5">{dynamicMetrics.ratedUsage}</div>
-                            <div className="text-[11px] font-bold text-[#16A34A]">↑ +{dynamicMetrics.ratedUsageGrowth}%</div>
-                          </div>
-                          {/* Dynamic Blue Sparkline SVG */}
-                          <div className="h-6 mt-1 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
-                            <svg className="w-full h-full text-[#2563EB]" viewBox="0 0 100 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d={dynamicMetrics.usageSparklineD} strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </div>
+                          <img src="/image/super/icon-mini-calendar.svg" className="w-3.5 h-3.5 mb-1 group-hover:scale-110 transition-transform" alt="" />
+                          <div className="text-[9.5px] text-[#64748B] leading-tight">Upcoming<br />bill runs</div>
+                          <div className="text-sm font-extrabold text-[#0F172A] my-0.5 group-hover:text-[#2563EB]">{dynamicMetrics.upcomingBillRuns}</div>
+                          <div className="text-[8.5px] text-[#64748B]">Next: {dynamicMetrics.nextBillDate}</div>
                         </div>
-
                         <div
                           onClick={() => {
                             setModule("billing");
-                            toast.info(`Billable Revenue breakdown: ${dynamicMetrics.revenueFormatted} (+${dynamicMetrics.revenueGrowth}%)`);
+                            toast.warning(`Investigating ${dynamicMetrics.paymentFailures} payment failures (${dynamicMetrics.paymentFailureRate}% transaction failure rate)`);
                           }}
-                          className="p-3 border border-[#E2E8F0] hover:border-[#16A34A]/60 hover:shadow-sm rounded-xl flex flex-col justify-between cursor-pointer transition select-none group"
-                          title="Click to view Billable Revenue ledger"
+                          className="p-2 border border-[#E2E8F0] hover:border-[#EF4444]/60 hover:bg-red-50/30 rounded-xl flex flex-col justify-between items-center cursor-pointer transition select-none group"
+                          title="Click to view payment exceptions"
                         >
-                          <div>
-                            <div className="text-[11px] text-[#64748B] leading-tight group-hover:text-[#16A34A] transition-colors">Billable Revenue<br />({dynamicMetrics.timeUnit})</div>
-                            <div className="text-base font-extrabold text-[#0F172A] mt-0.5">{dynamicMetrics.revenueFormatted}</div>
-                            <div className="text-[11px] font-bold text-[#16A34A]">↑ +{dynamicMetrics.revenueGrowth}%</div>
-                          </div>
-                          {/* Dynamic Green Sparkline SVG */}
-                          <div className="h-6 mt-1 overflow-hidden group-hover:scale-105 transition-transform">
-                            <svg className="w-full h-full text-[#16A34A]" viewBox="0 0 100 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d={dynamicMetrics.revenueSparklineD} strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </div>
+                          <img src="/image/super/icon-mini-payment.svg" className="w-3.5 h-3.5 mb-1 group-hover:scale-110 transition-transform" alt="" />
+                          <div className="text-[9.5px] text-[#64748B] leading-tight">Payment<br />failures</div>
+                          <div className="text-sm font-extrabold text-[#EF4444] my-0.5 group-hover:scale-105 transition-transform">{dynamicMetrics.paymentFailures}</div>
+                          <div className="text-[8.5px] text-[#64748B]">{dynamicMetrics.paymentFailureRate}% trans</div>
+                        </div>
+                        <div
+                          onClick={() => {
+                            setModule("billing");
+                            toast.info(`Unbilled exposure ledger: $${dynamicMetrics.unbilledExp}K (+${dynamicMetrics.unbilledGrowth}%)`);
+                          }}
+                          className="p-2 border border-[#E2E8F0] hover:border-[#16A34A]/60 hover:bg-emerald-50/30 rounded-xl flex flex-col justify-between items-center cursor-pointer transition select-none group"
+                          title="Click to view unbilled exposure details"
+                        >
+                          <img src="/image/super/icon-mini-exposure.svg" className="w-3.5 h-3.5 mb-1 group-hover:scale-110 transition-transform" alt="" />
+                          <div className="text-[9.5px] text-[#64748B] leading-tight">Unbilled<br />exposure</div>
+                          <div className="text-sm font-extrabold text-[#0F172A] my-0.5 group-hover:text-[#16A34A]">${dynamicMetrics.unbilledExp}K</div>
+                          <div className="text-[8.5px] font-bold text-[#16A34A]">↑ +{dynamicMetrics.unbilledGrowth}%</div>
                         </div>
                       </div>
                     </div>
-
-                    {/* 3 Bottom mini cards */}
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div
-                        onClick={() => {
-                          setModule("billing");
-                          toast.info(`Upcoming bill runs: ${dynamicMetrics.upcomingBillRuns}. Next scheduled on ${dynamicMetrics.nextBillDate}`);
-                        }}
-                        className="p-2 border border-[#E2E8F0] hover:border-[#2563EB]/60 hover:bg-slate-50/80 rounded-xl flex flex-col justify-between items-center cursor-pointer transition select-none group"
-                        title="Click to view bill run scheduler"
-                      >
-                        <img src="/image/super/icon-mini-calendar.svg" className="w-3.5 h-3.5 mb-1 group-hover:scale-110 transition-transform" alt="" />
-                        <div className="text-[9.5px] text-[#64748B] leading-tight">Upcoming<br />bill runs</div>
-                        <div className="text-sm font-extrabold text-[#0F172A] my-0.5 group-hover:text-[#2563EB]">{dynamicMetrics.upcomingBillRuns}</div>
-                        <div className="text-[8.5px] text-[#64748B]">Next: {dynamicMetrics.nextBillDate}</div>
-                      </div>
-                      <div
-                        onClick={() => {
-                          setModule("billing");
-                          toast.warning(`Investigating ${dynamicMetrics.paymentFailures} payment failures (${dynamicMetrics.paymentFailureRate}% transaction failure rate)`);
-                        }}
-                        className="p-2 border border-[#E2E8F0] hover:border-[#EF4444]/60 hover:bg-red-50/30 rounded-xl flex flex-col justify-between items-center cursor-pointer transition select-none group"
-                        title="Click to view payment exceptions"
-                      >
-                        <img src="/image/super/icon-mini-payment.svg" className="w-3.5 h-3.5 mb-1 group-hover:scale-110 transition-transform" alt="" />
-                        <div className="text-[9.5px] text-[#64748B] leading-tight">Payment<br />failures</div>
-                        <div className="text-sm font-extrabold text-[#EF4444] my-0.5 group-hover:scale-105 transition-transform">{dynamicMetrics.paymentFailures}</div>
-                        <div className="text-[8.5px] text-[#64748B]">{dynamicMetrics.paymentFailureRate}% trans</div>
-                      </div>
-                      <div
-                        onClick={() => {
-                          setModule("billing");
-                          toast.info(`Unbilled exposure ledger: $${dynamicMetrics.unbilledExp}K (+${dynamicMetrics.unbilledGrowth}%)`);
-                        }}
-                        className="p-2 border border-[#E2E8F0] hover:border-[#16A34A]/60 hover:bg-emerald-50/30 rounded-xl flex flex-col justify-between items-center cursor-pointer transition select-none group"
-                        title="Click to view unbilled exposure details"
-                      >
-                        <img src="/image/super/icon-mini-exposure.svg" className="w-3.5 h-3.5 mb-1 group-hover:scale-110 transition-transform" alt="" />
-                        <div className="text-[9.5px] text-[#64748B] leading-tight">Unbilled<br />exposure</div>
-                        <div className="text-sm font-extrabold text-[#0F172A] my-0.5 group-hover:text-[#16A34A]">${dynamicMetrics.unbilledExp}K</div>
-                        <div className="text-[8.5px] font-bold text-[#16A34A]">↑ +{dynamicMetrics.unbilledGrowth}%</div>
-                      </div>
-                    </div>
-                  </div>
                   )}
                 </div>
 
@@ -2723,10 +2736,10 @@ export default function SuperAdminPage() {
                                 <td className="py-2.5">
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit ${isHealthy
-                                        ? "bg-[#DCFCE7] text-[#16A34A]"
-                                        : isWarn
-                                          ? "bg-[#FEF3C7] text-[#D97706]"
-                                          : "bg-[#FEE2E2] text-[#DC2626]"
+                                      ? "bg-[#DCFCE7] text-[#16A34A]"
+                                      : isWarn
+                                        ? "bg-[#FEF3C7] text-[#D97706]"
+                                        : "bg-[#FEE2E2] text-[#DC2626]"
                                       }`}
                                   >
                                     <span
@@ -2989,11 +3002,12 @@ export default function SuperAdminPage() {
                               <div
                                 key={i}
                                 className={`p-2 rounded-xl text-[11px] leading-relaxed ${msg.sender === "user"
-                                    ? "bg-[#EFF6FF] text-[#1E3A8A] font-medium ml-4 border border-[#BFDBFE]"
-                                    : "bg-[#F5F3FF] text-[#4338CA] mr-4 border border-[#DDD6FE]"
+                                  ? "bg-[#EFF6FF] text-[#1E3A8A] font-medium ml-4 border border-[#BFDBFE]"
+                                  : "bg-[#F5F3FF] text-[#4338CA] mr-4 border border-[#DDD6FE]"
                                   }`}
                               >
                                 <span className="font-bold block mb-0.5">{msg.sender === "user" ? "You" : "✨ Veritas AI"}</span>
+                                <span style={{ whiteSpace: "pre-line" }}>{msg.text}</span>
                                 {msg.text}
                               </div>
                             ))}
@@ -3277,7 +3291,17 @@ export default function SuperAdminPage() {
                       override, so this shows the <b>platform tenant&apos;s own</b> evidence — not every tenant&apos;s.
                     </div>
                   </div>
+                  <TenantPicker tenants={tenants} value={focusTenant} onChange={setFocusTenant} />
                 </div>
+
+                {focusTenant && (
+                  <div className="kpis" style={{ gridTemplateColumns: "repeat(4,1fr)", marginBottom: 14 }}>
+                    <div className="kpi"><div className="l">Selected Tenant</div><div className="v sm">{focus?.name ?? "—"}</div></div>
+                    <div className="kpi"><div className="l">Lifecycle Status</div><div className="v sm">{focus?.status ?? "—"}</div></div>
+                    <div className="kpi"><div className="l">Audit Events</div><div className="v sm">{auditQ.isLoading ? "…" : (auditQ.data?.length ?? 0)}</div></div>
+                    <div className="kpi"><div className="l">Evidence Records</div><div className="v sm">{evidenceQ.isLoading ? "…" : (evidenceQ.data?.length ?? 0)}</div></div>
+                  </div>
+                )}
 
                 <div className="panel" style={{ marginBottom: 14 }}>
                   <h3>Chain integrity</h3>
@@ -3319,8 +3343,14 @@ export default function SuperAdminPage() {
                   <table>
                     <thead><tr><th>Time (UTC)</th><th>Evidence ID</th><th>Aggregate</th><th>Event</th><th>Actor</th><th></th></tr></thead>
                     <tbody>
-                      <TableState colSpan={6} loading={evidenceQ.isLoading} error={evidenceQ.error} empty={(evidenceQ.data ?? []).length === 0} emptyLabel="No evidence records for the platform tenant." />
-                      {(evidenceQ.data ?? []).map((e, i) => {
+                      <TableState
+                        colSpan={6}
+                        loading={!!focusTenant && evidenceQ.isLoading}
+                        error={focusTenant ? evidenceQ.error : null}
+                        empty={!focusTenant || (evidenceQ.data ?? []).length === 0}
+                        emptyLabel={focusTenant ? "No evidence records for this tenant." : "Select a tenant to inspect evidence records."}
+                      />
+                      {(focusTenant ? (evidenceQ.data ?? []) : []).map((e, i) => {
                         const when = e.occurred_at ?? e.created_at;
                         return (
                           <tr key={e.evidence_id ?? e.id ?? i}>
@@ -3542,7 +3572,7 @@ export default function SuperAdminPage() {
                 <div className="panel">
                   <h3>Veritas AI Operational Copilot</h3>
                   <p className="psub">Status: Online · Model: Veritas-Telecom-70B · Latency: 42ms · Dynamic Telemetry Active</p>
-                  
+
                   {/* Quick Action Chips */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                     {[
@@ -4049,9 +4079,9 @@ export default function SuperAdminPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--line, #dce5ef)", borderRadius: 10, overflow: "hidden", marginBottom: 4 }}>
             {[
               { label: "Current status", value: statusFor.tenant.status || "—", mono: false },
-              { label: "Tenant ID",      value: statusFor.tenant.tenant_id,                mono: true  },
-              { label: "Users affected", value: String(statusFor.tenant.user_count ?? 0),  mono: false },
-              { label: "Domain",         value: statusFor.tenant.domain_suffix || "—",     mono: true  },
+              { label: "Tenant ID", value: statusFor.tenant.tenant_id, mono: true },
+              { label: "Users affected", value: String(statusFor.tenant.user_count ?? 0), mono: false },
+              { label: "Domain", value: statusFor.tenant.domain_suffix || "—", mono: true },
             ].map((row, i) => (
               <div
                 key={row.label}

@@ -181,7 +181,7 @@ export default function DocAnalyserModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div className="sa-modal-overlay fixed inset-0 bg-white/80 dark:bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
       <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden text-xs animate-in fade-in zoom-in-95">
         <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-white">
           <div>

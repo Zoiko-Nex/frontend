@@ -2192,3 +2192,233 @@ tbody tr.clickable:hover td {
   color: var(--ink-faint);
   opacity: 0.35
 }
+
+
+/* ===== UNIFIED THEME SYSTEM (LIGHT & DARK MODE) ===== */
+:root {
+  --muted: var(--ink-soft);
+  --card-subtle: var(--field-soft);
+  --surface-2: var(--field-soft);
+}
+
+[data-theme="dark"] {
+  --muted: var(--ink-soft);
+  --card-subtle: var(--field-soft);
+  --surface-2: var(--field-soft);
+  color-scheme: dark;
+}
+
+.sa-shell {
+  background-color: var(--bg);
+  color: var(--ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ptitle,
+.sectitle,
+.panel h3,
+.modal-h h3,
+.kpi .v {
+  color: var(--ink);
+}
+
+.filters select option,
+.modal-b select option,
+.panel select option {
+  background-color: var(--card);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .modal-b input,
+[data-theme="dark"] .modal-b select,
+[data-theme="dark"] .modal-b textarea {
+  border-color: var(--line-strong) !important;
+  background-color: var(--field);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .panel input:not([type=checkbox]):not([type=file]),
+[data-theme="dark"] .panel select,
+[data-theme="dark"] .panel textarea {
+  border-color: var(--line-strong);
+  background-color: var(--field);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .modal-b input.is-invalid,
+[data-theme="dark"] .modal-b select.is-invalid,
+[data-theme="dark"] .modal-b textarea.is-invalid {
+  border-color: #ef4444 !important;
+  background-color: var(--danger-soft) !important;
+  color: var(--ink) !important;
+}
+
+/* Dark Mode Overrides for Console Chrome, Header, Command Centre, Cards, Tables & Modals */
+[data-theme="dark"] .sa-shell header {
+  background-color: var(--card) !important;
+  border-color: var(--line) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-white,
+[data-theme="dark"] .sa-modal-overlay .bg-white {
+  background-color: var(--card) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#F8FAFC\],
+[data-theme="dark"] .sa-shell .bg-\[\#FAFAFA\],
+[data-theme="dark"] .sa-modal-overlay .bg-\[\#F8FAFC\] {
+  background-color: var(--field-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell input.bg-\[\#F8FAFC\] {
+  background-color: var(--field) !important;
+  color: var(--ink) !important;
+  border-color: var(--line-strong) !important;
+}
+
+[data-theme="dark"] .sa-shell input.bg-\[\#F8FAFC\]:focus {
+  background-color: var(--field-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#FFF5F5\] {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+[data-theme="dark"] .sa-shell .from-\[\#F5F3FF\] {
+  background-image: linear-gradient(to bottom, #131c38, var(--card)) !important;
+  border-color: #2e3b6e !important;
+}
+
+[data-theme="dark"] .sa-shell .border-\[\#E2E8F0\],
+[data-theme="dark"] .sa-shell .border-\[\#F1F5F9\],
+[data-theme="dark"] .sa-shell .border-slate-100\/60,
+[data-theme="dark"] .sa-shell .border-slate-200,
+[data-theme="dark"] .sa-modal-overlay .border-\[\#E2E8F0\],
+[data-theme="dark"] .sa-modal-overlay .border-\[\#F1F5F9\] {
+  border-color: var(--line) !important;
+}
+
+[data-theme="dark"] .sa-shell .divide-\[\#F1F5F9\] > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] .sa-modal-overlay .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--line) !important;
+}
+
+[data-theme="dark"] .sa-shell .text-\[\#0F172A\],
+[data-theme="dark"] .sa-modal-overlay .text-\[\#0F172A\],
+[data-theme="dark"] .sa-modal-overlay .text-slate-900,
+[data-theme="dark"] .sa-modal-overlay .text-slate-800 {
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .sa-shell .text-\[\#475569\],
+[data-theme="dark"] .sa-shell .text-\[\#64748B\],
+[data-theme="dark"] .sa-modal-overlay .text-\[\#64748B\],
+[data-theme="dark"] .sa-modal-overlay .text-slate-600,
+[data-theme="dark"] .sa-modal-overlay .text-slate-500 {
+  color: var(--ink-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell .text-\[\#94A3B8\],
+[data-theme="dark"] .sa-modal-overlay .text-slate-400 {
+  color: var(--ink-faint) !important;
+}
+
+[data-theme="dark"] .sa-shell .text-\[\#F1F5F9\] {
+  color: var(--line) !important;
+}
+
+[data-theme="dark"] .sa-shell .hover\:bg-slate-50:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-slate-50\/70:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-slate-50\/80:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-slate-100:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-\[\#F1F5F9\]:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-\[\#F8FAFC\]:hover,
+[data-theme="dark"] .sa-modal-overlay .hover\:bg-\[\#F8FAFC\]:hover,
+[data-theme="dark"] .sa-modal-overlay .hover\:bg-slate-200:hover {
+  background-color: var(--field-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell .hover\:bg-\[\#EFF6FF\]:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-blue-50\/60:hover {
+  background-color: var(--blue-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell .hover\:bg-emerald-50\/60:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-emerald-50\/30:hover {
+  background-color: var(--green-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell .hover\:bg-red-50\/50:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-red-50\/60:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-red-50\/30:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-\[\#FEF2F2\]:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-\[\#FEE2E2\]:hover {
+  background-color: var(--danger-soft) !important;
+}
+
+[data-theme="dark"] .sa-shell .hover\:bg-amber-50\/60:hover,
+[data-theme="dark"] .sa-shell .hover\:bg-\[\#FFF7ED\]:hover {
+  background-color: var(--amber-soft) !important;
+}
+
+/* Soft tinted icon boxes & pills inside Command Centre in Dark Mode */
+[data-theme="dark"] .sa-shell .bg-\[\#EFF6FF\],
+[data-theme="dark"] .sa-shell .bg-blue-50,
+[data-theme="dark"] .sa-shell .bg-\[\#F0F7FF\]\/40 {
+  background-color: var(--blue-soft) !important;
+  color: var(--blue-bright) !important;
+  border-color: color-mix(in srgb, var(--blue) 35%, transparent) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#F0FDF4\],
+[data-theme="dark"] .sa-shell .bg-\[\#DCFCE7\],
+[data-theme="dark"] .sa-shell .bg-emerald-50 {
+  background-color: var(--green-soft) !important;
+  color: var(--green) !important;
+  border-color: color-mix(in srgb, var(--green) 35%, transparent) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#FEF2F2\],
+[data-theme="dark"] .sa-shell .bg-\[\#FEE2E2\],
+[data-theme="dark"] .sa-shell .bg-rose-100 {
+  background-color: var(--danger-soft) !important;
+  color: var(--danger) !important;
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#FFFBEB\],
+[data-theme="dark"] .sa-shell .bg-\[\#FEF3C7\],
+[data-theme="dark"] .sa-shell .bg-amber-100 {
+  background-color: var(--amber-soft) !important;
+  color: var(--amber) !important;
+  border-color: color-mix(in srgb, var(--amber) 35%, transparent) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#F5F3FF\],
+[data-theme="dark"] .sa-shell .bg-\[\#FAF5FF\],
+[data-theme="dark"] .sa-shell .bg-indigo-50 {
+  background-color: var(--violet-soft) !important;
+  color: var(--violet) !important;
+  border-color: color-mix(in srgb, var(--violet) 35%, transparent) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-\[\#ECFEFF\] {
+  background-color: var(--cyan-soft) !important;
+  color: var(--cyan) !important;
+}
+
+[data-theme="dark"] .sa-shell .bg-slate-100,
+[data-theme="dark"] .sa-shell .bg-slate-200,
+[data-theme="dark"] .sa-modal-overlay .bg-slate-50,
+[data-theme="dark"] .sa-modal-overlay .bg-slate-100 {
+  background-color: var(--field-soft) !important;
+  color: var(--ink-soft) !important;
+  border-color: var(--line-strong) !important;
+}
+
+/* Sidebar active item in Dark Mode */
+[data-theme="dark"] .sa-shell aside nav button.bg-white {
+  background-color: #11324E !important;
+  color: #EAF2FA !important;
+}

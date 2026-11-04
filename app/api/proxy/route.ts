@@ -25,13 +25,6 @@ const PORT_TO_LIVE_URL: Record<number, string> = {
 // Port → override env var. These MUST match lib/admin/services.ts, because the
 // browser client and this proxy resolve base URLs independently and would
 // otherwise disagree about which host serves a port.
-//
-// The previous map used a completely different service numbering: port 8083 (the
-// ordering service) read AUTH_URL, 8092 (billing) read CONFIG_URL, 8096 (payments)
-// read WEBHOOK_URL, and so on — only 8080 was correct. Because the env var takes
-// priority over PORT_TO_LIVE_URL below, setting any one of them would have silently
-// routed a whole service's traffic to the wrong host. None were set in any
-// deployment, so this was a latent landmine rather than a live outage.
 const PORT_TO_ENV_VAR: Record<number, string> = {
   8080: "NEXT_PUBLIC_SVC_IDENTITY",
   8081: "NEXT_PUBLIC_SVC_CUSTOMER",
@@ -55,6 +48,10 @@ const PORT_TO_ENV_VAR: Record<number, string> = {
 };
 
 const BLOCKED_HEADERS = new Set(["connection", "content-length", "cookie", "host", "origin", "referer"]);
+
+function isLocalhostUrl(url: string): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url);
+}
 
 export async function POST(req: NextRequest) {
   let method = "UNKNOWN";
@@ -90,7 +87,9 @@ export async function POST(req: NextRequest) {
     }
 
     const envVar = PORT_TO_ENV_VAR[port];
-    baseUrl = (envVar ? process.env[envVar] : null) || PORT_TO_LIVE_URL[port] || `http://localhost:${port}`;
+    const configuredUrl = envVar ? process.env[envVar] : null;
+    const liveUrl = PORT_TO_LIVE_URL[port];
+    baseUrl = configuredUrl || liveUrl || `http://localhost:${port}`;
 
     // A caller-supplied path is concatenated onto the resolved host below, so it is
     // constrained here. `//host` would otherwise read as protocol-relative and `..`
@@ -109,12 +108,31 @@ export async function POST(req: NextRequest) {
     const hasBody = payload.body !== undefined && method !== "GET" && method !== "HEAD";
     if (hasBody && !headers.has("content-type")) headers.set("content-type", "application/json");
 
-    const upstream = await fetch(`${baseUrl}${path}`, {
-      method,
-      headers,
-      body: hasBody ? JSON.stringify(payload.body) : undefined,
-      cache: "no-store",
-    });
+    const serializedBody = hasBody ? JSON.stringify(payload.body) : undefined;
+
+    let upstream: Response;
+    try {
+      upstream = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers,
+        body: serializedBody,
+        cache: "no-store",
+      });
+    } catch (primaryErr) {
+      // If .env.local points to localhost:<port> but the local Go service is not
+      // running, automatically fall back to the deployed live URL for that port.
+      if (liveUrl && baseUrl !== liveUrl && isLocalhostUrl(baseUrl)) {
+        baseUrl = liveUrl;
+        upstream = await fetch(`${baseUrl}${path}`, {
+          method,
+          headers,
+          body: serializedBody,
+          cache: "no-store",
+        });
+      } else {
+        throw primaryErr;
+      }
+    }
 
     const text = await upstream.text();
     let data: unknown = text;
