@@ -36,7 +36,10 @@ const IDENTITY_PORT = 8080;
 // registry, since this module intentionally has its own minimal port list
 // for the handful of cross-service platform views it needs.
 const ORDER_PORT = 8083;
-const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN_SUFFIX || "platform.zoikonex.io";
+const DEFAULT_PLATFORM_DOMAIN = "platform.zoikonex.io";
+const ENV_PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN_SUFFIX?.trim();
+const isLocalHostSlug = (d?: string) => !d || /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(d);
+const PLATFORM_DOMAIN = !isLocalHostSlug(ENV_PLATFORM_DOMAIN) ? ENV_PLATFORM_DOMAIN! : DEFAULT_PLATFORM_DOMAIN;
 
 interface ProxyPayload {
   status: number;
@@ -60,7 +63,25 @@ async function proxy(method: string, path: string, opts: { headers?: Record<stri
   return res.json();
 }
 
-async function resolvePlatformTenantId(): Promise<string> {
+async function resolvePlatformTenantId(email?: string): Promise<string> {
+  const emailDomain = email && email.includes("@") ? email.split("@")[1]?.trim().toLowerCase() : "";
+  const candidates = Array.from(
+    new Set(
+      [
+        PLATFORM_DOMAIN,
+        DEFAULT_PLATFORM_DOMAIN,
+        emailDomain && !isLocalHostSlug(emailDomain) ? emailDomain : "",
+        "zoikonex.internal",
+        "super-admin.zoikonex.com",
+      ].filter(Boolean),
+    ),
+  );
+  for (const domain of candidates) {
+    const candidatePayload = await proxy("GET", `/v1/tenants/resolve?domain=${encodeURIComponent(domain)}`);
+    if (candidatePayload.ok && candidatePayload.data?.tenant_id) {
+      return candidatePayload.data.tenant_id as string;
+    }
+  }
   const payload = await proxy("GET", `/v1/tenants/resolve?domain=${encodeURIComponent(PLATFORM_DOMAIN)}`);
   if (!payload.ok || !payload.data?.tenant_id) {
     throw new ApiException(payload.status || 404, {
@@ -97,7 +118,7 @@ export async function platformLogin(email: string, password: string): Promise<Pl
     });
   }
 
-  const tenantId = await resolvePlatformTenantId();
+  const tenantId = await resolvePlatformTenantId(email);
 
   const payload = await proxy("POST", "/v1/sessions", {
     headers: { "x-tenant-id": tenantId },
@@ -332,7 +353,12 @@ let cachedPlatformTenant: { tenantId: string; brandId: string } | null = null;
 async function resolvePlatformTenantAndBrand(): Promise<{ tenantId: string; brandId: string }> {
   if (cachedPlatformTenant) return cachedPlatformTenant;
   const tenants = await fetchTenants();
-  const platform = tenants.find((t) => t.domain_suffix === PLATFORM_DOMAIN);
+  const platform = tenants.find(
+    (t) =>
+      t.domain_suffix === PLATFORM_DOMAIN ||
+      t.domain_suffix === DEFAULT_PLATFORM_DOMAIN ||
+      t.domain_suffix === "zoikonex.internal",
+  );
   if (!platform || !platform.brands?.[0]?.id) {
     throw new ApiException(500, {
       code: "PLATFORM_TENANT_MISCONFIGURED",

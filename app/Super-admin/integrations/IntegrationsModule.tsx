@@ -52,12 +52,21 @@ function useUrlParam(name: string): string {
   return value;
 }
 
-export default function IntegrationsModule({ tenants, tenantsLoading, tenantsError }: {
+export default function IntegrationsModule({
+  tenants,
+  tenantsLoading,
+  tenantsError,
+  focusTenant,
+  onTenantChange,
+}: {
   tenants: TenantOption[];
   tenantsLoading?: boolean;
   tenantsError?: unknown;
+  focusTenant?: string;
+  onTenantChange?: (v: string) => void;
 }) {
-  const tenant = useUrlParam("tenant");
+  const urlTenant = useUrlParam("tenant");
+  const tenant = urlTenant || focusTenant || "";
   const connectorId = useUrlParam("connector");
   const openConnector = useCallback((id: string) => writeParams({ connector: id, step: "" }), []);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -79,7 +88,14 @@ export default function IntegrationsModule({ tenants, tenantsLoading, tenantsErr
           <div className="psub">Carrier and provider connectors, per tenant. Each one is set up in order: credentials, the carrier&apos;s rules, callbacks, operations, then governed activation.</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <TenantPicker tenants={tenants} value={tenant} onChange={(v) => writeParams({ tenant: v, connector: "", step: "" })} />
+          <TenantPicker
+            tenants={tenants}
+            value={tenant}
+            onChange={(v) => {
+              onTenantChange?.(v);
+              writeParams({ tenant: v, connector: "", step: "" });
+            }}
+          />
           {tenantInfo && !connectorId && (
             <button type="button" className="btn btn-primary" onClick={() => setRegisterOpen(true)}>+ Register connector</button>
           )}
