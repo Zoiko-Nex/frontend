@@ -1,0 +1,120 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+
+const pillars = [
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8F252" strokeWidth="1.6">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M7 8h10M7 12h5" strokeLinecap="round" />
+        <path d="M15 15l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    title: "Legacy Mediation Integration",
+    desc: "Seamlessly bridge existing network probes with cloud-native rating engines without hardware retooling.",
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8F252" strokeWidth="1.6">
+        <path d="M4 9h16M4 15h16" strokeLinecap="round" />
+        <path d="M8 5l-4 4 4 4M16 5l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    title: "Parallel Rating",
+    desc: "Run new and legacy engines in dual-state to verify billing accuracy before the final cutover.",
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8F252" strokeWidth="1.6">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    title: "Evidence-Grade Audit",
+    desc: "Immutable transaction logging that meets stringent regulatory requirements for Tier-1 financial auditing.",
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8F252" strokeWidth="1.6">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" />
+        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    ),
+    title: "Sovereign Cloud Portability",
+    desc: "Deploy on-premise, public, or hybrid cloud with zero vendor lock-in and complete data sovereignty.",
+  },
+];
+
+export default function ModernizationPillars() {
+  const [visible, setVisible] = useState(false);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section ref={ref} className="bg-[#0D1525] py-24">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <div
+          className="mb-14"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(30px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+          }}
+        >
+          <h2
+            className="text-white font-bold mb-4"
+            style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.75rem)", letterSpacing: "-0.02em" }}
+          >
+            Modernization Pillars
+          </h2>
+          <p className="text-[#7B8FA6] text-base max-w-[38rem] leading-7">
+            Engineer out the complexity of legacy architecture with four critical technological safeguards.
+          </p>
+        </div>
+
+        {/* Cards grid */}
+        <div
+          className="grid grid-cols-4 gap-4"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(40px)",
+            transition: "opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s",
+          }}
+        >
+          {pillars.map((pillar, i) => (
+            <div
+              key={i}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              className="rounded-[10px] p-8 cursor-default transition-all duration-[250ms]"
+              style={{
+                border: hovered === i
+                  ? "1px solid rgba(200,242,82,0.25)"
+                  : "1px solid rgba(0,0,0,0.08)",
+                background: hovered === i ? "#0F1C2E" : "#101828",
+              }}
+            >
+              <div className="mb-5">{pillar.icon}</div>
+              <h3 className="text-white text-[1.05rem] font-bold mb-3.5 leading-[1.35]">
+                {pillar.title}
+              </h3>
+              <p className="text-[#7B8FA6] text-[0.88rem] leading-[1.8]">
+                {pillar.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
