@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function ZoikoNexIntelligenceHub() {
   return (
@@ -54,15 +55,65 @@ export default function ZoikoNexIntelligenceHub() {
                   Critical analysis on global telecom monetization architecture.
                 </p>
               </div>
-              <a href="#" className="flex items-center gap-2 text-sky-600 font-semibold text-sm group hover:text-sky-700 transition-colors">
+              <Link href="/blog-and-news" className="flex items-center gap-2 text-sky-600 font-semibold text-sm group hover:text-sky-700 transition-colors">
                 View All Articles <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </a>
+              </Link>
             </div>
 
             {/* Structured Post Card Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
-              {/* Card One */}
+              {/* Card One: Added Agentic AI in Telecom Article */}
+              <article className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
+                <Link href="/agentic-ai-in-telecom-revenue-management" className="block relative w-full h-64 sm:h-80 bg-slate-100 overflow-hidden">
+                  <Image 
+                    src="/image/blogs/card1.png" 
+                    alt="Agentic AI in Telecom: The Next Revolution in Revenue Management" 
+                    fill 
+                    className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                    unoptimized 
+                  />
+                  <div className="absolute top-6 left-6 flex gap-2 z-10">
+                    <span className="px-3 py-1 bg-zinc-950/80 backdrop-blur-md rounded-md text-[10px] font-medium text-white border border-white/20">AGENTIC AI</span>
+                    <span className="px-3 py-1 bg-lime-300/90 rounded-md text-[10px] font-bold text-lime-950 shadow-sm">REVENUE STRATEGY</span>
+                  </div>
+                </Link>
+                <div className="p-8 sm:p-10 flex flex-col flex-1 gap-4">
+                  <div className="flex items-center gap-3 text-xs ">
+                    <span className="px-2 py-0.5 bg-stone-100 rounded text-slate-600 font-medium">12 MIN READ</span>
+                    <span className="text-stone-300">•</span>
+                    <span className="font-semibold text-sky-600 tracking-wider">TELECOM REVENUE MANAGEMENT</span>
+                  </div>
+                  <h3 className="text-black text-2xl font-semibold leading-tight tracking-tight group-hover:text-sky-600 transition-colors">
+                    <Link href="/agentic-ai-in-telecom-revenue-management">
+                      Agentic AI in Telecom: The Next Revolution in Revenue Management
+                    </Link>
+                  </h3>
+                  <p className="text-slate-600 font-light leading-relaxed mb-6">
+                    Explore how Agentic AI is transforming telecom revenue management through intelligent billing, fraud prevention, compliance automation, MVNO solutions and 5G monetisation.
+                  </p>
+                  <div className="mt-auto pt-6 border-t border-slate-200/60 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 bg-gradient-to-br from-lime-400 to-sky-600 rounded-xl flex items-center justify-center font-bold text-zinc-950 text-xs shadow-sm">
+                        ZN
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-black">Zoiko Nex</p>
+                        <p className="text-[10px] font-light text-slate-500 tracking-wider uppercase">Telecom Technology Research</p>
+                      </div>
+                    </div>
+                    <Link 
+                      href="/agentic-ai-in-telecom-revenue-management" 
+                      className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-600 font-bold group-hover:bg-sky-600 group-hover:text-white transition-all"
+                      aria-label="Read full article"
+                    >
+                      →
+                    </Link>
+                  </div>
+                </div>
+              </article>
+
+              {/* OLD CODE (Commented out as requested):
               <article className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
                 <div className="relative w-full h-64 sm:h-80 bg-slate-100">
                   <Image src="/image/blogs/card1.png" alt="Revenue Assurance Cover" fill className="object-cover" unoptimized />
@@ -95,6 +146,7 @@ export default function ZoikoNexIntelligenceHub() {
                   </div>
                 </div>
               </article>
+              */}
 
               {/* Card Two */}
               <article className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
@@ -147,7 +199,6 @@ export default function ZoikoNexIntelligenceHub() {
               
               {/* Domain Core Box 1 */}
               <div className="p-10 h-96 bg-zinc-950/40 border border-white/10 rounded-2xl flex flex-col justify-end gap-4 relative overflow-hidden group hover:border-white/20 transition-all">
-                {/* FIXED: Removed -z-10 to stop image hiding behind parent element background color layer */}
                 <div className="absolute inset-0 opacity-45 group-hover:opacity-60 transition-opacity pointer-events-none">
                   <Image src="/image/blogs/card3.png" alt="Executive Strategy Background" fill className="object-cover mix-blend-luminosity" unoptimized />
                 </div>
@@ -173,7 +224,7 @@ export default function ZoikoNexIntelligenceHub() {
                 </div>
                 <div className="relative z-10 flex flex-col gap-4">
                   <div className="w-14 h-14 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center">
-             <img className="w-6 h-6 " 
+                    <img className="w-6 h-6 " 
                         src="/image/blogs/Icon (1).png"
                         alt="icon"
                     />                  </div>
@@ -191,7 +242,7 @@ export default function ZoikoNexIntelligenceHub() {
                 </div>
                 <div className="relative z-10 flex flex-col gap-4">
                   <div className="w-14 h-14 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center">
-                   <img className="w-6 h-6 " 
+                    <img className="w-6 h-6 " 
                         src="/image/blogs/Icon (2).png"
                         alt="icon"
                     />                  </div>
@@ -231,7 +282,7 @@ export default function ZoikoNexIntelligenceHub() {
                   title: "How MVNOs are winning with High-Density Charging Architecture", 
                   desc: "A breakdown of cost-per-subscriber advantages in modern SaaS deployments.", 
                   meta: "EXPLORE • 5 MIN",
-                  imgSrc: "/image/blogs/card.png" // FIXED: Distinct image mapping assigned to each data entity
+                  imgSrc: "/image/blogs/card.png"
                 },
                 { 
                   title: "Governing Sovereign Data: Compliance at the Edge", 
@@ -248,7 +299,6 @@ export default function ZoikoNexIntelligenceHub() {
               ].map((item, i) => (
                 <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
                   <div className="w-full h-56 bg-slate-200 relative">
-                    {/* FIXED: Dynamic source path applied using the updated list entries */}
                     <Image src={item.imgSrc} alt={item.title} fill className="object-cover" unoptimized />
                     <div className="absolute bottom-4 left-4">
                       <span className="px-2 py-1 bg-white/10 border border-white/20 text-white text-[9px] tracking-wider rounded backdrop-blur-[6px]">
