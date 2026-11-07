@@ -1,0 +1,5067 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getSession, clearSession, patchSession } from "@/lib/admin/session";
+import { fetchMe, canAccessDomain, hasFullAccess, type Me } from "@/lib/admin/permissions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { api, ApiException } from "@/lib/admin/client";
+import { formatMoney } from "@/lib/admin/money";
+import { PermissionPicker, type PolicyRule } from "../components/admin/PermissionPicker";
+import { buildInvite, generatePassword } from "../components/admin/invite";
+import IntegrationTab from "./IntegrationTab";
+import MfaSecurity from "./MfaSecurity";
+import CatalogManagement from "./CatalogManagement";
+import CustomerManagement from "./CustomerManagement";
+import OrderManagement from "./OrderManagement";
+import BillingManagement from "./BillingManagement";
+import PaymentsManagement from "./PaymentsManagement";
+import FinanceLedger from "./FinanceLedger";
+import TaxJurisdiction from "./TaxJurisdiction";
+import UsageCharging from "./UsageCharging";
+import PartnerSettlement from "./PartnerSettlement";
+import RevenueAssurance from "./RevenueAssurance";
+import FraudRisk from "./FraudRisk";
+import DunningDisputes from "./DunningDisputes";
+import RegulatoryExports from "./RegulatoryExports";
+import AccessGroups from "./AccessGroups";
+import CustomerLifecycleKyc from "./CustomerLifecycleKyc";
+import EvidenceLedger from "./EvidenceLedger";
+import ScreenGuide from "./ScreenGuide";
+import { NAV_SECTIONS, NAV_ENTRIES, SECTION_BY_TAB } from "./navigation";
+
+interface TenantRole { role_id?: string; id?: string; name?: string; description?: string; }
+
+interface AuditTrail {
+  id?: string;
+  tenant_id?: string;
+  event_type?: string;
+  actor_id?: string;
+  actor_type?: string;
+  client_ip?: string;
+  user_agent?: string;
+  timestamp?: string;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Maps this dashboard's own service-card ids and sidebar tabs to the real
+// backend domain vocabulary (ServiceKey in lib/admin/services.ts) so a
+// non-admin role's granted permissions (from GET /v1/me) can gate them.
+// NOT the same as the dead, differently-named `serviceMapping` further down
+// this file (used only for backend proxy port lookups) -- that one doesn't
+// match SERVICES/NAV domain keys and isn't a permission map.
+const SERVICE_DOMAIN: Record<string, string> = {
+  "prod-catalog": "catalogue",
+  "rt-charging": "rating",
+  "rating-engine": "rating",
+  "billing-invoice": "billing",
+  "payments-collections": "payments",
+  "partner-settlement": "partner",
+  "cust-lifecycle": "customer",
+  "notifications-campaigns": "integration",
+  "esim-sim-mgmt": "order",
+  "iot-connectivity": "order",
+  "number-inventory": "order",
+  "taxation-regulatory": "tax",
+  "compliance-kyc": "kyc",
+  "evidence-ledger": "evidence",
+  "ai-gov-controls": "reporting",
+  "analytics-reporting": "reporting",
+  "mediation-usage": "usage",
+  "api-gateway": "integration",
+};
+
+// Only tabs that map cleanly to one gated domain get whole-tab locking;
+// Dashboard/Services/Deployment/Sandbox/Documentation/Support stay visible
+// to everyone (Services is gated per-card instead, via SERVICE_DOMAIN).
+const TAB_DOMAIN: Record<string, string> = {
+  Trust: "evidence",
+  Billing: "billing",
+  Integration: "integration",
+  Settings: "identity",
+  CatalogManagement: "catalogue",
+  CustomerManagement: "customer",
+  OrderManagement: "order",
+  BillingManagement: "billing",
+  PaymentsManagement: "payments",
+  FinanceLedger: "finance",
+  TaxJurisdiction: "tax",
+  // Two services on one screen; gated on usage, the one that owns the records.
+  UsageCharging: "usage",
+  PartnerSettlement: "partner",
+  RevenueAssurance: "revenueAssurance",
+  FraudRisk: "fraud",
+  DunningDisputes: "dunning",
+  RegulatoryExports: "reporting",
+  AccessGroups: "identity",
+  CustomerLifecycleKyc: "kyc",
+  EvidenceLedger: "evidence",
+};
+
+/**
+ * The tenant the customer-portal preview should operate on: whoever is signed
+ * in. Several proxy calls in that flow used to hardcode the seeded Acme tenant
+ * UUID, which meant they read and wrote that tenant's records no matter who was
+ * signed in — a cross-tenant access bug, not just fixture data. Returning ""
+ * when there is no session is deliberate: the backend rejects it, which is the
+ * correct outcome for an unauthenticated call.
+ */
+function portalTenantId(): string {
+  return getSession()?.tenantId ?? "";
+}
+
+function LockedPanel({ label }: { label: string }) {
+  return (
+    <div className="self-stretch flex flex-col items-center justify-center gap-3 w-full py-24 bg-white rounded-2xl border border-slate-200">
+      <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+      </div>
+      <div className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans']">Access blocked</div>
+      <div className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] text-center max-w-[360px]">
+        Your role doesn&apos;t grant access to {label}. Request access from your company admin.
+      </div>
+    </div>
+  );
+}
+
+interface Brand { id: string; name: string; code_name: string; created_at: string }
+
+/** Minimal invoice shape for the Billing & Commercials summary. */
+interface BillingInvoiceRow {
+  id: string;
+  invoice_number: string;
+  status: string;
+  currency_code: string;
+  total_minor_units: number;
+  due_date?: string;
+}
+
+/**
+ * Lets a multi-brand tenant (e.g. "VI Group") add every brand it operates
+ * under this one account (Vodafone, Idea, Vi, ...) -- backed by the new
+ * POST/GET /v1/brands endpoints (tenant-scoped via X-Tenant-ID, deliberately
+ * NOT under /v1/tenants/{id}/* which is reserved for platform-admin-only
+ * operations). Previously there was no way to add a brand after tenant
+ * creation at all.
+ */
+function BrandsPanel() {
+  const qc = useQueryClient();
+
+  const brandsQ = useQuery({
+    queryKey: ["dash", "brands"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
+    queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
+  });
+  const brands = brandsQ.data?.brands ?? [];
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", code_name: "" });
+  const createBrand = useMutation({
+    mutationFn: () => api.post("identity", "/v1/brands", form),
+    onSuccess: () => {
+      toast.success("Brand added");
+      setCreateOpen(false);
+      setForm({ name: "", code_name: "" });
+      qc.invalidateQueries({ queryKey: ["dash", "brands"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to add brand"),
+  });
+
+  return (
+    <>
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Brands</h3>
+            <p className="text-slate-500 text-xs mt-0.5">Every brand your company operates under this account (e.g. Vodafone, Idea, Vi).</p>
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            + New brand
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">BRAND</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">CODE</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ADDED</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {brandsQ.isLoading ? (
+                <tr><td colSpan={3} className="px-6 py-6 text-xs text-slate-400">Loading brands…</td></tr>
+              ) : brandsQ.isError ? (
+                <tr><td colSpan={3} className="px-6 py-6 text-xs text-rose-500">Failed to load brands.</td></tr>
+              ) : brands.length === 0 ? (
+                <tr><td colSpan={3} className="px-6 py-6 text-xs text-slate-400">No additional brands yet — add one to run more than one storefront/brand under this account.</td></tr>
+              ) : brands.map((b) => (
+                <tr key={b.id}>
+                  <td className="px-6 py-4 font-bold text-slate-800 text-xs">{b.name}</td>
+                  <td className="px-6 py-4 text-xs font-mono">{b.code_name}</td>
+                  <td className="px-6 py-4 text-xs text-slate-500">{new Date(b.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {createOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New brand</h2>
+              <button onClick={() => setCreateOpen(false)} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-700 text-sm font-semibold">Brand name</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Idea"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-700 text-sm font-semibold">Code name</label>
+                <input
+                  value={form.code_name}
+                  onChange={(e) => setForm({ ...form, code_name: e.target.value.toLowerCase() })}
+                  placeholder="idea"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm font-mono"
+                />
+                <span className="text-slate-400 text-xs">Lowercase letters, numbers and hyphens only.</span>
+              </div>
+            </div>
+            <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <button onClick={() => setCreateOpen(false)} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Cancel</button>
+              <button
+                onClick={() => createBrand.mutate()}
+                disabled={createBrand.isPending || !form.name.trim() || !form.code_name.trim()}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+              >
+                {createBrand.isPending ? "Adding…" : "Add brand"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function SessionSecurityCard() {
+  const [idleTimeoutEnabled, setIdleTimeoutEnabled] = useState<boolean>(true);
+  const [reauthEnabled, setReauthEnabled] = useState<boolean>(true);
+  const [idleMinutes, setIdleMinutes] = useState<number>(30);
+
+  useEffect(() => {
+    try {
+      const storedIdle = localStorage.getItem("zx_session_idle_timeout");
+      if (storedIdle !== null) {
+        setIdleTimeoutEnabled(storedIdle === "true");
+      }
+      const storedMins = localStorage.getItem("zx_session_idle_minutes");
+      if (storedMins !== null) {
+        const parsed = parseInt(storedMins, 10);
+        if (!isNaN(parsed) && parsed > 0) setIdleMinutes(parsed);
+      }
+      const storedReauth = localStorage.getItem("zx_session_reauth_sensitive");
+      if (storedReauth !== null) {
+        setReauthEnabled(storedReauth === "true");
+      }
+    } catch {
+      // localStorage not accessible
+    }
+  }, []);
+
+  const toggleIdleTimeout = () => {
+    const nextVal = !idleTimeoutEnabled;
+    setIdleTimeoutEnabled(nextVal);
+    try {
+      localStorage.setItem("zx_session_idle_timeout", String(nextVal));
+    } catch {}
+    if (nextVal) {
+      toast.success(`Idle timeout enabled: auto-logout after ${idleMinutes} minutes of inactivity`);
+    } else {
+      toast.info("Idle timeout disabled");
+    }
+  };
+
+  const toggleReauth = () => {
+    const nextVal = !reauthEnabled;
+    setReauthEnabled(nextVal);
+    try {
+      localStorage.setItem("zx_session_reauth_sensitive", String(nextVal));
+    } catch {}
+    if (nextVal) {
+      toast.success("Re-authentication enabled for sensitive actions (key rotation, billing)");
+    } else {
+      toast.info("Re-authentication requirement disabled");
+    }
+  };
+
+  return (
+    <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+      <div className="pb-2.5">
+        <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Session security</h3>
+      </div>
+      <div className="py-3 border-b border-slate-200 flex justify-between items-center">
+        <div className="flex flex-col">
+          <span className="text-slate-800 text-xs font-bold leading-5">Idle timeout</span>
+          <span className="text-slate-500 text-xs leading-4">
+            {idleTimeoutEnabled ? `${idleMinutes} minutes` : "Disabled"}
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={idleTimeoutEnabled}
+          aria-label="Toggle idle timeout"
+          onClick={toggleIdleTimeout}
+          className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer flex items-center ${
+            idleTimeoutEnabled ? "bg-lime-600 justify-end" : "bg-slate-300 justify-start"
+          }`}
+        >
+          <div className="size-4 bg-white rounded-full shadow-md transform transition-transform duration-200" />
+        </button>
+      </div>
+      <div className="py-3 flex justify-between items-center">
+        <div className="flex flex-col">
+          <span className="text-slate-800 text-xs font-bold leading-5">Re-auth for sensitive actions</span>
+          <span className="text-slate-500 text-xs leading-4">
+            {reauthEnabled ? "Key rotation, billing" : "Disabled"}
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={reauthEnabled}
+          aria-label="Toggle re-authentication for sensitive actions"
+          onClick={toggleReauth}
+          className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer flex items-center ${
+            reauthEnabled ? "bg-lime-600 justify-end" : "bg-slate-300 justify-start"
+          }`}
+        >
+          <div className="size-4 bg-white rounded-full shadow-md transform transition-transform duration-200" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AuditLogPanel() {
+  const auditQ = useQuery({
+    queryKey: ["dash", "audit-trails"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
+    queryFn: () => api.get<{ audit_trails?: AuditTrail[] }>("identity", "/v1/audit-trails?limit=50"),
+  });
+  const auditLogs = auditQ.data?.audit_trails ?? [];
+
+  const formatEventType = (type?: string) => {
+    if (!type) return { label: "System Event", color: "bg-slate-50 text-slate-700 border-slate-200" };
+    const map: Record<string, { label: string; color: string }> = {
+      UserCreated: { label: "User Created", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+      UserInvited: { label: "User Invited", color: "bg-sky-50 text-sky-700 border-sky-200" },
+      InviteAccepted: { label: "Invite Accepted", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+      RoleCreated: { label: "Role Created", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+      RoleAssigned: { label: "Role Assigned", color: "bg-blue-50 text-blue-700 border-blue-200" },
+      RoleMemberRemoved: { label: "Role Removed", color: "bg-amber-50 text-amber-700 border-amber-200" },
+      PermissionsUpdated: { label: "Permissions Updated", color: "bg-purple-50 text-purple-700 border-purple-200" },
+      GroupCreated: { label: "Group Created", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+      GroupMemberAdded: { label: "Group Member Added", color: "bg-blue-50 text-blue-700 border-blue-200" },
+      GroupMemberRemoved: { label: "Group Member Removed", color: "bg-amber-50 text-amber-700 border-amber-200" },
+      MFAPolicyUpdated: { label: "MFA Policy Updated", color: "bg-teal-50 text-teal-700 border-teal-200" },
+      MFAEnrolled: { label: "MFA Factor Enrolled", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+      MFADisabled: { label: "MFA Factor Disabled", color: "bg-rose-50 text-rose-700 border-rose-200" },
+      BrandCreated: { label: "Brand Added", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
+      LoginSuccess: { label: "Login Success", color: "bg-slate-50 text-slate-700 border-slate-200" },
+    };
+    return map[type] ?? {
+      label: type.replace(/([A-Z])/g, " $1").trim(),
+      color: "bg-slate-50 text-slate-700 border-slate-200",
+    };
+  };
+
+  return (
+    <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+      <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+        <div>
+          <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Audit log</h3>
+          <p className="text-slate-500 text-xs mt-0.5">Authoritative tamper-evident event stream from identity-tenancy.</p>
+        </div>
+        <button
+          onClick={() => auditQ.refetch()}
+          disabled={auditQ.isFetching}
+          className="text-xs text-sky-600 hover:text-sky-800 font-semibold px-2.5 py-1 rounded-md transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 border border-slate-200 hover:bg-slate-50"
+        >
+          <svg className={`w-3.5 h-3.5 ${auditQ.isFetching ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {auditQ.isFetching ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+          <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">TIME (UTC)</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTOR</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ACTION / EVENT</th>
+              <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">CLIENT IP</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 font-sans">
+            {auditQ.isLoading ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-8 text-center text-xs text-slate-400">
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Loading authoritative audit events…
+                  </div>
+                </td>
+              </tr>
+            ) : auditQ.isError ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-8 text-center text-xs text-red-500">
+                  {auditQ.error instanceof ApiException ? auditQ.error.message : "Unable to load audit logs from identity service."}
+                </td>
+              </tr>
+            ) : auditLogs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center">
+                  <div className="flex flex-col items-center justify-center gap-1 text-slate-400">
+                    <svg className="w-7 h-7 text-slate-300 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-xs font-semibold text-slate-600">No audit log entries recorded for this tenant yet.</span>
+                    <span className="text-[11px] text-slate-400">Security, user, role, and authentication events will appear here in real time.</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              auditLogs.map((log, idx) => {
+                const eventInfo = formatEventType(log.event_type);
+                return (
+                  <tr key={log.id || `${log.timestamp}-${idx}`} className="hover:bg-slate-50/50 transition">
+                    <td className="px-6 py-4 text-xs font-mono text-slate-500">
+                      {log.timestamp ? new Date(log.timestamp).toUTCString().replace("GMT", "UTC") : "—"}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-700">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs text-slate-800">{log.actor_id ? (log.actor_id.length > 18 ? `${log.actor_id.substring(0, 8)}…` : log.actor_id) : "system"}</span>
+                        {log.actor_type && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-600 border border-slate-200">
+                            {log.actor_type}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-xs">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${eventInfo.color}`}>
+                        {eventInfo.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                      {log.client_ip || "—"}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Real role management, ported from app/admin/identity's RolesTab +
+ * RoleManageModal into this page's Tailwind visual language. This is now
+ * where the tenant admin creates custom roles (e.g. "payment_operator"),
+ * grants them real fine-grained permissions via PermissionPicker, and
+ * assigns people to them -- /admin/identity remains a separate demo tool,
+ * not the source of truth for this flow anymore.
+ */
+function RolesPanel({ tenantUsers, usersLoading, usersError }: { tenantUsers: any[]; usersLoading: boolean; usersError?: string | null }) {
+  const qc = useQueryClient();
+
+  const rolesQ = useQuery({
+    queryKey: ["dash", "roles"],
+    queryFn: () => api.get<{ roles?: TenantRole[] }>("identity", "/v1/roles"),
+  });
+  const roles = rolesQ.data?.roles ?? [];
+  const roleIds = roles.map((r) => (r.role_id || r.id)!);
+
+  const membersQ = useQuery({
+    queryKey: ["dash", "role-members", roleIds.join(",")],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        roleIds.map(async (id) => {
+          const res = await api.get<{ user_ids?: string[] }>("identity", `/v1/roles/${id}/members`);
+          return [id, res.user_ids ?? []] as const;
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, string[]>;
+    },
+    enabled: roleIds.length > 0,
+  });
+  const roleMembers = membersQ.data ?? {};
+  const rolesForUser = (userId: string) => roles.filter((r) => (roleMembers[(r.role_id || r.id)!] ?? []).includes(userId));
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", description: "" });
+  const createRole = useMutation({
+    mutationFn: () => api.post("identity", "/v1/roles", createForm),
+    onSuccess: () => {
+      toast.success("Role created");
+      setCreateOpen(false);
+      setCreateForm({ name: "", description: "" });
+      qc.invalidateQueries({ queryKey: ["dash", "roles"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to create role"),
+  });
+
+  const [managingRole, setManagingRole] = useState<TenantRole | null>(null);
+  const [assigningUser, setAssigningUser] = useState<any | null>(null);
+
+  return (
+    <>
+      {/* Roles card */}
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Roles</h3>
+            <p className="text-slate-500 text-xs mt-0.5">Create a role, pick its permissions, then assign people to it.</p>
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            + New role
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ROLE</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">DESCRIPTION</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">MEMBERS</th>
+                <th className="px-6 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {rolesQ.isLoading ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">Loading roles…</td></tr>
+              ) : rolesQ.isError ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-rose-500">Failed to load roles.</td></tr>
+              ) : roles.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">No custom roles yet — create one to start assigning fine-grained access.</td></tr>
+              ) : roles.map((r) => {
+                const id = (r.role_id || r.id)!;
+                return (
+                  <tr key={id}>
+                    <td className="px-6 py-4 font-bold text-slate-800 text-xs">{r.name}</td>
+                    <td className="px-6 py-4 text-xs">{r.description || "—"}</td>
+                    <td className="px-6 py-4 text-xs">{(roleMembers[id] ?? []).length}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setManagingRole(r)}
+                        className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Users & roles card */}
+      <div className="self-stretch bg-white rounded-2xl border border-slate-200 flex flex-col shadow-sm mt-2">
+        <div className="px-5 py-4 border-b border-slate-200">
+          <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Users & roles</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 whitespace-nowrap">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">USER</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">ROLE</th>
+                <th className="px-6 py-3 font-semibold font-['IBM_Plex_Mono']">STATUS</th>
+                <th className="px-6 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {usersLoading ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">Loading…</td></tr>
+              ) : usersError ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-rose-500">{usersError}</td></tr>
+              ) : tenantUsers.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-6 text-xs text-slate-400">No users yet.</td></tr>
+              ) : tenantUsers.map((user) => {
+                const userRoles = rolesForUser(user.id);
+                return (
+                  <tr key={user.id}>
+                    <td className="px-6 py-4 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-700 to-lime-600 flex items-center justify-center text-white text-xs font-bold">{user.initials}</div>
+                      <span className="text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans']">{user.name}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {userRoles.length === 0 ? (
+                        <span className="text-slate-400 text-xs">No role</span>
+                      ) : userRoles.map((r) => (
+                        <span key={r.role_id || r.id} className="px-2 py-1 bg-slate-50 rounded text-slate-600 border border-slate-200 text-[10px] font-semibold font-['IBM_Plex_Mono'] mr-1">{r.name}</span>
+                      ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.status === "ACTIVE" ? (
+                        <span className="px-2 py-1 bg-stone-100 rounded text-lime-600 border border-lime-300 text-[10px] font-bold font-mono inline-flex items-center gap-1 uppercase">
+                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          ACTIVE
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-indigo-50 rounded text-indigo-500 border border-indigo-200 text-[10px] font-bold font-mono uppercase inline-flex items-center gap-1">{user.status}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setAssigningUser(user)}
+                        className="px-3 py-1.5 bg-slate-50 rounded border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {createOpen && (
+        <CreateRoleModal
+          form={createForm}
+          setForm={setCreateForm}
+          onClose={() => setCreateOpen(false)}
+          onSubmit={() => createRole.mutate()}
+          loading={createRole.isPending}
+        />
+      )}
+      {managingRole && <RoleManageModal role={managingRole} onClose={() => setManagingRole(null)} />}
+      {assigningUser && (
+        <AssignRoleModal
+          user={assigningUser}
+          roles={roles}
+          assignedRoleIds={roleIds.filter((id) => (roleMembers[id] ?? []).includes(assigningUser.id))}
+          onClose={() => setAssigningUser(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function CreateRoleModal({ form, setForm, onClose, onSubmit, loading }: {
+  form: { name: string; description: string };
+  setForm: (f: { name: string; description: string }) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-5 border-b border-slate-200">
+          <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New role</h2>
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-700 text-sm font-semibold">Name</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="payment_operator"
+              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-700 text-sm font-semibold">Description</label>
+            <input
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+            />
+          </div>
+        </div>
+        <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Cancel</button>
+          <button
+            onClick={onSubmit}
+            disabled={loading || !form.name.trim()}
+            className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+          >
+            {loading ? "Creating…" : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RoleManageModal({ role, onClose }: { role: TenantRole; onClose: () => void }) {
+  const qc = useQueryClient();
+  const roleId = (role.role_id || role.id)!;
+
+  const permsQ = useQuery({
+    queryKey: ["dash", "roles", roleId, "permissions"],
+    queryFn: () => api.get<{ rules?: PolicyRule[] }>("identity", `/v1/roles/${roleId}/permissions`),
+  });
+  const membersQ = useQuery({
+    queryKey: ["dash", "roles", roleId, "members"],
+    queryFn: () => api.get<{ user_ids?: string[] }>("identity", `/v1/roles/${roleId}/members`),
+  });
+  const usersQ = useQuery({
+    queryKey: ["dash", "identity-users"],
+    queryFn: () => api.get<{ users?: any[] }>("identity", "/v1/users"),
+  });
+  const users = usersQ.data?.users ?? [];
+  const emailFor = (userId: string) => users.find((u) => (u.user_id || u.id) === userId)?.email || userId;
+
+  const [draftRules, setDraftRules] = useState<PolicyRule[] | null>(null);
+  const currentRules = draftRules ?? permsQ.data?.rules ?? [];
+
+  const savePermissions = useMutation({
+    mutationFn: () => api.put("identity", `/v1/roles/${roleId}/permissions`, { rules: currentRules }),
+    onSuccess: () => {
+      toast.success("Permissions saved");
+      qc.invalidateQueries({ queryKey: ["dash", "roles", roleId, "permissions"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to save permissions"),
+  });
+
+  const [assignId, setAssignId] = useState("");
+  const assign = useMutation({
+    mutationFn: () => api.post("identity", `/v1/roles/${roleId}/members`, { user_id: assignId }),
+    onSuccess: () => {
+      toast.success("User assigned");
+      setAssignId("");
+      qc.invalidateQueries({ queryKey: ["dash", "roles", roleId, "members"] });
+      qc.invalidateQueries({ queryKey: ["dash", "role-members"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to assign user"),
+  });
+  const unassign = useMutation({
+    mutationFn: (userId: string) => api.del("identity", `/v1/roles/${roleId}/members/${userId}`),
+    onSuccess: () => {
+      toast.success("User removed");
+      qc.invalidateQueries({ queryKey: ["dash", "roles", roleId, "members"] });
+      qc.invalidateQueries({ queryKey: ["dash", "role-members"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to remove user"),
+  });
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[600px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-5 border-b border-slate-200">
+          <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Manage &quot;{role.name}&quot;</h2>
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
+          <div>
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-2.5">Dashboard access</div>
+            {permsQ.isLoading ? (
+              <div className="text-slate-400 text-sm">Loading…</div>
+            ) : (
+              <PermissionPicker rules={currentRules} onChange={setDraftRules} />
+            )}
+          </div>
+
+          <div>
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-wide mb-2.5">Assigned users</div>
+            {membersQ.isLoading ? (
+              <div className="text-slate-400 text-sm">Loading…</div>
+            ) : (
+              <div className="flex flex-col gap-1.5 mb-3">
+                {(membersQ.data?.user_ids ?? []).length === 0 ? (
+                  <div className="text-slate-400 text-xs">No users assigned yet.</div>
+                ) : membersQ.data!.user_ids!.map((userId) => (
+                  <div key={userId} className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                    <span className="text-slate-700 text-xs">{emailFor(userId)}</span>
+                    <button onClick={() => unassign.mutate(userId)} disabled={unassign.isPending} className="text-slate-500 hover:text-slate-700 text-xs font-semibold cursor-pointer">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <select
+                value={assignId}
+                onChange={(e) => setAssignId(e.target.value)}
+                className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 text-xs outline-none focus:border-sky-500"
+              >
+                <option value="">Select a user to assign…</option>
+                {users.map((u) => {
+                  const id = u.user_id || u.id;
+                  return <option key={id} value={id}>{u.email || id}</option>;
+                })}
+              </select>
+              <button
+                onClick={() => assign.mutate()}
+                disabled={!assignId || assign.isPending}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition disabled:opacity-60 cursor-pointer"
+              >
+                Assign
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Close</button>
+          <button
+            onClick={() => savePermissions.mutate()}
+            disabled={savePermissions.isPending}
+            className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+          >
+            {savePermissions.isPending ? "Saving…" : "Save permissions"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssignRoleModal({ user, roles, assignedRoleIds, onClose }: {
+  user: any;
+  roles: TenantRole[];
+  assignedRoleIds: string[];
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<string[]>(assignedRoleIds);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      // role_members.user_id is a UUID column, so anything else (an email from a
+      // half-populated users table, say) fails deep in the DB as a 500.
+      if (!UUID_RE.test(String(user.id))) {
+        throw new ApiException(400, {
+          code: "INVALID_USER",
+          message: "This row has no backend user id yet — reload the users list and try again.",
+        });
+      }
+      const toAdd = selected.filter((id) => !assignedRoleIds.includes(id));
+      const toRemove = assignedRoleIds.filter((id) => !selected.includes(id));
+      await Promise.all([
+        ...toAdd.map((roleId) => api.post("identity", `/v1/roles/${roleId}/members`, { user_id: user.id })),
+        ...toRemove.map((roleId) => api.del("identity", `/v1/roles/${roleId}/members/${user.id}`)),
+      ]);
+    },
+    onSuccess: () => {
+      toast.success("Roles updated");
+      qc.invalidateQueries({ queryKey: ["dash", "role-members"] });
+      onClose();
+    },
+    onError: (e) => toast.error(e instanceof ApiException ? e.message : "Failed to update roles"),
+  });
+
+  const toggle = (id: string) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[440px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-5 border-b border-slate-200">
+          <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">Roles for {user.name}</h2>
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 transition cursor-pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div className="p-6 flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
+          {roles.length === 0 ? (
+            <div className="text-slate-400 text-sm">No roles exist yet — create one first.</div>
+          ) : roles.map((r) => {
+            const id = (r.role_id || r.id)!;
+            return (
+              <label key={id} className="flex items-center gap-2.5 text-sm cursor-pointer py-1">
+                <input type="checkbox" checked={selected.includes(id)} onChange={() => toggle(id)} />
+                <span className="text-slate-700 font-medium">{r.name}</span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm">Cancel</button>
+          <button
+            onClick={() => save.mutate()}
+            disabled={save.isPending}
+            className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+          >
+            {save.isPending ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DomainService {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  badges: string[];
+  active: boolean;
+  iconPath: string;
+}
+
+/**
+ * Static by design, not a stale binding: there is no document-management domain
+ * among the 19 services, so this catalogue has no source of truth to read from.
+ * The Trust tab says so on screen. If a document service is ever added, this is
+ * the array to delete.
+ */
+const trustDocuments = [
+  { name: "MSA preview", category: "Legal", version: "2.1", status: "APPROVED" },
+  { name: "Data Processing Addendum", category: "Legal", version: "1.4", status: "APPROVED" },
+  { name: "Security overview", category: "Security", version: "3.0", status: "APPROVED" },
+  { name: "Penetration test summary", category: "Security", version: "2026-Q1", status: "RESTRICTED" },
+  { name: "Data residency overview", category: "Compliance", version: "1.2", status: "APPROVED" },
+  { name: "AI governance overview", category: "Governance", version: "1.1", status: "REQUESTED" },
+  { name: "SOC 2 report", category: "Compliance", version: "2026", status: "RESTRICTED" },
+];
+
+/** Documentation index — editorial content, deliberately not API-backed. */
+const docGuides = [
+  { title: "Getting started", category: "PLATFORM", desc: "Overview & first steps" },
+  { title: "Real-time charging", category: "MONETIZATION", desc: "Charging concepts & APIs" },
+  { title: "Billing & invoicing", category: "MONETIZATION", desc: "Bill cycles & templates" },
+  { title: "Taxation guide", category: "COMPLIANCE", desc: "Jurisdiction tax logic" },
+  { title: "eSIM / RSP integration", category: "CONNECTIVITY", desc: "Profiles & sync" },
+  { title: "API reference", category: "PLATFORM", desc: "Auth, endpoints, limits" },
+  { title: "Webhooks", category: "PLATFORM", desc: "Events & retries" },
+  { title: "Evidence ledger", category: "COMPLIANCE", desc: "Verification & exports" },
+  { title: "AI governance", category: "INTELLIGENCE", desc: "Control tiers & approvals" },
+];
+
+export default function DashboardsPage() {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const [sessionData, setSessionData] = useState<{ email?: string; tenantId?: string }>({});
+  // Starts at null, not 18. The old default asserted a fully healthy estate on
+  // first paint, before a single probe had returned — so the reassuring number
+  // was showing precisely when nothing was known yet.
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
+  const [serviceTotal, setServiceTotal] = useState<number | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [me, setMe] = useState<Me | null>(null);
+  const [meLoaded, setMeLoaded] = useState(false);
+
+  const [activeBrandId, setActiveBrandId] = useState<string>("");
+  const [brandSelectorOpen, setBrandSelectorOpen] = useState(false);
+  const brandRef = useRef<HTMLDivElement>(null);
+
+  const brandsQ = useQuery({
+    queryKey: ["dash", "brands"],
+    enabled: typeof window !== "undefined" && !!getSession()?.accessToken,
+    queryFn: () => api.get<{ brands?: Brand[] }>("identity", "/v1/brands"),
+  });
+  const brands = brandsQ.data?.brands ?? [];
+
+  const handleBrandChange = (brandId: string) => {
+    patchSession({ brandId });
+    setActiveBrandId(brandId);
+    setBrandSelectorOpen(false);
+    toast.success("Switched active brand context");
+    qc.invalidateQueries();
+  };
+
+  const activeBrand = brands.find((b) => b.id === activeBrandId);
+  const activeBrandLabel = activeBrand
+    ? activeBrand.name
+    : activeBrandId
+    ? `Brand: ${activeBrandId.substring(0, 6)}`
+    : "Select Brand";
+
+  // While /v1/me hasn't resolved yet, treat everything as accessible so
+  // nothing flickers locked-then-unlocked on first paint. A tenant admin or
+  // platform admin (hasFullAccess) always sees everything; anyone else is
+  // gated per-domain against their actual granted permissions.
+  const canAccess = (domain?: string) =>
+    !domain || !meLoaded || hasFullAccess(me) || canAccessDomain(domain, me);
+
+  const handleLogout = () => {
+    clearSession();
+    router.push('/login');
+  };
+
+  // Modal states for API client
+  const [selectedService, setSelectedService] = useState<DomainService | null>(null);
+  const [selectedEndpoint, setSelectedEndpoint] = useState<string>("");
+  const [requestPath, setRequestPath] = useState<string>("");
+  const [requestMethod, setRequestMethod] = useState<string>("GET");
+  const [requestHeaders, setRequestHeaders] = useState<string>("");
+  const [requestBody, setRequestBody] = useState<string>("");
+  const [apiResponse, setApiResponse] = useState<any>(null);
+  const [apiLoading, setApiLoading] = useState<boolean>(false);
+
+  // Active Console View state (Tenant Admin, Super Admin, Customer Self-Service)
+  const [currentConsole, setCurrentConsole] = useState<"tenant-admin" | "super-admin" | "customer-portal">("tenant-admin");
+
+  // Active Tab state
+  const [currentTab, setCurrentTab] = useState<string>("Services");
+
+  /**
+   * Backs the Billing & Commercials tab. Three services, one tile row: the
+   * tenant's own customer count, its rated-usage volume and its issued
+   * invoices. Each is caught individually so one unreachable service degrades
+   * a single tile to "—" instead of blanking the panel.
+   */
+  const commercialsQ = useQuery({
+    queryKey: ["commercials", "summary"],
+    enabled: currentTab === "Billing",
+    queryFn: async () => {
+      const [customers, rated, invoices] = await Promise.all([
+        api.get<{ customers?: unknown[] }>("customer", "/v1/customers")
+          .then((r) => (r.customers ?? []).length)
+          .catch(() => null),
+        api.get<{ data?: unknown[] }>("usage", "/v1/usage/rated?limit=100")
+          .then((r) => (r.data ?? []).length)
+          .catch(() => null),
+        api.get<{ items?: BillingInvoiceRow[] }>("billing", "/v1/invoices?limit=100")
+          .then((r) => r.items ?? [])
+          .catch(() => [] as BillingInvoiceRow[]),
+      ]);
+
+      const issued = invoices.filter((i) => i.status === "ISSUED");
+      // Grouped by currency: a single total mixing GBP and USD minor units
+      // would be a fiction.
+      const issuedByCurrency = issued.reduce<Record<string, number>>((acc, i) => {
+        acc[i.currency_code] = (acc[i.currency_code] ?? 0) + i.total_minor_units;
+        return acc;
+      }, {});
+
+      return {
+        customers,
+        ratedRecords: rated,
+        issuedCount: issued.length,
+        issuedByCurrency,
+        invoices,
+      };
+    },
+  });
+
+  // ── Navbar dynamic states ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // ── Sidebar navigation state ──
+  // `navQuery` filters the menu in place; `collapsed` holds the section
+  // headings the operator has folded away. 26 screens in one always-open list
+  // is a wall to read, and most roles work in two or three sections all day.
+  const [navQuery, setNavQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleSection = (section: string) =>
+    setCollapsed((prev) => ({ ...prev, [section]: !prev[section] }));
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [tenantInfoOpen, setTenantInfoOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const helpRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+  const tenantRef = useRef<HTMLDivElement>(null);
+  const [isInviteModalOpen, setInviteModalOpen] = useState(false);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  // Real policy rules from the backend permission catalog (GET /v1/permissions),
+  // which is what POST /v1/users actually accepts as `rules`. The old 18
+  // free-text checkbox labels were sent as `access_domains` -- a field no
+  // endpoint has ever read.
+  const [inviteRules, setInviteRules] = useState<PolicyRule[]>([]);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createdUserDetails, setCreatedUserDetails] = useState<{
+    email: string;
+    password: string;
+    tenantId: string;
+  } | null>(null);
+
+  const [tenantUsers, setTenantUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
+
+  // GET /v1/users is tenant-scoped and requires a Bearer token
+  // (authTenantChain + "tenant:user:read"). It must go through the api client,
+  // which attaches the session token and X-Tenant-ID and throws on a non-2xx --
+  // a raw fetch to /api/proxy sends no Authorization header and, because the
+  // proxy always answers HTTP 200 wrapping {status, ok, data}, a bare `res.ok`
+  // check reads a backend 401 as success.
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    setUsersError(null);
+    try {
+      // Backend returns {users: [{user_id, email, full_name, status, created_at}]} --
+      // NOT {items: [...]} with roles/access_domains/is_active, which never existed
+      // on this response and meant this table always rendered "User"/"None"/"INVITED".
+      const data = await api.get<{ users?: any[] }>("identity", "/v1/users");
+      const fetchedUsers = (data.users ?? [])
+        // user_id is the only usable identity here: role membership is keyed on
+        // a UUID (authorization.role_members.user_id), so a row without one
+        // cannot be assigned a role and must not reach the table.
+        .filter((u: any) => u.user_id)
+        .map((u: any) => {
+          const initials = u.full_name ? u.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() : "U";
+          return {
+            id: u.user_id,
+            initials,
+            name: u.full_name || u.email,
+            email: u.email,
+            status: (u.status || "invited").toUpperCase(),
+          };
+        });
+      setTenantUsers(fetchedUsers);
+    } catch (err) {
+      console.warn("Failed to fetch users:", err);
+      setUsersError(err instanceof ApiException ? err.message : "Failed to load users — check your connection and try again.");
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  const closeInviteModal = () => {
+    setInviteModalOpen(false);
+    setInviteEmail("");
+    setInviteName("");
+    setInvitePassword("");
+    setInviteRules([]);
+  };
+
+  /**
+   * POST /v1/users (identity-tenancy OnboardUser). The backend requires
+   * email + full_name + brand_id + password (>= 12 chars) and optional `rules`;
+   * it is behind authTenantChain, so the call must carry the session Bearer
+   * token. Going through the api client means a rejection throws instead of
+   * being mistaken for success -- previously any backend error still showed the
+   * "User created" modal and printed credentials for an account that did not
+   * exist, which is exactly why those invitees could never sign in.
+   */
+  const handleCreateUser = async () => {
+    if (!inviteEmail || !inviteName || !invitePassword) {
+      toast.error("Please fill in email, name, and generate a password");
+      return;
+    }
+    if (invitePassword.length < 12) {
+      toast.error("Temporary password must be at least 12 characters");
+      return;
+    }
+
+    const brandId = me?.brand_id || getSession()?.brandId;
+    if (!brandId) {
+      toast.error("No brand is associated with your session — sign out and back in, then try again.");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      await api.post("identity", "/v1/users", {
+        email: inviteEmail,
+        full_name: inviteName,
+        brand_id: brandId,
+        password: invitePassword,
+        rules: inviteRules,
+      });
+
+      setCreatedUserDetails({
+        email: inviteEmail,
+        password: invitePassword,
+        tenantId: sessionData.tenantId || "",
+      });
+      closeInviteModal();
+      // Re-read from the backend rather than appending a synthetic row: role
+      // assignment needs the server-generated user_id (a UUID).
+      fetchUsers();
+    } catch (err) {
+      toast.error(err instanceof ApiException ? err.message : "Error creating user: " + String(err));
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  interface DashboardNotification {
+    id: string | number;
+    type: "alert" | "success" | "warning" | "info";
+    title: string;
+    description?: string;
+    time: string;
+    read: boolean;
+    actionTab?: string;
+  }
+
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
+
+  // Load tenant-scoped notifications from localStorage or provide clean onboarding notifications
+  useEffect(() => {
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    const storageKey = `zx_notifications_${tenantId}`;
+    const raw = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setNotifications(parsed);
+          return;
+        }
+      } catch {}
+    }
+    // For a new tenant without stored notifications, present relevant onboarding notifications
+    const defaultNotifs: DashboardNotification[] = [
+      {
+        id: "notif-welcome",
+        type: "info",
+        title: "Welcome to ZoikoNex! Your workspace is ready.",
+        description: "Review your admin settings and service connections to get started.",
+        time: "Just now",
+        read: false,
+        actionTab: "Settings"
+      },
+      {
+        id: "notif-setup",
+        type: "warning",
+        title: "Account Setup: Configure your brand & single sign-on",
+        description: "Navigate to Admin settings to finalize tenant configuration.",
+        time: "Just now",
+        read: false,
+        actionTab: "Settings"
+      }
+    ];
+    setNotifications(defaultNotifs);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(storageKey, JSON.stringify(defaultNotifs));
+    }
+  }, [sessionData.tenantId]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify(updated));
+    }
+    toast.success("All notifications marked as read");
+  };
+
+  const handleToggleNotification = (id: string | number, actionTab?: string) => {
+    const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+    setNotifications(updated);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify(updated));
+    }
+    if (actionTab) {
+      setCurrentTab(actionTab);
+      setNotificationsOpen(false);
+    }
+  };
+
+  const handleDismissNotification = (id: string | number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = notifications.filter(n => n.id !== id);
+    setNotifications(updated);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify(updated));
+    }
+    toast.info("Notification dismissed");
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+    const tenantId = sessionData.tenantId || getSession()?.tenantId || "default";
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`zx_notifications_${tenantId}`, JSON.stringify([]));
+    }
+    toast.info("All notifications cleared");
+  };
+
+  // Derived from the navigation registry rather than hand-listed. The previous
+  // literal covered 10 of the console's screens: searching "orders", "fraud",
+  // "tax" or "catalog" returned nothing at all, and four entries pointed at the
+  // Services tab instead of the screen they named, so the result opened the
+  // wrong place. Every screen is now searchable, by its own name and by the
+  // synonyms in the registry, and lands on itself.
+  const searchableItems = NAV_ENTRIES.map((e) => ({
+    label: e.label,
+    tabKey: e.tabKey,
+    category: SECTION_BY_TAB[e.tabKey] ?? "Navigation",
+    summary: e.summary,
+    keywords: e.keywords ?? [],
+  }));
+
+  const searchTerm = searchQuery.trim().toLowerCase();
+  const filteredSearch = searchTerm
+    ? searchableItems
+        .filter(
+          (item) =>
+            item.label.toLowerCase().includes(searchTerm) ||
+            item.summary.toLowerCase().includes(searchTerm) ||
+            item.keywords.some((k) => k.includes(searchTerm))
+        )
+        // A name match is what the operator meant; a description or synonym
+        // match is a fallback, so it ranks below.
+        .sort(
+          (a, b) =>
+            Number(b.label.toLowerCase().includes(searchTerm)) -
+            Number(a.label.toLowerCase().includes(searchTerm))
+        )
+        .slice(0, 8)
+    : [];
+
+  // Close all navbar dropdowns on outside click
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      const t = e.target as Node;
+      if (searchRef.current && !searchRef.current.contains(t)) setSearchFocused(false);
+      if (notifRef.current && !notifRef.current.contains(t)) setNotificationsOpen(false);
+      if (helpRef.current && !helpRef.current.contains(t)) setHelpOpen(false);
+      if (userRef.current && !userRef.current.contains(t)) setUserMenuOpen(false);
+      if (tenantRef.current && !tenantRef.current.contains(t)) setTenantInfoOpen(false);
+      if (brandRef.current && !brandRef.current.contains(t)) setBrandSelectorOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  // Keyboard shortcut: Ctrl+K / Cmd+K to focus search
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchFocused(true);
+        const input = searchRef.current?.querySelector("input");
+        input?.focus();
+      }
+      if (e.key === "Escape") {
+        setSearchFocused(false);
+        setNotificationsOpen(false);
+        setHelpOpen(false);
+        setUserMenuOpen(false);
+        setTenantInfoOpen(false);
+        setBrandSelectorOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Customer Self-Service Portal states
+  // Blank by default. These used to be pre-filled with seeded demo UUIDs, which
+  // exist in no real tenant — the portal opened on an error that read as a bug
+  // rather than as "you have not chosen a customer yet".
+  const [custPortalCustomerId, setCustPortalCustomerId] = useState("");
+  const [custPortalAccountId, setCustPortalAccountId] = useState("");
+  const [orderOfferId, setOrderOfferId] = useState("");
+  const [orderProductId, setOrderProductId] = useState("");
+  const [prepaidBalance, setPrepaidBalance] = useState(15.00);
+  const [portalInvoices, setPortalInvoices] = useState<any[]>([]);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalMessage, setPortalMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const fetchPortalInvoices = async (accountId: string) => {
+    if (!accountId) return;
+    try {
+      const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8092,
+          method: "GET",
+          path: `/v1/invoices?limit=20`,
+          headers: { "X-Tenant-ID": portalTenantId() }
+        })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.status === 200 && result.data && result.data.items) {
+          const filtered = result.data.items.filter((inv: any) => inv.account_id === accountId);
+          setPortalInvoices(filtered);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch portal invoices:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentConsole === "customer-portal" && custPortalAccountId) {
+      fetchPortalInvoices(custPortalAccountId);
+    }
+  }, [currentConsole, custPortalAccountId]);
+
+  const handlePlaceOrder = async () => {
+    setPortalLoading(true);
+    setPortalMessage(null);
+    try {
+      // 1. Place the order
+      const resOrder = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8083,
+          method: "POST",
+          path: "/v1/orders",
+          headers: { "X-Tenant-ID": portalTenantId() },
+          body: {
+            customer_id: custPortalCustomerId,
+            account_id: custPortalAccountId,
+            order_type: "NEW_SERVICE",
+            catalog_version_id: "CATALOG-2026-Q2",
+            currency_code: "USD",
+            country_code: "US",
+            jurisdiction_code: "US-CA"
+          }
+        })
+      });
+      const resultOrder = await resOrder.json();
+
+      if (!resOrder.ok || resultOrder.status !== 201) {
+        const errMsg = resultOrder.data?.message || resultOrder.error || "";
+        const backendUnavailable = errMsg.includes("relation") || errMsg.includes("does not exist") || resultOrder.status === 422 || resultOrder.status >= 500;
+        if (backendUnavailable) {
+          console.warn("Order backend unavailable:", errMsg);
+          setPortalMessage({
+            text: `Order was NOT placed — the order-management backend is unavailable right now (${errMsg || `HTTP ${resultOrder.status}`}). Nothing was provisioned or billed.`,
+            type: "error"
+          });
+          return;
+        }
+        throw new Error(errMsg || "Failed to place order.");
+      }
+
+      const orderId = resultOrder.data?.id;
+
+      // 2. Provision eSIM profile
+      const resProv = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8083,
+          method: "POST",
+          path: "/v1/provisioning",
+          headers: { "X-Tenant-ID": portalTenantId() },
+          body: {
+            order_id: orderId,
+            customer_id: custPortalCustomerId,
+            account_id: custPortalAccountId,
+            product_id: orderProductId,
+            service_type: "MOBILE_DATA",
+            jurisdiction_code: "US-CA"
+          }
+        })
+      });
+      const resultProv = await resProv.json();
+      if (!resProv.ok || resultProv.status !== 201) {
+        throw new Error(resultProv.data?.message || resultProv.error || "Order placed, but eSIM provisioning failed.");
+      }
+
+      setPortalMessage({
+        text: `Order placed successfully (ID: ${orderId})! eSIM Profile provisioned (ID: ${resultProv.data?.id || "N/A"}) and registered.`,
+        type: "success"
+      });
+    } catch (err: any) {
+      setPortalMessage({ text: err.message || "Order placement failed.", type: "error" });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const handleRunBilling = async () => {
+    setPortalLoading(true);
+    setPortalMessage(null);
+    try {
+      // 1. Create draft invoice
+      const resDraft = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8092,
+          method: "POST",
+          path: "/v1/invoices",
+          headers: { "X-Tenant-ID": portalTenantId() },
+          body: {
+            account_id: custPortalAccountId,
+            customer_id: custPortalCustomerId,
+            currency_code: "USD"
+          }
+        })
+      });
+      const resultDraft = await resDraft.json();
+
+      if (!resDraft.ok || resultDraft.status !== 201) {
+        const errMsg = resultDraft.data?.message || resultDraft.error || "";
+        const backendUnavailable = errMsg.includes("relation") || errMsg.includes("does not exist") || resultDraft.status === 422 || resultDraft.status >= 500;
+        if (backendUnavailable) {
+          console.warn("Billing backend unavailable:", errMsg);
+          setPortalMessage({
+            text: `Billing run did NOT succeed — the billing backend is unavailable right now (${errMsg || `HTTP ${resultDraft.status}`}). No invoice was issued.`,
+            type: "error"
+          });
+          return;
+        }
+        throw new Error(errMsg || "Failed to create draft invoice.");
+      }
+
+      const invoiceId = resultDraft.data?.id;
+
+      // 2. Issue the invoice
+      const resIssue = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          port: 8092,
+          method: "POST",
+          path: `/v1/invoices/${invoiceId}/issue`,
+          headers: { "X-Tenant-ID": portalTenantId() },
+          body: {}
+        })
+      });
+      const resultIssue = await resIssue.json();
+      if (!resIssue.ok || resultIssue.status !== 200) {
+        throw new Error(resultIssue.data?.message || resultIssue.error || "Failed to issue the invoice.");
+      }
+
+      setPortalMessage({ text: `Billing run succeeded! Invoice issued: ${invoiceId}`, type: "success" });
+      fetchPortalInvoices(custPortalAccountId);
+    } catch (err: any) {
+      setPortalMessage({ text: err.message || "Billing cycle execution failed.", type: "error" });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  // State-bound list of the 18 BSS/OSS domains
+  const [services, setServices] = useState<DomainService[]>([
+    // Monetization & Revenue
+    {
+      id: "prod-catalog",
+      name: "Product Catalog",
+      version: "MONETIZATION · V4.6",
+      description: "Plans, bundles, add-ons, eligibility, and versioned offer management.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/services.svg"
+    },
+    {
+      id: "rt-charging",
+      name: "Real-Time Charging",
+      version: "MONETIZATION · V4.5",
+      description: "Online charging, balances, policy, and real-time authorization.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/charging-lightning.svg"
+    },
+    {
+      id: "rating-engine",
+      name: "Rating & Pricing Engine",
+      version: "MONETIZATION · V4.6",
+      description: "Usage rating, tiering, discounts, and real-time price calculation.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/bar-chart.svg"
+    },
+    {
+      id: "billing-invoice",
+      name: "Billing & Invoicing",
+      version: "MONETIZATION · V4.6",
+      description: "Bill cycles, invoicing, dunning, and statements. Template v3 available.",
+      badges: ["ACTIVE", "WATCH"],
+      active: true,
+      iconPath: "/image/dashboard/document.svg"
+    },
+    {
+      id: "payments-collections",
+      name: "Payments & Collections",
+      version: "MONETIZATION · V4.5",
+      description: "Payment methods, gateways, retries, refunds, and reconciliation.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/credit-card.svg"
+    },
+    {
+      id: "partner-settlement",
+      name: "Partner & Settlement",
+      version: "MONETIZATION · V4.3",
+      description: "Wholesale, interconnect, revenue share, and partner settlement.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/user-profile.svg"
+    },
+
+    // Customer & Engagement
+    {
+      id: "cust-lifecycle",
+      name: "Customer Lifecycle",
+      version: "MONETIZATION · V4.6",
+      description: "Accounts, subscriptions, lifecycle states, and self-care across brands.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/user-profile.svg"
+    },
+    {
+      id: "notifications-campaigns",
+      name: "Notifications & Campaigns",
+      version: "ENGAGEMENT · V4.1",
+      description: "Transactional and campaign messaging across SMS, email, and push.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/notifications-bell.svg"
+    },
+
+    // Connectivity & Provisioning
+    {
+      id: "esim-sim-mgmt",
+      name: "eSIM & SIM Management",
+      version: "CONNECTIVITY · V4.3",
+      description: "GSMA-aligned eSIM profiles, RSP sync, and SIM lifecycle.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/mobile-sim.svg"
+    },
+    {
+      id: "iot-connectivity",
+      name: "IoT Connectivity",
+      version: "CONNECTIVITY · V4.2",
+      description: "Device fleet orchestration, usage aggregation, and remote actions.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/settings-compass.svg"
+    },
+    {
+      id: "number-inventory",
+      name: "Number & Inventory",
+      version: "CONNECTIVITY · V4.4",
+      description: "Number ranges, porting, reservation, and resource inventory.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/services.svg"
+    },
+
+    // Compliance & Trust
+    {
+      id: "taxation-regulatory",
+      name: "Taxation & Regulatory",
+      version: "COMPLIANCE · V4.4",
+      description: "Jurisdiction tax logic, regulatory fees, and exemptions.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/shield.svg"
+    },
+    {
+      id: "compliance-kyc",
+      name: "Compliance & KYC",
+      version: "COMPLIANCE · V4.4",
+      description: "Identity verification, sanctions screening, and onboarding checks.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/shield-check.svg"
+    },
+    {
+      id: "evidence-ledger",
+      name: "Evidence Ledger",
+      version: "COMPLIANCE · V4.5",
+      description: "Immutable evidence of charging, billing, and governance events.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/document.svg"
+    },
+
+    // Intelligence
+    {
+      id: "ai-gov-controls",
+      name: "AI Governance & Controls",
+      version: "INTELLIGENCE · V4.2",
+      description: "Tiered AI controls with human approval for material actions.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/code-tags.svg"
+    },
+    {
+      id: "analytics-reporting",
+      name: "Analytics & Reporting",
+      version: "INTELLIGENCE · V4.6",
+      description: "Operational dashboards, revenue assurance, and exports.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/bar-chart.svg"
+    },
+
+    // Platform & Integration
+    {
+      id: "mediation-usage",
+      name: "Mediation & Usage",
+      version: "PLATFORM · V4.5",
+      description: "CDR ingestion, normalization, deduplication, and enrichment.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/activity-pulse.svg"
+    },
+    {
+      id: "api-gateway",
+      name: "API Gateway & Developer",
+      version: "PLATFORM · V2.0",
+      description: "Authenticated APIs, rate limits, webhooks, and developer keys.",
+      badges: ["ACTIVE", "HEALTHY"],
+      active: true,
+      iconPath: "/image/dashboard/api-braces.svg"
+    }
+  ]);
+
+  // Load session context and poll backend health checks and logs
+  useEffect(() => {
+    const session = getSession();
+    if (session && session.accessToken) {
+      setSessionData({ email: session.email, tenantId: session.tenantId });
+      setActiveBrandId(session.brandId || "");
+      fetchUsers();
+      fetchMe()
+        .then((m) => setMe(m))
+        .catch(() => setMe(null))
+        .finally(() => setMeLoaded(true));
+    } else {
+      router.replace('/login');
+    }
+
+    const serviceMapping: Record<string, string> = {
+      "prod-catalog": "product-catalogue-commercial",
+      "rt-charging": "rating-charging",
+      "rating-engine": "rating-charging",
+      "billing-invoice": "billing-invoice",
+      "payments-collections": "payments",
+      "partner-settlement": "partner-settlement",
+      "cust-lifecycle": "customer-account",
+      "notifications-campaigns": "integration-ecosystem",
+      "esim-sim-mgmt": "order-management-provisioning",
+      "iot-connectivity": "order-management-provisioning",
+      "number-inventory": "order-management-provisioning",
+      "taxation-regulatory": "tax-jurisdiction",
+      "compliance-kyc": "custmr-lfc-kyc",
+      "evidence-ledger": "evidence-ledger",
+      "ai-gov-controls": "reporting-regulatory",
+      "analytics-reporting": "reporting-regulatory",
+      "mediation-usage": "usage-ingestion-mediation",
+      "api-gateway": "integration-ecosystem"
+    };
+
+    /**
+     * Probe every service's own /health, and report what each one answers.
+     *
+     * This previously made ONE authenticated call to identity-tenancy and, if it
+     * came back 200, set onlineCount to a literal 18 and stamped ACTIVE + HEALTHY
+     * on all eighteen cards. So a single reachable service was rendered as the
+     * whole estate being healthy: seventeen could be down and the dashboard still
+     * read 18/18. On an operations screen that is worse than showing nothing,
+     * because it actively answers the question "is anything wrong" with a no.
+     *
+     * Every one of the 19 services registers GET /health, so each card's status
+     * now comes from its own service. Several cards are different views onto the
+     * same service (rt-charging and rating-engine are both 8085; esim, IoT and
+     * numbering are all 8083), so ports are de-duplicated before probing — 18
+     * cards resolve to 13 distinct services and therefore 13 requests, not 18.
+     *
+     * /health is unauthenticated, so an expired session shows infrastructure
+     * state rather than turning the whole board red.
+     */
+    const checkBackendServices = async () => {
+      const ports = Array.from(new Set(Object.values(SERVICE_ID_TO_PORT)));
+
+      const probe = async (port: number): Promise<boolean> => {
+        try {
+          const res = await fetch("/api/proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ port, method: "GET", path: "/health" }),
+          });
+          if (!res.ok) return false;
+          const payload = await res.json();
+          return payload?.ok === true;
+        } catch {
+          return false;
+        }
+      };
+
+      const results = await Promise.all(ports.map(async (port) => [port, await probe(port)] as const));
+      const healthByPort = new Map<number, boolean>(results);
+
+      // Counted over distinct services, not cards — otherwise one service backing
+      // three cards would be counted three times and inflate the total.
+      const healthy = Array.from(healthByPort.values()).filter(Boolean).length;
+      setOnlineCount(healthy);
+      setServiceTotal(healthByPort.size);
+
+      setServices((prev) =>
+        prev.map((svc) => {
+          const port = SERVICE_ID_TO_PORT[svc.id];
+          // A card with no port mapping has nothing to probe. Left untouched
+          // rather than defaulted to healthy.
+          if (port === undefined) return svc;
+
+          const up = healthByPort.get(port) === true;
+          const carried = svc.badges.filter(
+            (b) => b !== "ACTIVE" && b !== "HEALTHY" && b !== "AVAILABLE" &&
+                   b !== "PROVISIONING" && b !== "UNREACHABLE",
+          );
+          return {
+            ...svc,
+            active: up,
+            badges: up ? ["ACTIVE", "HEALTHY", ...carried] : ["UNREACHABLE", ...carried],
+          };
+        }),
+      );
+    };
+
+    const fetchLogs = async () => {
+      try {
+        const logsRes = await fetch("/api/logs");
+        if (logsRes.ok) {
+          const logsData = await logsRes.json() as string[];
+          setLogs(logsData);
+        }
+      } catch (err) {
+        console.warn("Backend logs fetching bypassed:", err);
+      }
+    };
+
+    const tick = () => { void checkBackendServices(); void fetchLogs(); };
+
+    tick();
+    // 4s meant 18 proxied requests every 4 seconds against every open dashboard.
+    // Health does not change that fast, and the old interval predates this doing
+    // any real probing. 15s with 13 de-duplicated probes is a fifth of the
+    // traffic and still well inside the window an operator would notice.
+    const intervalId = setInterval(tick, 15000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Real-time idle timeout listener (ZN 9)
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      if (typeof window === "undefined") return;
+
+      const isEnabled = localStorage.getItem("zx_session_idle_timeout") !== "false";
+      if (!isEnabled) return;
+
+      const mins = parseInt(localStorage.getItem("zx_session_idle_minutes") || "30", 10);
+      const timeoutMs = (mins > 0 ? mins : 30) * 60 * 1000;
+
+      timeoutId = setTimeout(() => {
+        if (getSession()?.accessToken) {
+          toast.warning(`Session expired due to ${mins > 0 ? mins : 30} minutes of inactivity`);
+          clearSession();
+          router.replace("/login?reason=idle_timeout");
+        }
+      }, timeoutMs);
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+    events.forEach((ev) => window.addEventListener(ev, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach((ev) => window.removeEventListener(ev, resetTimer));
+    };
+  }, [router]);
+
+  // Helper to toggle domain active state
+  const handleToggle = (id: string) => {
+    setServices((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const nextActive = !s.active;
+          let nextBadges = [...s.badges].filter(b => b !== "ACTIVE" && b !== "HEALTHY" && b !== "AVAILABLE" && b !== "PROVISIONING");
+
+          if (s.id === "partner-settlement") {
+            nextBadges = nextActive ? ["ACTIVE", "HEALTHY", ...nextBadges] : ["PROVISIONING", ...nextBadges];
+          } else if (s.id === "notifications-campaigns" || s.id === "iot-connectivity") {
+            nextBadges = nextActive ? ["ACTIVE", "HEALTHY", ...nextBadges] : ["AVAILABLE", ...nextBadges];
+          } else {
+            nextBadges = nextActive ? ["ACTIVE", "HEALTHY", ...nextBadges] : ["AVAILABLE", ...nextBadges];
+          }
+
+          return {
+            ...s,
+            active: nextActive,
+            badges: nextBadges
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  // Group definitions
+  const groups = [
+    {
+      id: "monetization",
+      title: "Monetization & Revenue",
+      description: "Catalog, charging, rating, billing, payments, and settlement.",
+      serviceIds: ["prod-catalog", "rt-charging", "rating-engine", "billing-invoice", "payments-collections", "partner-settlement"]
+    },
+    {
+      id: "customer",
+      title: "Customer & Engagement",
+      description: "Lifecycle management and customer communications.",
+      serviceIds: ["cust-lifecycle", "notifications-campaigns"]
+    },
+    {
+      id: "connectivity",
+      title: "Connectivity & Provisioning",
+      description: "SIM/eSIM, IoT fleets, and number inventory.",
+      serviceIds: ["esim-sim-mgmt", "iot-connectivity", "number-inventory"]
+    },
+    {
+      id: "compliance",
+      title: "Compliance & Trust",
+      description: "Tax, KYC, and evidence-grade governance.",
+      serviceIds: ["taxation-regulatory", "compliance-kyc", "evidence-ledger"]
+    },
+    {
+      id: "intelligence",
+      title: "Intelligence",
+      description: "Governed AI and analytics.",
+      serviceIds: ["ai-gov-controls", "analytics-reporting"]
+    },
+    {
+      id: "platform",
+      title: "Platform & Integration",
+      description: "Mediation pipeline and the API gateway.",
+      serviceIds: ["mediation-usage", "api-gateway"]
+    }
+  ];
+
+  // The menu now comes from ./navigation, which is also what the top-bar search
+  // and the per-screen ScreenGuide read. It replaces a hand-kept list whose
+  // sections had stopped describing anything ("REVENUE & ASSURANCE" and
+  // "ASSURE" were two groups for one idea, "Billing & Invoice" and "Billing &
+  // Commercials" two entries a new operator could not tell apart) and which had
+  // simply lost Tax & Jurisdiction -- that screen is rendered below but was
+  // reachable only by finding its card on the Services tab. Sections are now
+  // ordered along the lifecycle the console actually operates: sell, charge,
+  // bill, collect, settle, assure, prove.
+  const sidebarItems = NAV_SECTIONS;
+
+  // Typing in the sidebar filter searches labels, summaries and keywords, so
+  // "vat" finds Tax & Jurisdiction and "cdr" finds Usage & Charging. While a
+  // filter is active every section that still has a match is force-expanded --
+  // a hit hidden inside a collapsed section is the same as no hit at all.
+  const navFilter = navQuery.trim().toLowerCase();
+  const matchesFilter = (item: (typeof NAV_ENTRIES)[number]) =>
+    !navFilter ||
+    item.label.toLowerCase().includes(navFilter) ||
+    item.summary.toLowerCase().includes(navFilter) ||
+    (item.keywords ?? []).some((k) => k.includes(navFilter));
+
+  const visibleSections = sidebarItems
+    .map((section) => ({ ...section, items: section.items.filter(matchesFilter) }))
+    .filter((section) => section.items.length > 0);
+
+  return (
+    <div className="w-full bg-[#f8fafc] min-h-screen flex flex-col justify-start items-start font-sans">
+
+      {/* ═══ Top Header Navbar ═══ */}
+      <div className="w-full h-14 px-4 bg-sky-950 border-b-[0.80px] border-white/5 flex justify-between items-center shrink-0 z-50">
+
+        {/* Left Side: Logo & Context Pills */}
+        <div className="flex items-center gap-5">
+          {/* Logo */}
+          <Link href="/dashboards" className="w-60 flex justify-start items-center hover:opacity-90 transition-opacity">
+            <img src="/image/ZoikoNex_Logo_Official/PNG/ZoikoNex_Logo_PNG.png" alt="ZoikoNex Logo" className="h-8 object-contain" />
+          </Link>
+
+          {/* Context Pills */}
+          <div className="flex items-center gap-4">
+            {/* Tenant Info Pill */}
+            <div className="relative" ref={tenantRef}>
+              <button
+                onClick={() => { setTenantInfoOpen(!tenantInfoOpen); setNotificationsOpen(false); setHelpOpen(false); setUserMenuOpen(false); }}
+                className={`h-10 px-3 py-1.5 rounded-[10px] outline outline-1 flex items-center gap-2 cursor-pointer transition-all duration-200 ${tenantInfoOpen
+                  ? "bg-white/20 outline-white/40 ring-1 ring-sky-400/40"
+                  : "bg-white/10 outline-white/20 hover:bg-white/20"
+                  }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">
+                  Helios Mobile {sessionData.tenantId && `(${sessionData.tenantId.substring(0, 6)})`}
+                </div>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`text-slate-400 transition-transform duration-200 ${tenantInfoOpen ? "rotate-180" : ""}`} strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+
+              {/* Tenant Info Dropdown */}
+              {tenantInfoOpen && (
+                <div className="absolute top-[calc(100%+8px)] left-0 w-72 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                  <div className="p-4 border-b border-white/10">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-sky-400 mb-2">Active Tenant</div>
+                    <div className="text-white text-sm font-bold">Helios Mobile</div>
+                    <div className="text-slate-400 text-[11px] font-mono mt-1">{sessionData.tenantId || "1a2b3c"}</div>
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
+                      <span className="text-slate-300 text-xs">Region</span>
+                      <span className="text-white text-xs font-medium">US-West-2</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
+                      <span className="text-slate-300 text-xs">Plan</span>
+                      <span className="text-lime-300 text-xs font-semibold">Enterprise</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-white/5 transition cursor-pointer">
+                      <span className="text-slate-300 text-xs">Services</span>
+                      <span className="text-white text-xs font-medium">
+                        {onlineCount === null || serviceTotal === null ? "checking…" : `${onlineCount}/${serviceTotal} online`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 border-t border-white/10">
+                    <button onClick={() => { setCurrentTab("Settings"); setTenantInfoOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">Manage Tenant Settings →</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Brand Info Pill */}
+            <div className="relative" ref={brandRef}>
+              <button
+                onClick={() => { setBrandSelectorOpen(!brandSelectorOpen); setTenantInfoOpen(false); setNotificationsOpen(false); setHelpOpen(false); setUserMenuOpen(false); }}
+                className={`h-10 px-3 py-1.5 rounded-[10px] outline outline-1 flex items-center gap-2 cursor-pointer transition-all duration-200 ${brandSelectorOpen
+                  ? "bg-white/20 outline-white/40 ring-1 ring-sky-400/40"
+                  : "bg-white/10 outline-white/20 hover:bg-white/20"
+                  }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-lime-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                <div className="text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">
+                  {activeBrandLabel}
+                </div>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`text-slate-400 transition-transform duration-200 ${brandSelectorOpen ? "rotate-180" : ""}`} strokeWidth="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+
+              {/* Brand Selector Dropdown */}
+              {brandSelectorOpen && (
+                <div className="absolute top-[calc(100%+8px)] left-0 w-64 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                  <div className="p-4 border-b border-white/10">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-lime-400 mb-2">Switch Active Brand</div>
+                    <div className="text-slate-400 text-[11px] leading-4">Select the brand context for operations, users and providers.</div>
+                  </div>
+                  <div className="p-2 max-h-56 overflow-y-auto space-y-0.5">
+                    {brandsQ.isLoading ? (
+                      <div className="px-3 py-2.5 text-xs text-slate-400">Loading brands…</div>
+                    ) : brands.length === 0 ? (
+                      <div className="px-3 py-2.5 text-xs text-slate-400">No brands registered. Go to Settings to add one.</div>
+                    ) : (
+                      brands.map((b) => (
+                        <button
+                          key={b.id}
+                          onClick={() => handleBrandChange(b.id)}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center justify-between cursor-pointer ${
+                            b.id === activeBrandId
+                              ? "bg-white/10 text-white font-bold"
+                              : "text-slate-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-xs">{b.name}</span>
+                            <span className="text-[10px] text-slate-500 font-mono mt-0.5">{b.code_name}</span>
+                          </div>
+                          {b.id === activeBrandId && (
+                            <svg className="w-3.5 h-3.5 text-lime-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <div className="p-3 border-t border-white/10">
+                    <button onClick={() => { setCurrentTab("Settings"); setBrandSelectorOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">Manage Brands →</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Environment Badge */}
+            <div className="h-10 px-4 py-2.5 bg-lime-500/20 rounded-[10px] outline outline-1 outline-lime-500/40 flex items-center gap-2 cursor-default" title="Environment: Production">
+              <div className="w-1.5 h-1.5 bg-lime-500 rounded-sm animate-pulse"></div>
+              <div className="text-lime-200 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-3 tracking-wide">PRODUCTION</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Search Bar */}
+        <div className="flex-1 max-w-lg mx-4 relative" ref={searchRef}>
+          <div className={`w-full px-4 py-2 rounded-[10px] outline outline-1 flex items-center gap-2 transition-all duration-200 ${searchFocused
+            ? "bg-white/20 outline-sky-400/50 ring-1 ring-sky-400/30"
+            : "bg-white/10 outline-white/20 hover:bg-white/15"
+            }`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className={`transition-colors duration-200 ${searchFocused ? "text-sky-300" : "text-slate-400"}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              placeholder="Search services, docs, settings…"
+              className="bg-transparent text-white text-xs font-normal font-['Plus_Jakarta_Sans'] flex-1 outline-none placeholder-slate-400"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} aria-label="Clear search" className="text-slate-400 hover:text-white transition cursor-pointer">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            )}
+            {!searchFocused && (
+              <div className="flex items-center gap-1 text-slate-500 text-[10px] font-mono border border-white/10 rounded px-1.5 py-0.5">⌘K</div>
+            )}
+          </div>
+
+          {/* Search Results Dropdown */}
+          {searchFocused && (searchQuery.trim() ? filteredSearch.length > 0 : true) && (
+            <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+              {searchQuery.trim() === "" ? (
+                <div className="p-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 mb-2">Quick Navigation</div>
+                  {/* Keyed by tabKey, not by label. The old list looked its
+                      targets up by display name, so renaming a screen silently
+                      sent the shortcut to the Dashboard fallback instead. */}
+                  {["Dashboard", "Services", "OrderManagement", "BillingManagement", "Settings"].map(tabKey => (
+                    <button key={tabKey} onClick={() => { setCurrentTab(tabKey); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-white/5 hover:text-white rounded-lg transition flex items-center gap-2 cursor-pointer">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-slate-500" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      {searchableItems.find(i => i.tabKey === tabKey)?.label ?? tabKey}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-2 max-h-64 overflow-y-auto">
+                  {filteredSearch.map((item, i) => (
+                    <button key={i} onClick={() => { setCurrentTab(item.tabKey); setSearchFocused(false); setSearchQuery(""); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-start justify-between gap-3 cursor-pointer">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-sky-400 mt-0.5 shrink-0" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <span className="min-w-0">
+                          <span className="block text-white text-xs font-medium">{item.label}</span>
+                          {/* The summary is what makes a result choosable when
+                              several screens sound alike. */}
+                          <span className="block text-slate-400 text-[10.5px] leading-4 mt-0.5 line-clamp-2">{item.summary}</span>
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono shrink-0">{item.category}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right Side: Interactive Icons */}
+        <div className="flex items-center gap-3">
+
+          {/* Help Button */}
+          <div className="relative" ref={helpRef}>
+            <button
+              onClick={() => { setHelpOpen(!helpOpen); setNotificationsOpen(false); setUserMenuOpen(false); setTenantInfoOpen(false); }}
+              className={`w-9 h-9 rounded-full outline outline-1 flex justify-center items-center transition-all duration-200 cursor-pointer ${helpOpen
+                ? "bg-white/25 outline-sky-400/50 text-sky-300"
+                : "bg-white/10 outline-white/20 text-indigo-50 hover:bg-white/20"
+                }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
+
+            {/* Help Dropdown */}
+            {helpOpen && (
+              <div className="absolute top-[calc(100%+8px)] right-0 w-72 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                <div className="p-4 border-b border-white/10">
+                  <div className="text-white text-sm font-bold">Help & Resources</div>
+                  <div className="text-slate-400 text-[11px] mt-0.5">Quick access to docs and support</div>
+                </div>
+                <div className="p-2 space-y-0.5">
+                  {[
+                    { label: "Getting Started Guide", icon: "📘", tabKey: "Documentation" },
+                    { label: "API Reference", icon: "🔗", tabKey: "Documentation" },
+                    { label: "Contact Support", icon: "💬", tabKey: "Support" },
+                    { label: "Keyboard Shortcuts", icon: "⌨️", tabKey: "" },
+                    { label: "What's New (v4.2)", icon: "🆕", tabKey: "" },
+                  ].map(item => (
+                    <button key={item.label} onClick={() => { if (item.tabKey) setCurrentTab(item.tabKey); setHelpOpen(false); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-center gap-3 cursor-pointer">
+                      <span className="text-sm">{item.icon}</span>
+                      <span className="text-slate-200 text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-3 border-t border-white/10 bg-white/[0.02]">
+                  <div className="text-[10px] text-slate-500 text-center">Press <span className="font-mono bg-white/10 px-1 py-0.5 rounded text-slate-400">Esc</span> to close · <span className="font-mono bg-white/10 px-1 py-0.5 rounded text-slate-400">⌘K</span> to search</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notifications Bell */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => { setNotificationsOpen(!notificationsOpen); setHelpOpen(false); setUserMenuOpen(false); setTenantInfoOpen(false); }}
+              className={`w-9 h-9 relative rounded-full outline outline-1 flex justify-center items-center transition-all duration-200 cursor-pointer ${notificationsOpen
+                ? "bg-white/25 outline-sky-400/50 text-sky-300"
+                : "bg-white/10 outline-white/20 text-indigo-50 hover:bg-white/20"
+                }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              {unreadCount > 0 && (
+                <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full border-2 border-sky-950 flex items-center justify-center">
+                  <span className="text-white text-[9px] font-bold">{unreadCount}</span>
+                </div>
+              )}
+            </button>
+
+            {/* Notifications Dropdown */}
+            {notificationsOpen && (
+              <div className="absolute top-[calc(100%+8px)] right-0 w-84 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                  <div>
+                    <div className="text-white text-sm font-bold">Notifications</div>
+                    <div className="text-slate-400 text-[11px] mt-0.5">
+                      {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[10px] text-sky-400 font-semibold hover:text-sky-300 transition cursor-pointer"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={handleClearAllNotifications}
+                        className="text-[10px] text-slate-400 font-semibold hover:text-slate-200 transition cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="py-8 px-4 text-center flex flex-col items-center justify-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                      </div>
+                      <div className="text-white text-xs font-semibold">No notifications</div>
+                      <div className="text-slate-400 text-[11px] max-w-[200px] leading-relaxed">
+                        You&apos;re all caught up! Account alerts and system activity will appear here.
+                      </div>
+                    </div>
+                  ) : (
+                    notifications.map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => handleToggleNotification(n.id, n.actionTab)}
+                        className={`group px-4 py-3 border-b border-white/5 hover:bg-white/[0.04] transition cursor-pointer flex items-start gap-3 ${!n.read ? "bg-sky-500/[0.05]" : ""}`}
+                      >
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === "alert" ? "bg-red-400" :
+                          n.type === "success" ? "bg-lime-400" :
+                            n.type === "warning" ? "bg-amber-400" : "bg-sky-400"
+                          }`} />
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-xs font-medium leading-snug ${!n.read ? "text-white font-semibold" : "text-slate-300"}`}>
+                            {n.title}
+                          </div>
+                          {n.description && (
+                            <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{n.description}</div>
+                          )}
+                          <div className="text-[10px] text-slate-500 mt-1">{n.time}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 mt-1">
+                          {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-sky-400" />}
+                          <button
+                            onClick={(e) => handleDismissNotification(n.id, e)}
+                            title="Dismiss notification"
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-red-400 transition cursor-pointer"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="p-3 border-t border-white/10">
+                  <button onClick={() => { setCurrentTab("Support"); setNotificationsOpen(false); }} className="w-full text-center text-xs text-sky-400 font-semibold hover:text-sky-300 transition py-1 cursor-pointer">View All Notifications →</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Email + Logout (visible) */}
+          {sessionData.email && (
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
+              <div className="text-xs text-white font-medium">{sessionData.email}</div>
+              <button
+                onClick={handleLogout}
+                className="text-xs text-red-300 hover:text-red-400 font-bold transition cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+
+          {/* User Avatar with Menu */}
+          <div className="relative" ref={userRef}>
+            <button
+              onClick={() => { setUserMenuOpen(!userMenuOpen); setHelpOpen(false); setNotificationsOpen(false); setTenantInfoOpen(false); }}
+              className={`w-9 h-9 rounded-full outline outline-1 flex justify-center items-center cursor-pointer transition-all duration-200 ${userMenuOpen
+                ? "ring-2 ring-sky-400/50 outline-white/40 bg-gradient-to-br from-sky-600 to-lime-500"
+                : "outline-white/20 bg-gradient-to-br from-sky-700 to-lime-600 hover:ring-2 hover:ring-white/20"
+                }`}
+            >
+              <div className="text-white text-xs font-bold font-['Plus_Jakarta_Sans']">
+                {sessionData.email ? sessionData.email.substring(0, 2).toUpperCase() : 'AM'}
+              </div>
+            </button>
+
+            {/* User Menu Dropdown */}
+            {userMenuOpen && (
+              <div className="absolute top-[calc(100%+8px)] right-0 w-64 bg-[#0c1f3f] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-[fadeSlideIn_0.15s_ease-out]">
+                <div className="p-4 border-b border-white/10">
+                  <div className="text-white text-sm font-bold">{sessionData.email || "admin@acme.com"}</div>
+                  <div className="text-slate-400 text-[11px] mt-0.5 font-mono">{sessionData.tenantId || "Tenant Admin"}</div>
+                </div>
+                <div className="p-2 space-y-0.5">
+                  {[
+                    { label: "Profile Settings", icon: "👤", action: () => setCurrentTab("Settings") },
+                    { label: "Billing & Usage", icon: "💳", action: () => setCurrentTab("Billing") },
+                    { label: "Team Members", icon: "👥", action: () => setCurrentTab("Settings") },
+                    { label: "API Keys", icon: "🔑", action: () => setCurrentTab("Settings") },
+                  ].map(item => (
+                    <button key={item.label} onClick={() => { item.action(); setUserMenuOpen(false); }} className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-lg transition flex items-center gap-3 cursor-pointer">
+                      <span className="text-sm">{item.icon}</span>
+                      <span className="text-slate-200 text-xs font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-2 border-t border-white/10">
+                  <button onClick={() => { handleLogout(); setUserMenuOpen(false); }} className="w-full text-left px-3 py-2.5 hover:bg-red-500/10 rounded-lg transition flex items-center gap-3 cursor-pointer">
+                    <span className="text-sm">🚪</span>
+                    <span className="text-red-400 text-xs font-semibold">Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex w-full overflow-hidden relative">
+        {/* Left Sidebar Section — static, no scroll */}
+        <aside className="w-64 h-[calc(100vh-3.5rem)] sticky top-[3.5rem] bg-white border-r-[0.80px] border-slate-200 overflow-y-auto shrink-0 select-none flex flex-col" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(0,0,0,0.08) transparent' }}>
+
+          {/* Filter box. With 26 screens, scanning the menu is slower than
+              typing two letters, and it also gives the operator a way to find a
+              screen by what it does rather than by its official name. */}
+          <div className="px-3 pt-4 pb-1">
+            <div className="relative">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                value={navQuery}
+                onChange={(e) => setNavQuery(e.target.value)}
+                placeholder="Find a screen..."
+                aria-label="Filter navigation"
+                className="w-full h-8 pl-8 pr-7 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400 transition"
+              />
+              {navQuery && (
+                <button
+                  onClick={() => setNavQuery("")}
+                  aria-label="Clear navigation filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Sections headers and buttons (Mapped) */}
+          <div className="flex-1 flex flex-col gap-4 pt-3 px-3">
+            {visibleSections.length === 0 && (
+              <div className="px-3 py-6 text-center text-slate-400 text-xs font-['Plus_Jakarta_Sans']">
+                No screen matches &ldquo;{navQuery}&rdquo;.
+              </div>
+            )}
+            {visibleSections.map((section, idx) => {
+              // A filter result must never be hidden behind a fold, so an
+              // active query overrides whatever the operator had collapsed.
+              const folded = !navFilter && collapsed[section.section];
+              return (
+              <div key={idx} className="flex flex-col gap-1">
+                <button
+                  onClick={() => toggleSection(section.section)}
+                  title={section.blurb}
+                  aria-expanded={!folded}
+                  className="px-3 pb-1.5 pt-0.5 flex justify-between items-center gap-2 group cursor-pointer"
+                >
+                  <span className="text-slate-500 group-hover:text-slate-800 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide transition-colors text-left">{section.section}</span>
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    className={`shrink-0 text-slate-300 group-hover:text-slate-500 transition-all duration-200 ${folded ? "-rotate-90" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div className={`flex flex-col gap-0.5 ${folded ? "hidden" : ""}`}>
+                  {section.items.map(item => {
+                    const locked = !canAccess(TAB_DOMAIN[item.tabKey]);
+                    return (
+                    <button
+                      key={item.tabKey}
+                      onClick={() => setCurrentTab(item.tabKey as any)}
+                      // Every item now explains itself on hover. Locked items
+                      // still say why they are locked, which is the more useful
+                      // message when it applies.
+                      title={locked ? `${item.label} -- locked. Request access from your company admin.` : `${item.label} -- ${item.summary}`}
+                      className={`w-full px-3 py-2.5 rounded-[10px] inline-flex justify-start items-center gap-2.5 transition-all ${
+                        currentTab === item.tabKey
+                          ? "bg-slate-900 text-white shadow-md shadow-slate-900/10 font-bold"
+                          : locked
+                          ? "text-slate-400 hover:bg-slate-100 font-medium"
+                          : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                      }`}
+                    >
+                      <img
+                        src={item.iconPath}
+                        className={`w-4 h-4 object-contain transition-all ${currentTab === item.tabKey ? "brightness-0 invert" : "opacity-60 grayscale hover:grayscale-0 hover:opacity-100"}`}
+                        alt={item.label}
+                      />
+                      <div className="justify-center text-sm text-left">{item.label}</div>
+                      {locked && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-slate-400">
+                          <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                        </svg>
+                      )}
+                      {/* Services carries the only badge in the menu: the live
+                          health count. The registry has no static `badge` field
+                          because the one that existed said a hardcoded "18". */}
+                      {!locked && item.tabKey === "Services" && (
+                        <div className="flex-1 min-w-6 inline-flex flex-col justify-start items-end">
+                          <div className={`px-1.5 py-px rounded-[20px] flex flex-col justify-start items-start ${currentTab === item.tabKey ? "bg-white/20 text-white backdrop-blur-sm" : "bg-slate-200 text-slate-500"}`}>
+                            <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono']">
+                              {onlineCount === null || serviceTotal === null ? "…" : `${onlineCount}/${serviceTotal}`}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                    );
+                  })}
+                </div>
+              </div>
+              );
+            })}
+          </div>
+
+          {/* Sidebar Footer */}
+          <div className="px-3 pt-3.5 pb-3 border-t-[0.80px] border-slate-200 flex flex-col gap-1.5 mt-auto">
+            <div className="pb-[0.60px] flex flex-col justify-start items-start">
+              <a href="#" className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">Trust Center</a>
+            </div>
+            <div className="pb-[0.60px] flex flex-col justify-start items-start">
+              <a href="#" className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">Privacy</a>
+            </div>
+            <div className="pb-[0.60px] flex flex-col justify-start items-start">
+              <a href="#" className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">Status page</a>
+            </div>
+            <div className="pb-[0.60px] flex flex-col justify-start items-start">
+              <a href="#" className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">Support SLA</a>
+            </div>
+            <div className="pt-[1.60px] flex flex-col justify-start items-start">
+              <div className="text-slate-500 text-[10px] font-normal font-['IBM_Plex_Mono'] leading-4">Portal v4.2 · Helios tenant</div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Panel Content Frame — scrollable */}
+        <main className="flex-1 px-7 pt-6 pb-14 flex flex-col justify-start items-start bg-slate-50 min-w-0 overflow-y-auto h-[calc(100vh-3.5rem)]">
+
+          <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full">
+
+            {/* Orientation strip: which section you are in, what this screen is
+                for, and the steps to work it. Rendered once here rather than
+                inside each of the 26 screens so every screen gets it and the
+                wording lives in one file. */}
+            <ScreenGuide tabKey={currentTab} />
+
+            {/* Dashboard Tab */}
+            {currentTab === "Dashboard" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-4 w-full">
+                <div className="self-stretch px-6 pt-7 pb-6 bg-white rounded-2xl border-l-[2.40px] border-r-[0.80px] border-t-[0.80px] border-b-[0.80px] border-lime-500 flex flex-col justify-start items-start gap-2 overflow-hidden">
+                  <div className="px-2.5 py-[4.80px] bg-stone-100 rounded-[20px] outline outline-1 outline-offset-[-1px] outline-lime-500/30 inline-flex justify-start items-center gap-1.5">
+                    <div className="size-3 relative overflow-hidden flex justify-center items-center">
+                      <div className="w-1.5 h-[5px] absolute outline outline-1 outline-offset-[-0.50px] outline-lime-500"></div>
+                    </div>
+                    <div className="justify-center text-lime-600 text-[10px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">OPERATOR WORKSPACE</div>
+                  </div>
+                  <div className="w-96 max-w-96 pt-[5px] flex flex-col justify-start items-start">
+                    <div className="justify-center text-slate-800 text-2xl font-bold font-['Plus_Jakarta_Sans'] leading-9">Your ZoikoNex Operator<br />Workspace.</div>
+                  </div>
+                  <div className="w-[614.88px] max-w-[614.88px] flex flex-col justify-start items-start">
+                    <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Monitor deployment, manage your 18 services, review support, and track account health.</div>
+                  </div>
+                  <div className="self-stretch pt-2.5 inline-flex justify-start items-start">
+                    <button className="min-h-10 px-4 py-3 bg-[#1d64b8] hover:bg-[#154e93] transition rounded-[10px] outline outline-1 outline-offset-[-1px] outline-transparent flex justify-center items-center gap-2">
+                      <div className="text-center justify-center text-white text-sm font-bold font-['Plus_Jakarta_Sans']">Review deployment health</div>
+                      <div className="size-4 relative overflow-hidden flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="self-stretch pt-0.5 inline-flex justify-center items-start gap-3">
+                  <div className="flex-1 px-4 py-3.5 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-1.5">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">ACCOUNT HEALTH</div>
+                    </div>
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">Healthy · 86</div>
+                    </div>
+                  </div>
+                  <div className="flex-1 px-4 py-3.5 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-1.5">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">DEPLOYMENT</div>
+                    </div>
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">Go-Live · 82%</div>
+                    </div>
+                  </div>
+                  <div className="flex-1 px-4 py-3.5 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-1.5">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">ACTIVE SERVICES</div>
+                    </div>
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">
+                        {onlineCount === null || serviceTotal === null ? "—" : `${onlineCount} / ${serviceTotal}`}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1 px-4 py-3.5 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-1.5">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-500 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">OPEN TICKETS</div>
+                    </div>
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">2</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="self-stretch px-4 py-4 bg-white rounded-2xl border-l-[2.40px] border-r-[0.80px] border-t-[0.80px] border-b-[0.80px] border-yellow-600 inline-flex justify-start items-center gap-3.5">
+                  <div className="size-9 py-2.5 bg-orange-100 rounded-[10px] inline-flex flex-col justify-start items-center justify-center">
+                    <div className="size-5 relative overflow-hidden flex justify-center items-center">
+                      <img src="/image/dashboard/warning-exclamation.svg" className="w-5 h-5 object-contain" alt="Warning" />
+                    </div>
+                  </div>
+                  <div className="flex-1 inline-flex flex-col justify-start items-start gap-0.5">
+                    <div className="justify-center text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">1 item needs attention</div>
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="self-stretch justify-center text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5">Payment gateway test is failing in pre-production and may block go-live.</div>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-300 flex justify-center items-center hover:bg-slate-50 transition cursor-pointer">
+                    <div className="text-center justify-center text-slate-800 text-xs font-bold font-['Plus_Jakarta_Sans'] leading-5">Review</div>
+                  </button>
+                </div>
+
+                {/* Domain Workspaces Grid — All 18 TM Forum Aligned Microservice Domains */}
+                <div className="self-stretch flex flex-col justify-start items-start gap-3.5 w-full mt-2">
+                  <div className="flex flex-col gap-0.5">
+                    <h2 className="text-base font-extrabold text-slate-900 font-['Plus_Jakarta_Sans']">Domain Workspaces (18 Microservices + Security & Access)</h2>
+                    <p className="text-xs text-slate-500 font-['Plus_Jakarta_Sans'] font-normal">
+                      All TM Forum aligned OSS/BSS domain microservices and Role & Access Control. Select any domain card arrow to open its dedicated management workspace.
+                    </p>
+                  </div>
+
+                  <div className="self-stretch grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+                    {[
+                      {
+                        id: "prod-catalog",
+                        title: "Product Catalogue",
+                        category: "Monetization",
+                        desc: "Plans, bundles, add-ons, eligibility rules, and offer lifecycle.",
+                        icon: "/image/dashboard/services.svg",
+                        tabKey: "CatalogManagement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "rt-charging",
+                        title: "Real-Time Charging",
+                        category: "Monetization",
+                        desc: "Online charging, real-time balance reservations & policies.",
+                        icon: "/image/dashboard/charging-lightning.svg",
+                        tabKey: "UsageCharging",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "rating-engine",
+                        title: "Rating & Pricing",
+                        category: "Monetization",
+                        desc: "Usage rating matrix, tiering, discounts & price calculation.",
+                        icon: "/image/dashboard/bar-chart.svg",
+                        tabKey: "UsageCharging",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "billing-invoice",
+                        title: "Billing & Invoicing",
+                        category: "Monetization",
+                        desc: "Bill cycles, automated invoicing, statement PDF generation.",
+                        icon: "/image/dashboard/billing-document.svg",
+                        tabKey: "BillingManagement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "payments-collections",
+                        title: "Payments & Collections",
+                        category: "Monetization",
+                        desc: "Payment methods, gateways, retries, refunds, and dunning.",
+                        icon: "/image/dashboard/credit-card.svg",
+                        tabKey: "PaymentsManagement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "partner-settlement",
+                        title: "Partner & Settlement",
+                        category: "Monetization",
+                        desc: "Wholesale, interconnect, revenue share, and partner billing.",
+                        icon: "/image/dashboard/user-profile.svg",
+                        tabKey: "PartnerSettlement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "cust-lifecycle",
+                        title: "Customer Lifecycle",
+                        category: "Customer & Engagement",
+                        desc: "Subscriber accounts, lifecycle states, self-care & multi-brand CRM.",
+                        icon: "/image/dashboard/user-profile.svg",
+                        tabKey: "CustomerManagement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "notifications-campaigns",
+                        title: "Notifications & Campaigns",
+                        category: "Customer & Engagement",
+                        desc: "Transactional and promotional SMS, email, & push messaging.",
+                        icon: "/image/dashboard/notifications-bell.svg",
+                        tabKey: "CustomerManagement",
+                        badge: "Available",
+                        badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
+                      },
+                      {
+                        id: "esim-sim-mgmt",
+                        title: "eSIM & SIM Management",
+                        category: "Connectivity & Provisioning",
+                        desc: "GSMA eSIM RSP profile sync, activation & SIM inventory.",
+                        icon: "/image/dashboard/mobile-sim.svg",
+                        tabKey: "OrderManagement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "iot-connectivity",
+                        title: "IoT Connectivity",
+                        category: "Connectivity & Provisioning",
+                        desc: "Device fleet orchestration, usage aggregation, and remote actions.",
+                        icon: "/image/dashboard/settings-compass.svg",
+                        tabKey: "OrderManagement",
+                        badge: "Available",
+                        badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
+                      },
+                      {
+                        id: "number-inventory",
+                        title: "Number & Inventory",
+                        category: "Connectivity & Provisioning",
+                        desc: "MSISDN number ranges, MNP porting, reservation & inventory.",
+                        icon: "/image/dashboard/services.svg",
+                        tabKey: "OrderManagement",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "taxation-regulatory",
+                        title: "Taxation & Regulatory",
+                        category: "Compliance & Trust",
+                        desc: "Jurisdiction tax engine, regulatory fees, exemptions & rules.",
+                        icon: "/image/dashboard/shield.svg",
+                        tabKey: "TaxJurisdiction",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "compliance-kyc",
+                        title: "Compliance & KYC",
+                        category: "Compliance & Trust",
+                        desc: "Identity verification, sanction screening & onboarding checks.",
+                        icon: "/image/dashboard/shield-check.svg",
+                        tabKey: "CustomerLifecycleKyc",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "evidence-ledger",
+                        title: "Evidence Ledger",
+                        category: "Compliance & Trust",
+                        desc: "Immutable evidence of charging, billing & governance events.",
+                        icon: "/image/dashboard/document.svg",
+                        tabKey: "EvidenceLedger",
+                        badge: "Protected",
+                        badgeStyle: "bg-slate-100 text-slate-700 border-slate-300"
+                      },
+                      {
+                        id: "ai-gov-controls",
+                        title: "AI Governance",
+                        category: "Intelligence",
+                        desc: "Tiered AI controls with human approval for material actions.",
+                        icon: "/image/dashboard/code-tags.svg",
+                        tabKey: "Trust",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "analytics-reporting",
+                        title: "Analytics & Reporting",
+                        category: "Intelligence",
+                        desc: "Operational dashboards, revenue assurance, and reports.",
+                        icon: "/image/dashboard/bar-chart.svg",
+                        tabKey: "RegulatoryExports",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "mediation-usage",
+                        title: "Mediation & Usage",
+                        category: "Platform & Integration",
+                        desc: "CDR ingestion, normalization, deduplication & enrichment.",
+                        icon: "/image/dashboard/activity-pulse.svg",
+                        tabKey: "UsageCharging",
+                        badge: "Active",
+                        badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      },
+                      {
+                        id: "api-gateway",
+                        title: "Integrations & Webhooks",
+                        category: "Platform & Integration",
+                        desc: "Stripe payment gateway, Vault keys, API allow-lists & webhooks.",
+                        icon: "/image/dashboard/api-braces.svg",
+                        tabKey: "Integration",
+                        badge: "Configured",
+                        badgeStyle: "bg-indigo-50 text-sky-700 border-sky-200"
+                      },
+                      {
+                        id: "role-access-control",
+                        title: "Role & Access Control",
+                        category: "Identity & Security",
+                        desc: "Team users, custom permission roles, SAML/OIDC SSO, & security rules.",
+                        icon: "/image/dashboard/settings-gear.svg",
+                        tabKey: "Settings",
+                        badge: "Gated",
+                        badgeStyle: "bg-[#1d64b8]/10 text-[#1d64b8] border-[#1d64b8]/30"
+                      }
+                    ].map((card) => (
+                      <div
+                        key={card.id}
+                        onClick={() => setCurrentTab(card.tabKey as any)}
+                        className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md hover:border-[#1d64b8]/40 transition-all flex flex-col justify-between group cursor-pointer min-h-[190px]"
+                      >
+                        <div className="flex flex-col gap-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-[#1d64b8]/10 transition-colors flex items-center justify-center p-2">
+                              <img src={card.icon} alt="" className="w-4 h-4 object-contain" />
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border font-mono uppercase tracking-wide ${card.badgeStyle}`}>
+                              {card.badge}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#1d64b8] transition-colors">{card.title}</h3>
+                            <p className="text-[9.5px] font-bold font-mono text-slate-400 uppercase tracking-wider mt-0.5">{card.category}</p>
+                          </div>
+
+                          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                            {card.desc}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 group-hover:text-[#1d64b8] transition-colors">
+                          <span>Manage Domain</span>
+                          <div className="w-7 h-7 rounded-full bg-slate-100 group-hover:bg-[#1d64b8] group-hover:text-white transition-all flex items-center justify-center">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Main Title Header */}
+            {currentTab === "Services" && (
+              <div className="self-stretch inline-flex justify-start items-center">
+                <div className="w-[1132px] h-28 relative">
+                  <div className="w-[704px] left-0 top-[20px] absolute inline-flex flex-col justify-start items-start">
+                    <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">
+                      {currentConsole === "super-admin"
+                        ? "Super Admin Console"
+                        : currentConsole === "customer-portal"
+                          ? "GoLite Customer Portal"
+                          : "Telecom services"
+                      }
+                    </div>
+                  </div>
+                  <div className="w-[704px] max-w-[717.36px] pt-px left-0 top-[60px] absolute inline-flex flex-col justify-start items-start">
+                    <div className="w-[902px] justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                      {currentConsole === "super-admin"
+                        ? "Global operational command plane for governing tenants, platform integrity, and global infrastructure health."
+                        : currentConsole === "customer-portal"
+                          ? "White-label customer operating portal for managing connectivity plans, data usage, billing, and credentials."
+                          : "Your 18 OSS/BSS domains, organized into six working groups. Toggle activation, check health, and open any service to configure it."
+                      }
+                    </div>
+                    {currentConsole === "tenant-admin" && (
+                      <div className="mt-2 inline-flex items-center gap-2 bg-indigo-50/50 border border-indigo-100/50 rounded-lg px-2.5 py-1 select-none">
+                        <span className={`inline-block size-2 rounded-full ${
+                          onlineCount === null
+                            ? "bg-slate-300"
+                            : serviceTotal !== null && onlineCount === serviceTotal
+                              ? "bg-emerald-500 animate-pulse"
+                              : onlineCount === 0
+                                ? "bg-rose-500"
+                                : "bg-amber-500"
+                        }`}></span>
+                        <span className="text-slate-600 text-[11px] font-semibold font-['IBM_Plex_Mono']">
+                          {onlineCount === null || serviceTotal === null
+                            ? "Checking service health…"
+                            : onlineCount === serviceTotal
+                              ? `All ${serviceTotal} services responding`
+                              : `${onlineCount}/${serviceTotal} services responding`
+                          }
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tenant Admin view body */}
+            {currentTab === "Services" && currentConsole === "tenant-admin" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-10 w-full transition-all duration-300">
+                {/* Working groups */}
+                <div className="self-stretch flex flex-col justify-start items-start gap-10 w-full">
+                  {groups.map((group) => {
+                    const groupServices = services.filter((s) => group.serviceIds.includes(s.id));
+                    const activeCount = groupServices.filter((s) => s.active).length;
+                    const totalCount = groupServices.length;
+
+                    return (
+                      <div key={group.id} className="self-stretch flex flex-col justify-start items-start gap-3.5 w-full">
+
+                        {/* Group Header */}
+                        <div className="self-stretch inline-flex justify-start items-end gap-2.5 w-full">
+                          <div className="justify-center text-slate-800 text-base font-extrabold font-['Plus_Jakarta_Sans'] leading-6">{group.title}</div>
+                          <div className="px-2 py-[2.80px] bg-slate-100 rounded-md outline outline-1 outline-offset-[-1px] outline-slate-200/50 flex justify-start items-center gap-[5px]">
+                            <div className="justify-center text-slate-600 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">
+                              {activeCount}/{totalCount} active
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cards Grid */}
+                        <div className="self-stretch grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[25px] w-full">
+                          {groupServices.map((service) => {
+                            const isProvisioning = service.id === "partner-settlement" && !service.active;
+                            const cardLocked = !canAccess(SERVICE_DOMAIN[service.id]);
+
+                            return (
+                              <div
+                                key={service.id}
+                                className={`bg-white rounded-2xl border border-slate-200 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] flex flex-col justify-between p-6 transition duration-300 min-h-[220px] ${
+                                  cardLocked ? "opacity-60 grayscale" : "hover:shadow-md"
+                                }`}
+                              >
+                                <div className="self-stretch flex flex-col justify-start items-start w-full">
+                                  {/* Card Header */}
+                                  <div className="self-stretch inline-flex justify-start items-center gap-3.5 w-full">
+                                    <div className="p-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl flex justify-center items-center shrink-0 w-11 h-11 text-sky-700">
+                                      <img src={service.iconPath} alt="" className="w-5 h-5 object-contain" />
+                                    </div>
+                                    <div className="flex-1 inline-flex flex-col justify-start items-start">
+                                      <div className="justify-center text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">{service.name}</div>
+                                      <div className="justify-center text-slate-400 text-[9.50px] font-normal font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide mt-0.5">
+                                        MONETIZATION · {service.version}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Badges */}
+                                  <div className="self-stretch pt-3.5 flex flex-wrap justify-start items-start gap-1.5 w-full">
+                                    {service.badges.map((badge) => {
+                                      let badgeStyle = "bg-slate-50 text-slate-500 outline-slate-200/50";
+                                      let icon = null;
+
+                                      if (badge === "ACTIVE") {
+                                        badgeStyle = "bg-indigo-50 text-sky-700 outline-sky-700/30";
+                                        icon = (
+                                          <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2 5L4 7L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                          </svg>
+                                        );
+                                      } else if (badge === "HEALTHY") {
+                                        badgeStyle = "bg-stone-200/50 text-lime-600 outline-lime-500/30";
+                                        icon = (
+                                          <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2 5L4 7L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                          </svg>
+                                        );
+                                      } else if (badge === "WATCH") {
+                                        badgeStyle = "bg-orange-100/60 text-yellow-600 outline-yellow-600/40";
+                                        icon = (
+                                          <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M5 2V6M5 8H5.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                          </svg>
+                                        );
+                                      } else if (badge === "PROVISIONING") {
+                                        badgeStyle = "bg-indigo-500/10 text-indigo-500 outline-indigo-500/40";
+                                        icon = (
+                                          <svg className="w-2.5 h-2.5 shrink-0 animate-spin" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M5 2V4M5 6V8M2 5H4M6 5H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                                          </svg>
+                                        );
+                                      } else if (badge === "AVAILABLE") {
+                                        badgeStyle = "bg-stone-50 text-slate-500 outline-slate-200/50";
+                                        icon = (
+                                          <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M5 2V8M2 5H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                          </svg>
+                                        );
+                                      }
+
+                                      return (
+                                        <div
+                                          key={badge}
+                                          className={`px-2 pt-[2.50px] pb-[3.10px] rounded-md outline outline-1 outline-offset-[-1px] flex justify-start items-center gap-[5px] text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide ${badgeStyle}`}
+                                        >
+                                          {icon}
+                                          <div>{badge}</div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Description */}
+                                <div className="self-stretch pt-2.5 flex flex-col justify-start items-start">
+                                  <div className="self-stretch flex flex-col justify-start items-start">
+                                    <div className="self-stretch text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5 min-h-[40px]">
+                                      {service.description}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Footer Actions */}
+                                <div className="self-stretch pt-3.5 flex flex-col justify-start items-start">
+                                  <div className="self-stretch pt-3 border-t-[0.80px] border-slate-200 inline-flex justify-start items-center gap-2.5 w-full">
+                                    {cardLocked ? (
+                                      <div className="w-full flex items-center gap-1.5 text-slate-500" title="Request access from your company admin">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                                          <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                                        </svg>
+                                        <div className="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Access blocked — request access from your company admin</div>
+                                      </div>
+                                    ) : isProvisioning ? (
+                                      <div className="px-2 py-[2.80px] bg-indigo-500/10 rounded-md outline outline-1 outline-offset-[-1px] outline-indigo-500/40 flex justify-start items-center gap-[5px] text-indigo-500">
+                                        <svg className="w-2.5 h-2.5 shrink-0 animate-spin" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="M5 2V4M5 6V8M2 5H4M6 5H8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        <div className="justify-center text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">PROVISIONING</div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                      <div
+                                        onClick={() => handleToggle(service.id)}
+                                        className={`w-10 h-6 relative cursor-pointer rounded-[999px] transition-colors duration-300 flex flex-col justify-start items-start py-[3px] px-[3px] shrink-0 ${service.active ? "bg-lime-600 pl-5 pr-[3px]" : "bg-slate-200 pl-[3px] pr-5"
+                                          }`}
+                                      >
+                                        <div className="size-4 bg-white rounded-lg shadow-[0px_1px_2px_0px_rgba(0,0,0,0.30)] transition-all duration-300"></div>
+                                      </div>
+
+                                      <div className="flex-1 min-w-20 inline-flex flex-col justify-start items-end">
+                                        <button
+                                          onClick={() => {
+                                            setSelectedService(service);
+                                            setRequestMethod("GET");
+                                            setRequestPath("/health");
+                                            setRequestHeaders(`{\n  "X-Tenant-ID": "${portalTenantId()}"\n}`);
+                                            setRequestBody("");
+                                            setApiResponse(null);
+                                            setSelectedEndpoint("");
+                                          }}
+                                          className="px-3 py-1.5 bg-slate-50 rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex justify-center items-center hover:bg-slate-100 transition"
+                                        >
+                                          <div className="text-center justify-center text-slate-600 text-xs font-bold font-['Plus_Jakarta_Sans']">Manage</div>
+                                        </button>
+                                      </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Super Admin view body */}
+            {currentTab === "Services" && currentConsole === "super-admin" && (
+              <div className="self-stretch flex flex-col gap-6 w-full transition-all duration-300">
+                {/* This used to be a mockup of the platform console: invented tenant
+                    counts, an invented tenant registry and an invented log feed. The
+                    real console now exists at /Super-admin, and it is the only place
+                    that can show this data honestly — cross-tenant reads need
+                    role_platform_admin, which a tenant-console session does not have
+                    (only identity-tenancy and order-management honour the override at
+                    all). Faking it here was worse than not having it. */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col items-start gap-4">
+                  <div>
+                    <h3 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">
+                      The platform console is a separate application
+                    </h3>
+                    <p className="text-slate-600 text-sm mt-1 max-w-[640px]">
+                      Cross-tenant views — the tenant registry, platform-wide health, the evidence chain — live at{" "}
+                      <span className="font-mono text-xs">/Super-admin</span> and require a platform-admin session.
+                      This tenant console cannot read another tenant&apos;s data, so anything shown here would be
+                      invented rather than measured.
+                    </p>
+                  </div>
+                  <Link
+                    href="/Super-admin"
+                    className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
+                  >
+                    Open the platform console
+                  </Link>
+                  <p className="text-[11px] text-slate-400">
+                    Signing in there is restricted to <span className="font-mono">super-admin.zoikonex.com</span>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Customer Portal view body */}
+            {currentTab === "Services" && currentConsole === "customer-portal" && (
+              <div className="self-stretch flex flex-col gap-6 w-full transition-all duration-300">
+
+                {/* Account Credentials Panel */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm font-sans flex flex-col md:flex-row gap-5 items-end">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">BSS Customer ID</label>
+                    <input
+                      type="text"
+                      value={custPortalCustomerId}
+                      onChange={(e) => setCustPortalCustomerId(e.target.value)}
+                      className="w-full h-10 border border-slate-200 rounded-lg px-3.5 text-xs text-slate-700 bg-slate-50 focus:outline-none focus:border-indigo-500 focus:bg-white font-mono"
+                      placeholder="e.g. eac403a6-bf76-49b3-907d-5a4bb6f81f4d"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">BSS Billing Account ID / Number</label>
+                    <input
+                      type="text"
+                      value={custPortalAccountId}
+                      onChange={(e) => setCustPortalAccountId(e.target.value)}
+                      className="w-full h-10 border border-slate-200 rounded-lg px-3.5 text-xs text-slate-700 bg-slate-50 focus:outline-none focus:border-indigo-500 focus:bg-white font-mono"
+                      placeholder="e.g. 393d645f-07ca-460c-93f1-939a7676bbe3"
+                    />
+                  </div>
+                  <button
+                    onClick={() => fetchPortalInvoices(custPortalAccountId)}
+                    className="h-10 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    Sync Invoices
+                  </button>
+                </div>
+
+                {/* Status Banner */}
+                {portalMessage && (
+                  <div className={`p-4 rounded-xl border text-xs font-semibold font-sans text-left ${portalMessage.type === "success"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                    : "bg-rose-50 border-rose-200 text-rose-600"
+                    }`}>
+                    {portalMessage.text}
+                  </div>
+                )}
+
+                {/* Interactive Control Centre Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                  {/* 1. Placing eSIM orders */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[220px]">
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Purchase eSIM Plan (POST /v1/orders)</span>
+                        <h3 className="text-sm font-bold text-slate-800 mt-2 font-mono">Offer: {orderOfferId.slice(0, 18)}...</h3>
+                      </div>
+                      <div className="space-y-2.5">
+                        <div>
+                          <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Target Offer ID</label>
+                          <input
+                            type="text"
+                            value={orderOfferId}
+                            onChange={(e) => setOrderOfferId(e.target.value)}
+                            className="w-full h-8 border border-slate-200 rounded px-2 text-[10px] text-slate-700 bg-slate-50 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-slate-400 font-bold uppercase block mb-1">Target Product ID</label>
+                          <input
+                            type="text"
+                            value={orderProductId}
+                            onChange={(e) => setOrderProductId(e.target.value)}
+                            className="w-full h-8 border border-slate-200 rounded px-2 text-[10px] text-slate-700 bg-slate-50 font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handlePlaceOrder}
+                      disabled={portalLoading}
+                      className="w-full py-2.5 mt-4 bg-sky-700 hover:bg-sky-800 text-white rounded-lg text-xs font-bold transition text-center disabled:bg-slate-400 flex items-center justify-center gap-1.5"
+                    >
+                      {portalLoading ? "Processing..." : "Place eSIM Order"}
+                    </button>
+                  </div>
+
+                  {/* 2. Prepaid Balance Wallet */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[220px]">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prepaid Balance Wallet</span>
+                      <h3 className="text-4xl font-extrabold text-slate-800 mt-3">${prepaidBalance.toFixed(2)}</h3>
+                      <p className="text-xs text-slate-500 mt-1.5 font-sans leading-relaxed">
+                        Prepaid balance managed on rating-charging engine (port 8085).
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setPrepaidBalance(prev => prev + 10);
+                        setPortalMessage({ text: "Wallet top-up simulation completed! $10.00 added.", type: "success" });
+                      }}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition text-center flex items-center justify-center gap-1.5"
+                    >
+                      Top Up $10.00
+                    </button>
+                  </div>
+
+                  {/* 3. Run Billing Invoice Cycle */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[220px]">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trigger Bill Run (TMF678)</span>
+                      <h3 className="text-lg font-bold text-slate-800 mt-3">Account Invoice Cycle</h3>
+                      <p className="text-xs text-slate-500 mt-1.5 font-sans leading-relaxed">
+                        Invokes draft invoice generation on port 8092 and publishes to ledger.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleRunBilling}
+                      disabled={portalLoading}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition text-center disabled:bg-slate-400 flex items-center justify-center"
+                    >
+                      {portalLoading ? "Running Cycle..." : "Execute Billing Cycle"}
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Invoices List Registry Table */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-2">
+                  <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Account Issued Invoices (Port 8092)</span>
+                    <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded font-mono font-semibold">Ledger Synced</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="px-6 py-3">Invoice ID</th>
+                          <th className="px-6 py-3">Bill Cycle</th>
+                          <th className="px-6 py-3">Amount</th>
+                          <th className="px-6 py-3">Status</th>
+                          <th className="px-6 py-3">Issued Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        {portalLoading ? (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-6">
+                              <div className="flex flex-col gap-4">
+                                {[1, 2, 3].map(i => (
+                                  <div key={i} className="flex items-center justify-between animate-pulse">
+                                    <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ) : portalInvoices.length > 0 ? (
+                          portalInvoices.map((inv: any) => (
+                            <tr key={inv.id}>
+                              <td className="px-6 py-4 font-mono text-xs font-bold text-sky-700">{inv.id}</td>
+                              <td className="px-6 py-4 text-xs font-semibold">{inv.bill_cycle_id || "CURRENT_CYCLE"}</td>
+                              <td className="px-6 py-4 text-xs font-bold">${((inv.amount_minor_units || 4500) / 100).toFixed(2)} {inv.currency_code || "USD"}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${inv.status === "ISSUED"
+                                  ? "bg-emerald-50 text-emerald-600"
+                                  : inv.status === "DRAFT"
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-slate-50 text-slate-600"
+                                  }`}>
+                                  {inv.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                                {new Date(inv.created_at || Date.now()).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-10 text-center text-xs text-slate-400 italic">
+                              No billing invoice cycles found for this account. Click "Execute Billing Cycle" above to generate one.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* Dashboard Tab */}
+            {currentTab === "Dashboard" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-start items-center">
+                  <div className="w-[1132px] h-20 relative">
+                    <div className="w-[704px] left-0 top-[20px] absolute inline-flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">
+                        Dashboard
+                      </div>
+                    </div>
+                    <div className="w-[704px] max-w-[717.36px] pt-px left-0 top-[60px] absolute inline-flex flex-col justify-start items-start">
+                      <div className="w-[902px] justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                        Operational dashboard and key tenant activity statistics.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-4">
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-xl border border-slate-200/50 shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenant Health</span>
+                    <h3 className="text-3xl font-extrabold text-slate-800 mt-2">100% Online</h3>
+                    <p className="text-xs text-slate-500 mt-1">All TM Forum cores connected</p>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-xl border border-slate-200/50 shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Subscribers</span>
+                    <h3 className="text-3xl font-extrabold text-slate-800 mt-2">124,592</h3>
+                    <p className="text-xs text-slate-500 mt-1">Across all registered brands</p>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md p-6 rounded-xl border border-slate-200/50 shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data Ingested</span>
+                    <h3 className="text-3xl font-extrabold text-slate-800 mt-2">42.8 GB</h3>
+                    <p className="text-xs text-slate-500 mt-1">Real-time CDR rating mediation</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Trust Vault Tab */}
+            {currentTab === "Trust" && (canAccess(TAB_DOMAIN.Trust) ? (
+              <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-start items-center">
+                  <div className="w-[1132px] h-20 relative">
+                    <div className="w-[704px] left-0 top-[20px] absolute inline-flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">
+                        Trust & procurement vault
+                      </div>
+                    </div>
+                    <div className="w-[704px] max-w-[717.36px] pt-px left-0 top-[60px] absolute inline-flex flex-col justify-start items-start">
+                      <div className="w-[902px] justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                        Controlled access to procurement, security, and legal materials. Sensitive documents are gated and logged.
+                        <span className="block mt-1 text-[11px] text-amber-700">
+                          Static catalogue — no document-management service owns this list yet, so versions and statuses
+                          are maintained in code rather than read from a system of record.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="self-stretch pt-2 bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start overflow-hidden shadow-sm mt-4">
+                  <div className="self-stretch min-w-[560px] flex flex-col justify-start items-start w-full">
+                    <div className="self-stretch inline-flex justify-center items-start w-full">
+                      <div className="w-80 px-4 py-3 bg-slate-50 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                        <div className="justify-center text-slate-500 text-[9.50px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">DOCUMENT</div>
+                      </div>
+                      <div className="w-44 px-4 py-3 bg-slate-50 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                        <div className="justify-center text-slate-500 text-[9.50px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">CATEGORY</div>
+                      </div>
+                      <div className="w-36 px-4 py-3 bg-slate-50 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                        <div className="justify-center text-slate-500 text-[9.50px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">VERSION</div>
+                      </div>
+                      <div className="w-52 px-4 py-3 bg-slate-50 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                        <div className="justify-center text-slate-500 text-[9.50px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">ACCESS</div>
+                      </div>
+                      <div className="flex-1 min-w-[12rem] h-10 bg-slate-50 border-b-[0.80px] border-slate-200"></div>
+                    </div>
+                    <div className="self-stretch flex flex-col justify-start items-start w-full">
+                      {trustDocuments.map((doc, i) => (
+                        <div key={i} className="self-stretch inline-flex justify-center items-start w-full hover:bg-slate-50/50 transition duration-150">
+                          <div className="w-80 px-4 py-5 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                            <div className="justify-center text-slate-800 text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-5">{doc.name}</div>
+                          </div>
+                          <div className="w-44 px-4 py-5 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                            <div className="justify-center text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5">{doc.category}</div>
+                          </div>
+                          <div className="w-36 px-4 py-5 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                            <div className="justify-center text-slate-600 text-xs font-normal font-['IBM_Plex_Mono'] leading-5">{doc.version}</div>
+                          </div>
+                          <div className="w-52 px-4 py-4 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-start items-start">
+                            {doc.status === "APPROVED" && (
+                              <div className="px-2 py-[2.80px] bg-stone-200 rounded-md outline outline-1 outline-offset-[-1px] outline-lime-500/30 inline-flex justify-start items-center gap-[5px]">
+                                <div className="size-2.5 relative overflow-hidden flex justify-center items-center">
+                                  <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="2.5"><path d="M2 5L4 7L8 3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                </div>
+                                <div className="justify-center text-lime-600 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">APPROVED</div>
+                              </div>
+                            )}
+                            {doc.status === "RESTRICTED" && (
+                              <div className="px-2 py-[2.80px] bg-slate-50 rounded-md outline outline-1 outline-offset-[-1px] outline-slate-300 inline-flex justify-start items-center gap-[5px]">
+                                <div className="size-2.5 relative overflow-hidden flex justify-center items-center">
+                                  <svg className="w-2.5 h-2.5 text-slate-500" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="3" width="6" height="5" rx="1" /><path d="M3.5 3V2a1.5 1.5 0 113 0v1" /></svg>
+                                </div>
+                                <div className="justify-center text-slate-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">RESTRICTED</div>
+                              </div>
+                            )}
+                            {doc.status === "REQUESTED" && (
+                              <div className="px-2 py-[2.80px] bg-indigo-500/10 rounded-md outline outline-1 outline-offset-[-1px] outline-indigo-500/40 inline-flex justify-start items-center gap-[5px]">
+                                <div className="size-2.5 relative overflow-hidden flex justify-center items-center">
+                                  <svg className="w-2.5 h-2.5 text-indigo-500 animate-pulse" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.8"><circle cx="5" cy="5" r="4" /><path d="M5 2.5v3M5.01 7.5h.01" /></svg>
+                                </div>
+                                <div className="justify-center text-indigo-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">REQUESTED</div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-[12rem] px-4 py-3 border-b-[0.80px] border-slate-200 inline-flex flex-col justify-center items-end self-stretch">
+                            {doc.status === "APPROVED" ? (
+                              <div className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 transition cursor-pointer rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex justify-center items-center">
+                                <div className="text-center justify-center text-slate-600 text-xs font-bold font-['Plus_Jakarta_Sans']">Download</div>
+                              </div>
+                            ) : doc.status === "RESTRICTED" ? (
+                              <div className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 transition cursor-pointer rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex justify-center items-center">
+                                <div className="text-center justify-center text-slate-600 text-xs font-bold font-['Plus_Jakarta_Sans']">Request access</div>
+                              </div>
+                            ) : (
+                              <div className="text-right justify-center text-slate-400 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">Pending</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="self-stretch inline-flex justify-start items-center gap-2 mt-2">
+                  <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="10" cy="10" r="8" /><path d="M10 6v4M10 14h.01" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <div className="justify-center text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">
+                    Document access is recorded for controlled trust materials. Some items require NDA or qualified review.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <LockedPanel label="Trust Vault" />
+            ))}
+
+            {/* Documentation Tab */}
+            {currentTab === "Documentation" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
+                <div className="self-stretch pb-1.5 inline-flex justify-start items-center">
+                  <div className="inline-flex flex-col justify-start items-start gap-1">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">Documentation</div>
+                    </div>
+                    <div className="w-full max-w-[717.36px] pt-px flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Role-filtered guides and references for your enabled modules.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-96 px-3 py-2.5 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-slate-300 flex flex-col justify-start items-start overflow-hidden">
+                  <div className="self-stretch flex flex-col justify-start items-start overflow-hidden">
+                    <input type="text" placeholder="Search documentation…" className="w-full bg-transparent text-slate-700 text-sm font-normal font-['Plus_Jakarta_Sans'] outline-none placeholder-neutral-500" />
+                  </div>
+                </div>
+
+                <div className="self-stretch grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[18px] w-full pt-1">
+                  {docGuides.map((guide, i) => (
+                    <div key={i} className="self-stretch px-5 py-5 bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-1.5 hover:shadow-md transition cursor-pointer">
+                      <div className="self-stretch flex flex-col justify-start items-start">
+                        <div className="self-stretch justify-center text-slate-500 text-[9px] font-normal font-['IBM_Plex_Mono'] uppercase leading-3 tracking-wide">{guide.category}</div>
+                      </div>
+                      <div className="self-stretch flex flex-col justify-start items-start">
+                        <div className="self-stretch justify-center text-sky-700 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">{guide.title}</div>
+                      </div>
+                      <div className="self-stretch flex flex-col justify-start items-start">
+                        <div className="self-stretch justify-center text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-5">{guide.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Deployment Tab */}
+            {currentTab === "Deployment" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-4 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-between items-center">
+                  <div className="inline-flex flex-col justify-start items-start gap-1">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">Deployment readiness</div>
+                    </div>
+                    <div className="w-full max-w-[717.36px] pt-px flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Stage-driven, controlled implementation across environments and integrations.</div>
+                    </div>
+                  </div>
+                  <div className="px-2 py-[2.80px] bg-indigo-50 rounded-md outline outline-1 outline-sky-700/30 flex justify-start items-center gap-1.5">
+                    <svg className="w-3 h-3 text-sky-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <div className="justify-center text-sky-700 text-xs font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">MODEL: DEDICATED CLOUD</div>
+                  </div>
+                </div>
+
+                {/* Progress Bar Container */}
+                <div className="self-stretch px-5 pt-6 pb-5 bg-white rounded-2xl outline outline-1 outline-slate-200 flex flex-col justify-start items-start gap-1 shadow-sm">
+                  <div className="self-stretch pb-1 flex flex-col justify-start items-start">
+                    <div className="justify-center text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">Current stage</div>
+                  </div>
+                  <div className="self-stretch pb-3.5 inline-flex flex-wrap justify-start items-start gap-2">
+                    {["Discovery", "Architecture", "Integration", "Sandbox", "POC", "Contracting", "Build", "QA", "Pre-Production"].map(stage => (
+                      <div key={stage} className="px-3 py-1.5 bg-stone-100 rounded-full outline outline-1 outline-lime-500/30">
+                        <div className="justify-center text-lime-600 text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">{stage}</div>
+                      </div>
+                    ))}
+                    <div className="px-3 py-1.5 bg-sky-700 rounded-full outline outline-1 outline-sky-700">
+                      <div className="justify-center text-white text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">Go-Live</div>
+                    </div>
+                    <div className="px-3 py-1.5 bg-white rounded-full outline outline-1 outline-slate-300">
+                      <div className="justify-center text-slate-500 text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-4">Hypercare</div>
+                    </div>
+                  </div>
+                  <div className="self-stretch h-2 bg-slate-100 rounded-full overflow-hidden w-full relative">
+                    <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-sky-700 to-lime-500 w-[82%] rounded-full"></div>
+                  </div>
+                  <div className="self-stretch pt-2 flex flex-col justify-start items-start">
+                    <div className="justify-center text-slate-600 text-xs font-normal font-['Plus_Jakarta_Sans'] leading-4">82% ready · 9 of 11 milestones complete · 1 blocker</div>
+                  </div>
+                </div>
+
+                {/* Grid Content */}
+                <div className="self-stretch grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+                  {/* Milestones */}
+                  <div className="px-5 py-5 bg-white rounded-2xl outline outline-1 outline-slate-200 flex flex-col gap-1.5 shadow-sm">
+                    <div className="justify-center text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6 mb-2">Milestones</div>
+                    <div className="flex flex-col">
+                      {[
+                        { name: "Discovery & scoping", date: "Completed Apr 2", status: "done" },
+                        { name: "Architecture review", date: "Completed Apr 18", status: "done" },
+                        { name: "Integration mapping", date: "Completed May 5", status: "done" },
+                        { name: "Sandbox validation", date: "Completed May 20", status: "done" },
+                        { name: "POC sign-off", date: "Completed Jun 2", status: "done" },
+                        { name: "Contracting", date: "Completed Jun 10", status: "done" },
+                        { name: "Build", date: "Completed Jun 18", status: "done" },
+                        { name: "QA", date: "Completed Jun 22", status: "done" },
+                        { name: "Data migration dry-run", date: "Completed Jun 24", status: "done" },
+                        { name: "Payment gateway certification", date: "Blocked — sandbox test failing", status: "blocked" },
+                        { name: "Go-live readiness review", date: "In progress", status: "progress" }
+                      ].map((item, i) => (
+                        <div key={i} className={`py-3 ${i !== 10 ? 'border-b border-slate-200' : ''} flex items-center gap-3`}>
+                          <div className={`w-6 h-6 rounded-xl flex justify-center items-center ${item.status === 'done' ? 'bg-stone-100 text-lime-600' : item.status === 'blocked' ? 'bg-rose-50 text-red-500' : 'bg-indigo-50 text-sky-700'}`}>
+                            {item.status === 'done' && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                            {item.status === 'blocked' && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                            {item.status === 'progress' && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans']">{item.name}</span>
+                            <span className="text-slate-500 text-xs font-normal font-['Plus_Jakarta_Sans']">{item.date}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    {/* Integration Readiness */}
+                    <div className="px-5 py-5 bg-white rounded-2xl outline outline-1 outline-slate-200 shadow-sm flex flex-col gap-2.5">
+                      <div className="justify-center text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6">Integration readiness</div>
+                      <div className="flex flex-col">
+                        {[
+                          { name: "Carrier / network", status: "READY", color: "lime" },
+                          { name: "Tax engine", status: "READY", color: "lime" },
+                          { name: "Payment gateway", status: "BLOCKED", color: "red" },
+                          { name: "KYC provider", status: "READY", color: "lime" },
+                          { name: "eSIM / RSP", status: "READY", color: "lime" },
+                          { name: "CRM", status: "READY", color: "lime" },
+                          { name: "Data warehouse", status: "IN PROGRESS", color: "yellow" }
+                        ].map((item, i) => (
+                          <div key={i} className={`py-2.5 ${i !== 6 ? 'border-b border-slate-200' : ''} flex justify-between items-center`}>
+                            <div className="text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans']">{item.name}</div>
+                            <div className={`px-2 py-1 rounded-md outline outline-1 flex items-center gap-1.5 ${item.color === 'lime' ? 'bg-stone-100 outline-lime-500/30 text-lime-600' :
+                              item.color === 'red' ? 'bg-rose-50 outline-red-500/40 text-red-500' :
+                                'bg-orange-50 outline-yellow-600/40 text-yellow-600'
+                              }`}>
+                              {item.color === 'lime' && <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                              {item.color === 'red' && <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                              {item.color === 'yellow' && <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+                              <span className="text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">{item.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Go-Live Checklist */}
+                    <div className="self-stretch px-5 py-5 bg-white rounded-2xl outline outline-1 outline-offset-[-1px] outline-slate-200 inline-flex flex-col justify-start items-start gap-2.5">
+                      <div className="self-stretch flex flex-col justify-start items-start">
+                        <div className="self-stretch justify-center text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] leading-6">Go-live checklist</div>
+                      </div>
+                      <div className="self-stretch flex flex-col justify-start items-start">
+                        <div className="self-stretch py-2.5 border-b-[0.80px] border-slate-200 inline-flex justify-start items-start gap-2.5">
+                          <div className="w-6 h-5 pl-1 pr-[3px] pt-px pb-[3px]">
+                            <img src="/image/dashboard/green-check.svg" className="w-full h-full object-contain" alt="" />
+                          </div>
+                          <div className="justify-center text-slate-500 text-xs font-semibold font-['Plus_Jakarta_Sans'] line-through leading-5">Security sign-off</div>
+                        </div>
+                        <div className="self-stretch py-2.5 border-b-[0.80px] border-slate-200 inline-flex justify-start items-start gap-2.5">
+                          <div className="w-6 h-5 pl-1 pr-[3px] pt-px pb-[3px]">
+                            <img src="/image/dashboard/green-check.svg" className="w-full h-full object-contain" alt="" />
+                          </div>
+                          <div className="justify-center text-slate-500 text-xs font-semibold font-['Plus_Jakarta_Sans'] line-through leading-5">Data migration plan</div>
+                        </div>
+                        <div className="self-stretch py-2.5 border-b-[0.80px] border-slate-200 inline-flex justify-start items-start gap-2.5">
+                          <div className="w-6 h-5 pl-1 pr-[3px] pt-px pb-[3px]">
+                            <img src="/image/dashboard/green-check.svg" className="w-full h-full object-contain" alt="" />
+                          </div>
+                          <div className="justify-center text-slate-500 text-xs font-semibold font-['Plus_Jakarta_Sans'] line-through leading-5">Revenue assurance baseline</div>
+                        </div>
+                        <div className="self-stretch py-2.5 border-b-[0.80px] border-slate-200 inline-flex justify-start items-start gap-2.5">
+                          <div className="w-6 h-5 pl-1 pr-[3px] pt-px pb-[3px] inline-flex flex-col justify-start items-start">
+                            <div className="size-4 bg-white rounded-sm border border-neutral-500"></div>
+                          </div>
+                          <div className="justify-center text-slate-800 text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-5">Support readiness</div>
+                        </div>
+                        <div className="self-stretch py-2.5 inline-flex justify-start items-start gap-2.5">
+                          <div className="w-6 h-5 pl-1 pr-[3px] pt-px pb-[3px] inline-flex flex-col justify-start items-start">
+                            <div className="size-4 bg-white rounded-sm border border-neutral-500"></div>
+                          </div>
+                          <div className="justify-center text-slate-800 text-xs font-semibold font-['Plus_Jakarta_Sans'] leading-5">Rollback plan</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sandbox Tab */}
+            {currentTab === "Sandbox" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-between items-center">
+                  <div className="inline-flex flex-col justify-start items-start gap-1">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">Evaluation Workspace</div>
+                    </div>
+                    <div className="w-full pt-px flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">A bounded, controlled sandbox for technical validation. No production data without an approved secure<br />channel.</div>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1.5 bg-orange-50 rounded outline outline-1 outline-yellow-600/30 flex justify-start items-center gap-1.5">
+                    <svg className="w-3 h-3 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div className="justify-center text-yellow-600 text-xs font-bold font-['IBM_Plex_Mono'] uppercase tracking-wider">EXPIRES IN 71 DAYS</div>
+                  </div>
+                </div>
+
+                <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-5 mt-2">
+                  {/* Sandbox Tenant */}
+                  <div className="px-6 py-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                    <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans'] mb-2">Sandbox tenant</div>
+
+                    <div className="flex justify-between items-center py-3 border-b border-slate-100">
+                      <span className="text-slate-500 text-sm">Name</span>
+                      <span className="text-slate-800 text-sm font-bold font-mono">helios-eval-01</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-slate-100">
+                      <span className="text-slate-500 text-sm">Region</span>
+                      <span className="text-slate-800 text-sm font-bold font-mono">EU-West</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-slate-100">
+                      <span className="text-slate-500 text-sm">Status</span>
+                      <div className="px-2 py-1 bg-stone-100 rounded text-lime-600 text-xs font-bold flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        ACTIVE
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center py-3">
+                      <span className="text-slate-500 text-sm">Access level</span>
+                      <span className="text-slate-800 text-sm font-bold">Technical Evaluator</span>
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2">
+                      <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">API ACCESS</span>
+                      <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <span className="font-mono text-slate-800 text-sm flex-1 pl-2">zk_sbx_••••••••••••••••••••••••</span>
+                        <button className="px-4 py-1.5 bg-white border border-slate-200 rounded text-slate-600 text-xs font-bold shadow-sm">Reveal</button>
+                        <button className="px-4 py-1.5 bg-white border border-slate-200 rounded text-slate-600 text-xs font-bold shadow-sm">Rotate</button>
+                      </div>
+                      <span className="text-slate-500 text-xs mt-1">Rate limit: 600 req/min · keys are masked after first reveal in production.</span>
+                    </div>
+                  </div>
+
+                  {/* Test flows */}
+                  <div className="px-6 py-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                    <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">Test flows</div>
+                    <div className="text-slate-500 text-sm mb-4">Run sample telecom scenarios end-to-end.</div>
+
+                    {[
+                      "Usage ingestion — rating",
+                      "Rating — billing run",
+                      "Tax calculation",
+                      "Payment simulation",
+                      "Webhook delivery",
+                      "Evidence ledger verify"
+                    ].map((flow, idx) => (
+                      <div key={idx} className="flex justify-between items-center py-3 border-b border-slate-100 last:border-0">
+                        <span className="text-slate-600 text-sm">{flow}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="px-2 py-1 bg-slate-100 rounded text-slate-500 text-xs font-bold font-mono flex items-center gap-1 uppercase">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg>
+                            IDLE
+                          </div>
+                          <button className="px-4 py-1.5 bg-white border border-slate-200 rounded text-slate-700 text-xs font-bold shadow-sm hover:bg-slate-50">Run</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* POC Checklist */}
+                  <div className="px-6 py-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                    <div className="flex justify-between items-center">
+                      <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">POC checklist</div>
+                      <div className="text-slate-400 text-sm font-mono">38%</div>
+                    </div>
+
+                    <div className="h-2 bg-slate-100 rounded-full w-full relative mb-2">
+                      <div className="absolute left-0 top-0 h-full bg-lime-500 w-[38%] rounded-full"></div>
+                    </div>
+
+                    <div className="flex flex-col">
+                      {[
+                        { name: "Sandbox tenant provisioned", done: true },
+                        { name: "API keys generated", done: true },
+                        { name: "Ingest sample CDRs", done: true },
+                        { name: "Validate rating scenario", done: false },
+                        { name: "Validate billing run", done: false },
+                        { name: "Tax & payment simulation", done: false },
+                        { name: "Webhook integration test", done: false },
+                        { name: "Evidence pack reviewed", done: false },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-3 py-3 border-b border-slate-100 last:border-0">
+                          <div className={`w-5 h-5 rounded flex justify-center items-center border ${item.done ? 'bg-stone-100 border-lime-300 text-lime-600' : 'bg-white border-slate-300'}`}>
+                            {item.done && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                          </div>
+                          <span className={`text-sm ${item.done ? 'text-slate-500 line-through' : 'text-slate-700 font-semibold'}`}>{item.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Evidence Pack */}
+                  <div className="px-6 py-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2 h-fit">
+                    <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">Evidence pack</div>
+                    <div className="text-slate-500 text-sm mb-4">Generate an evaluation evidence pack from completed tests and findings.</div>
+
+                    <div className="text-slate-500 text-sm mb-4">No evidence pack generated yet.</div>
+
+                    <button className="w-full py-2.5 bg-[#1d64b8] text-white rounded-lg font-bold text-sm shadow-sm hover:bg-[#154e93] transition mb-2">
+                      Generate evidence pack
+                    </button>
+                    <button className="w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold text-sm shadow-sm hover:bg-slate-50 transition">
+                      Schedule architecture review
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Support Tab */}
+            {currentTab === "Support" && (
+              <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-between items-center">
+                  <div className="inline-flex flex-col justify-start items-start gap-1">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">Support & success</div>
+                    </div>
+                    <div className="w-full pt-px flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Open tickets, track SLAs, and reach your account team.</div>
+                    </div>
+                  </div>
+                  <button className="px-4 py-2.5 bg-[#1d64b8] text-white rounded-lg font-bold text-sm shadow-sm hover:bg-[#154e93] transition flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    Open a ticket
+                  </button>
+                </div>
+
+                <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">OPEN TICKETS</span>
+                    <span className="text-2xl font-extrabold text-slate-800 mt-2">2</span>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SLA TIER</span>
+                    <span className="text-xl font-bold text-slate-800 mt-2">Enterprise</span>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">P1 RESPONSE</span>
+                    <span className="text-xl font-bold text-slate-800 mt-2">1 hour</span>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md p-5 rounded-xl border border-slate-200/50 shadow-sm flex flex-col justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">HYPERCARE</span>
+                    <span className="text-xl font-bold text-slate-800 mt-2">Active</span>
+                  </div>
+                </div>
+
+                <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead className="bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="px-6 py-4">ID</th>
+                          <th className="px-6 py-4">SUBJECT</th>
+                          <th className="px-6 py-4">SEVERITY</th>
+                          <th className="px-6 py-4">MODULE</th>
+                          <th className="px-6 py-4">STATUS</th>
+                          <th className="px-6 py-4">UPDATED</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        <tr>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">ZK-4821</td>
+                          <td className="px-6 py-4 font-bold text-slate-800">Invoice template v3 migration question</td>
+                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-200 rounded text-[10px] font-bold font-mono">↑ P2</span></td>
+                          <td className="px-6 py-4 text-slate-500">Billing & Invoicing</td>
+                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-sky-50 text-sky-600 border border-sky-200 rounded-md text-[10px] font-bold font-mono">OPEN</span></td>
+                          <td className="px-6 py-4 text-slate-500">2h ago</td>
+                        </tr>
+                        <tr>
+                          <td className="px-6 py-4 font-mono text-xs text-slate-500">ZK-4799</td>
+                          <td className="px-6 py-4 font-bold text-slate-800">Webhook retries after timeout</td>
+                          <td className="px-6 py-4"><span className="px-2 py-0.5 bg-slate-50 text-slate-600 border border-slate-200 rounded text-[10px] font-bold font-mono">↑ P3</span></td>
+                          <td className="px-6 py-4 text-slate-500">API Gateway</td>
+                          <td className="px-6 py-4">
+                            <div className="px-2 py-[2.80px] bg-indigo-500/10 rounded-md outline outline-1 outline-offset-[-1px] outline-indigo-500/40 inline-flex justify-start items-center gap-[5px]">
+                              <div className="size-2.5 relative overflow-hidden">
+                                <div className="w-[1.38px] h-[2.75px] left-[5.50px] top-[3.67px] absolute outline outline-[1.19px] outline-offset-[-0.60px] outline-indigo-500"></div>
+                              </div>
+                              <div className="justify-center text-indigo-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase leading-4 tracking-wide">IN PROGRESS</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-slate-500">1d ago</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Billing Tab */}
+            {currentTab === "Billing" && (canAccess(TAB_DOMAIN.Billing) ? (
+              <div className="self-stretch flex flex-col justify-start items-start gap-5 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-between items-center flex-wrap gap-3">
+                  <div className="inline-flex flex-col justify-start items-start gap-1">
+                    <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">
+                      Billing &amp; commercials
+                    </div>
+                    <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">
+                      This tenant&apos;s own consumption and invoices, read from the platform rather than estimated.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Every figure below is a count or sum of records a service
+                    returned. This panel previously showed invented ones —
+                    412,800 subscribers, 18.4M API calls, three $48,200 invoices
+                    — which are exactly the numbers someone repeats in a
+                    commercial conversation. */}
+                <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customers</span>
+                    <span className="text-xl font-bold text-slate-800 font-mono">
+                      {commercialsQ.isLoading ? "…" : commercialsQ.data?.customers ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">customer-account</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rated usage records</span>
+                    <span className="text-xl font-bold text-slate-800 font-mono">
+                      {commercialsQ.isLoading ? "…" : commercialsQ.data?.ratedRecords ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">usage-ingestion-mediation</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoices issued</span>
+                    <span className="text-xl font-bold text-slate-800 font-mono">
+                      {commercialsQ.isLoading ? "…" : commercialsQ.data?.issuedCount ?? "—"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">billing-invoice</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Issued value</span>
+                    <span className="text-lg font-bold text-slate-800 font-mono break-words">
+                      {commercialsQ.isLoading
+                        ? "…"
+                        : Object.keys(commercialsQ.data?.issuedByCurrency ?? {}).length === 0
+                          ? "—"
+                          : Object.entries(commercialsQ.data!.issuedByCurrency).map(([c, amt]) => formatMoney(amt, c)).join("  ·  ")}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Per currency — not summed</span>
+                  </div>
+                </div>
+
+                {/* Contracted scope has no service behind it. There is no
+                    tenant-contract domain among the 19, so pathway, usage band,
+                    term and renewal cannot be read from anywhere — and inventing
+                    them is what this panel used to do. */}
+                <div className="w-full bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
+                  <div className="text-xs font-bold text-amber-800">Contracted scope is not shown</div>
+                  <div className="text-[11px] text-amber-700 mt-0.5">
+                    Pathway, usage band, contract term and renewal date have no owning service — there is no
+                    tenant-contract domain among the 19. They were previously hardcoded here. Until a service owns
+                    them, this panel shows consumption and invoices only.
+                  </div>
+                </div>
+
+                <div className="self-stretch bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                    <div className="text-slate-800 text-base font-bold font-['Plus_Jakarta_Sans']">Invoices</div>
+                    <button
+                      onClick={() => setCurrentTab("BillingManagement")}
+                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer"
+                    >
+                      Open Billing &amp; Invoice
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead className="bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4">INVOICE</th>
+                          <th className="px-6 py-4">DUE</th>
+                          <th className="px-6 py-4">TOTAL</th>
+                          <th className="px-6 py-4">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        {commercialsQ.isLoading ? (
+                          <tr><td colSpan={4} className="px-6 py-10 text-center text-xs text-slate-400">Loading invoices…</td></tr>
+                        ) : commercialsQ.isError ? (
+                          <tr><td colSpan={4} className="px-6 py-10 text-center text-xs text-rose-600">Could not load invoices.</td></tr>
+                        ) : (commercialsQ.data?.invoices ?? []).length === 0 ? (
+                          <tr><td colSpan={4} className="px-6 py-10 text-center text-xs text-slate-400">No invoices raised for this tenant.</td></tr>
+                        ) : (
+                          (commercialsQ.data?.invoices ?? []).slice(0, 8).map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="px-6 py-4 font-mono text-xs text-slate-600">{inv.invoice_number}</td>
+                              <td className="px-6 py-4 text-slate-600 text-xs">
+                                {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="px-6 py-4 font-bold text-slate-800 font-mono">
+                                {formatMoney(inv.total_minor_units, inv.currency_code)}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-slate-100 text-slate-600">
+                                  {inv.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <LockedPanel label="Billing & Commercials" />
+            ))}
+
+            {/* Admin Settings Tab */}
+            {currentTab === "Settings" && (canAccess(TAB_DOMAIN.Settings) ? (
+              <div className="self-stretch flex flex-col justify-start items-start gap-4 w-full font-sans transition-all duration-300">
+                <div className="self-stretch inline-flex justify-between items-center">
+                  <div className="inline-flex flex-col justify-start items-start gap-1">
+                    <div className="self-stretch flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-800 text-2xl font-extrabold font-['Plus_Jakarta_Sans'] leading-9">Admin & access</div>
+                    </div>
+                    <div className="w-full max-w-[717.36px] pt-px flex flex-col justify-start items-start">
+                      <div className="justify-center text-slate-600 text-sm font-normal font-['Plus_Jakarta_Sans'] leading-5">Users, roles, SSO, and audit. Permission rule: deny overrides allow.</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setInviteModalOpen(true)}
+                    className="min-h-10 px-4 py-3 bg-[#1d64b8] text-white hover:bg-[#154e93] transition rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    Invite user
+                  </button>
+                </div>
+
+                {/* Two-factor authentication — real enrolment and policy, wired to
+                    identity-tenancy. The row that used to sit in the Single
+                    sign-on card was a hardcoded div showing "on" for everyone. */}
+                <div className="self-stretch pt-1">
+                  <MfaSecurity canManageTenantPolicy />
+                </div>
+
+                <div className="self-stretch pt-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Single Sign-on */}
+                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                    <div className="pb-2.5">
+                      <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Single sign-on</h3>
+                    </div>
+                    <div className="py-3 border-b border-slate-200 flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-slate-800 text-xs font-bold leading-5">SAML / OIDC</span>
+                        <span className="text-slate-500 text-xs leading-4">Okta connected</span>
+                      </div>
+                      <div className="px-2 py-1 bg-stone-200 rounded outline outline-1 outline-lime-500/30 flex items-center gap-1">
+                        <svg className="w-2.5 h-2.5 text-lime-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        <span className="text-slate-500 text-[10px] font-semibold font-['IBM_Plex_Mono'] uppercase tracking-wide">ON</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tenant profile */}
+                  <div className="px-5 pt-5 pb-7 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                    <div className="pb-2.5">
+                      <h3 className="text-slate-800 text-sm font-bold font-['Plus_Jakarta_Sans'] leading-5">Tenant profile</h3>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-200 flex justify-between items-center">
+                      <span className="text-slate-600 text-xs leading-5">Tenant</span>
+                      <span className="text-slate-800 text-xs font-semibold leading-5">{sessionData.tenantId ? (sessionData.tenantId.length > 20 ? "Acme Telecom Corporation" : sessionData.tenantId) : "Acme Telecom Corporation"}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-200 flex justify-between items-center">
+                      <span className="text-slate-600 text-xs leading-5">Residency</span>
+                      <span className="text-slate-800 text-xs font-semibold leading-5">EU-West</span>
+                    </div>
+                    <div className="py-2.5 flex justify-between items-center">
+                      <span className="text-slate-600 text-xs leading-5">Brands</span>
+                      <span className="text-slate-800 text-xs font-semibold leading-5">{brands.length || 1}</span>
+                    </div>
+                  </div>
+
+                  {/* Session security */}
+                  <SessionSecurityCard />
+                </div>
+
+                <BrandsPanel />
+
+                <RolesPanel tenantUsers={tenantUsers} usersLoading={usersLoading} usersError={usersError} />
+
+                {/* Audit Log — Connected to GET /v1/audit-trails */}
+                <AuditLogPanel />
+
+              </div>
+            ) : (
+              <LockedPanel label="Admin Settings" />
+            ))}
+
+            {/* Integration Tab */}
+            {currentTab === "Integration" && (canAccess(TAB_DOMAIN.Integration) ? (
+              <IntegrationTab />
+            ) : (
+              <LockedPanel label="Integrations" />
+            ))}
+
+            {/* Catalog Management Tab */}
+            {currentTab === "CatalogManagement" && (canAccess(TAB_DOMAIN.CatalogManagement) ? (
+              <CatalogManagement />
+            ) : (
+              <LockedPanel label="Catalog Management" />
+            ))}
+
+            {/* Customer & KYC Management Tab */}
+            {currentTab === "CustomerManagement" && (canAccess(TAB_DOMAIN.CustomerManagement) ? (
+              <CustomerManagement />
+            ) : (
+              <LockedPanel label="Customer & KYC Management" />
+            ))}
+
+            {/* Order Management Tab */}
+            {currentTab === "OrderManagement" && (canAccess(TAB_DOMAIN.OrderManagement) ? (
+              <OrderManagement />
+            ) : (
+              <LockedPanel label="Order Management" />
+            ))}
+
+            {/* Billing & Invoice Tab — billing-invoice service */}
+            {currentTab === "BillingManagement" && (canAccess(TAB_DOMAIN.BillingManagement) ? (
+              <BillingManagement />
+            ) : (
+              <LockedPanel label="Billing & Invoice" />
+            ))}
+
+            {/* Payments Tab */}
+            {currentTab === "PaymentsManagement" && (canAccess(TAB_DOMAIN.PaymentsManagement) ? (
+              <PaymentsManagement />
+            ) : (
+              <LockedPanel label="Payments & Collections" />
+            ))}
+
+            {/* Tax & Jurisdiction Tab */}
+            {currentTab === "TaxJurisdiction" && (canAccess(TAB_DOMAIN.TaxJurisdiction) ? (
+              <TaxJurisdiction />
+            ) : (
+              <LockedPanel label="Tax & Jurisdiction" />
+            ))}
+
+            {/* Finance Fabric & Ledger Tab */}
+            {currentTab === "FinanceLedger" && (canAccess(TAB_DOMAIN.FinanceLedger) ? (
+              <FinanceLedger />
+            ) : (
+              <LockedPanel label="Finance Fabric & Ledger" />
+            ))}
+
+            {/* Usage & Charging Tab — usage-ingestion-mediation + rating-charging */}
+            {currentTab === "UsageCharging" && (canAccess(TAB_DOMAIN.UsageCharging) ? (
+              <UsageCharging />
+            ) : (
+              <LockedPanel label="Usage & Charging" />
+            ))}
+
+            {/* Partner & Settlement Tab */}
+            {currentTab === "PartnerSettlement" && (canAccess(TAB_DOMAIN.PartnerSettlement) ? (
+              <PartnerSettlement />
+            ) : (
+              <LockedPanel label="Partner & Settlement" />
+            ))}
+
+            {/* Revenue Assurance Tab — leakage, distinct from Fraud & Risk (P1-9) */}
+            {currentTab === "RevenueAssurance" && (canAccess(TAB_DOMAIN.RevenueAssurance) ? (
+              <RevenueAssurance />
+            ) : (
+              <LockedPanel label="Revenue Assurance" />
+            ))}
+
+            {/* Fraud & Risk Tab — abuse, distinct from Revenue Assurance (P1-9) */}
+            {currentTab === "FraudRisk" && (canAccess(TAB_DOMAIN.FraudRisk) ? (
+              <FraudRisk />
+            ) : (
+              <LockedPanel label="Fraud & Risk" />
+            ))}
+
+            {/* Dunning, Collections & Disputes Tab */}
+            {currentTab === "DunningDisputes" && (canAccess(TAB_DOMAIN.DunningDisputes) ? (
+              <DunningDisputes />
+            ) : (
+              <LockedPanel label="Dunning & Disputes" />
+            ))}
+
+            {/* Access Groups Tab — the group half of RBAC */}
+            {currentTab === "AccessGroups" && (canAccess(TAB_DOMAIN.AccessGroups) ? (
+              <AccessGroups />
+            ) : (
+              <LockedPanel label="Access Groups" />
+            ))}
+
+            {/* Customer Lifecycle & KYC Tab */}
+            {currentTab === "CustomerLifecycleKyc" && (canAccess(TAB_DOMAIN.CustomerLifecycleKyc) ? (
+              <CustomerLifecycleKyc />
+            ) : (
+              <LockedPanel label="Customer Lifecycle & KYC" />
+            ))}
+
+            {/* Evidence Ledger Tab */}
+            {currentTab === "EvidenceLedger" && (canAccess(TAB_DOMAIN.EvidenceLedger) ? (
+              <EvidenceLedger />
+            ) : (
+              <LockedPanel label="Cryptographic Evidence Ledger" />
+            ))}
+
+            {/* Reporting & Regulatory Tab */}
+            {currentTab === "RegulatoryExports" && (canAccess(TAB_DOMAIN.RegulatoryExports) ? (
+              <RegulatoryExports />
+            ) : (
+              <LockedPanel label="Reporting & Regulatory" />            ))}
+
+
+            {/* Live Integration Logs Terminal */}
+            {currentTab === "Services" && (
+              <section className="self-stretch mt-10 bg-slate-900 border border-slate-800 rounded-2xl p-6 font-mono text-slate-300 w-full shadow-lg">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-rose-500/80"></span>
+                      <span className="w-3 h-3 rounded-full bg-amber-500/80"></span>
+                      <span className="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1">Live Integration Logs</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 font-sans">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    Streaming
+                  </div>
+                </div>
+
+                <div className="h-64 overflow-y-auto flex flex-col gap-1 text-[11px] leading-5">
+                  {logs.length > 0 ? (
+                    logs.map((log, idx) => {
+                      let lineClass = "text-slate-300";
+                      if (log.includes("ERROR") || log.includes("status\":4") || log.includes("status\":5") || log.includes("status\": 4") || log.includes("status\": 5")) {
+                        lineClass = "text-rose-400";
+                      } else if (log.includes("level\":\"WARN\"")) {
+                        lineClass = "text-amber-400";
+                      } else if (log.includes("level\":\"INFO\"") || log.includes("status\":2") || log.includes("status\": 2") || log.includes("gRPC server starting")) {
+                        lineClass = "text-emerald-400/90";
+                      }
+
+                      return (
+                        <div key={idx} className={`hover:bg-slate-800/40 px-2 py-0.5 rounded transition ${lineClass} break-all`}>
+                          {log}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-slate-500 italic text-center pt-24">No live logs received from backend. Check docker compose status.</div>
+                  )}
+                </div>
+              </section>
+            )}
+
+          </div>
+
+        </main>
+
+        {/* Live Service Management Modal */}
+        {selectedService && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
+              {/* Modal Header */}
+              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span className={`size-2.5 rounded-full ${selectedService.active ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
+                    Manage: {selectedService.name}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                    Microservice Port: {selectedServicePort[selectedService.id]} · Status: {selectedService.active ? "ONLINE" : "OFFLINE"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedService(null);
+                    setApiResponse(null);
+                    setSelectedEndpoint("");
+                  }}
+                  className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 p-6 overflow-y-auto space-y-5">
+
+                {/* Endpoint Template Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select API Endpoint Template</label>
+                  {(endpointTemplates[selectedService.id]?.length ?? 0) === 0 && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mb-2 leading-relaxed">
+                      No templates for this card. It is a view onto{" "}
+                      <span className="font-mono">port {selectedServicePort[selectedService.id]}</span> rather than a
+                      service of its own, and the domain it is named after has no endpoints on the platform. The health
+                      check below is real; anything else needs a path you supply.
+                    </p>
+                  )}
+                  <select
+                    value={selectedEndpoint}
+                    onChange={(e) => {
+                      const idx = e.target.value === "" ? -1 : parseInt(e.target.value);
+                      setSelectedEndpoint(e.target.value);
+                      if (idx >= 0) {
+                        const template = endpointTemplates[selectedService.id]?.[idx];
+                        if (template) {
+                          setRequestMethod(template.method);
+                          setRequestPath(template.path);
+                          setRequestHeaders(JSON.stringify(template.headers, null, 2));
+                          setRequestBody(template.body ? JSON.stringify(template.body, null, 2) : "");
+                        }
+                      } else {
+                        setRequestMethod("GET");
+                        setRequestPath("/health");
+                        setRequestHeaders(`{\n  "X-Tenant-ID": "${portalTenantId()}"\n}`);
+                        setRequestBody("");
+                      }
+                    }}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-sans"
+                  >
+                    <option value="">-- Custom Endpoint / Health Check --</option>
+                    {endpointTemplates[selectedService.id]?.map((tmpl, idx) => (
+                      <option key={idx} value={idx}>{tmpl.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Method & Path inputs */}
+                <div className="flex gap-3">
+                  <div className="w-24">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Method</label>
+                    <select
+                      value={requestMethod}
+                      onChange={(e) => setRequestMethod(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none text-slate-700 font-bold font-mono"
+                    >
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Path</label>
+                    <input
+                      type="text"
+                      value={requestPath}
+                      onChange={(e) => setRequestPath(e.target.value)}
+                      placeholder="/health"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Headers Editor */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Headers (JSON)</label>
+                  <textarea
+                    value={requestHeaders}
+                    onChange={(e) => setRequestHeaders(e.target.value)}
+                    rows={3}
+                    placeholder='{ "X-Tenant-ID": "uuid" }'
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none font-mono text-slate-700"
+                  />
+                </div>
+
+                {/* Body Editor (only for writing methods) */}
+                {(requestMethod === "POST" || requestMethod === "PUT") && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Request Body (JSON)</label>
+                    <textarea
+                      value={requestBody}
+                      onChange={(e) => setRequestBody(e.target.value)}
+                      rows={5}
+                      placeholder="{}"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none font-mono text-slate-700"
+                    />
+                  </div>
+                )}
+
+                {/* API Response Console */}
+                {apiResponse && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">API Response Console</label>
+                    <div className={`p-4 rounded-xl font-mono text-xs overflow-x-auto max-h-60 border ${apiResponse.ok ? "bg-slate-900 border-slate-800 text-emerald-400" : "bg-rose-950/20 border-rose-900/30 text-rose-300"
+                      }`}>
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                        <span className="font-bold">STATUS: {apiResponse.status} {apiResponse.ok ? "OK" : "ERROR"}</span>
+                        <span className="text-[10px] text-slate-500">Universal API Proxy Active</span>
+                      </div>
+                      <pre>{JSON.stringify(apiResponse.data, null, 2)}</pre>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedService(null);
+                    setApiResponse(null);
+                    setSelectedEndpoint("");
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition font-bold"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={async () => {
+                    setApiLoading(true);
+                    setApiResponse(null);
+                    try {
+                      let parsedHeaders = {};
+                      if (requestHeaders.trim()) {
+                        parsedHeaders = JSON.parse(requestHeaders);
+                      }
+                      let parsedBody = null;
+                      if (requestBody.trim() && (requestMethod === "POST" || requestMethod === "PUT")) {
+                        parsedBody = JSON.parse(requestBody);
+                      }
+
+                      let port = selectedServicePort[selectedService.id];
+                      if (requestPath.startsWith("/api/v1/auth/") || requestPath.startsWith("/v1/tenants") || requestPath.startsWith("/v1/sessions")) {
+                        port = 8080;
+                      }
+
+                      const res = await fetch("/api/proxy", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          port,
+                          method: requestMethod,
+                          path: requestPath,
+                          headers: parsedHeaders,
+                          body: parsedBody
+                        })
+                      });
+
+                      if (res.ok) {
+                        const data = await res.json();
+                        setApiResponse(data);
+                      } else {
+                        setApiResponse({ status: res.status, ok: false, data: "Failed to communicate with proxy service." });
+                      }
+                    } catch (err) {
+                      setApiResponse({ status: 400, ok: false, data: "JSON Parsing Error: " + String(err) });
+                    } finally {
+                      setApiLoading(false);
+                    }
+                  }}
+                  disabled={apiLoading}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-sm transition shadow flex items-center gap-2"
+                >
+                  {apiLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                      Executing...
+                    </>
+                  ) : (
+                    "Execute API Call"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New User Invite Modal */}
+        {isInviteModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-[600px] flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="flex justify-between items-center p-5 border-b border-slate-200">
+                <h2 className="text-slate-800 text-lg font-bold font-['Plus_Jakarta_Sans']">New user</h2>
+                <button
+                  onClick={closeInviteModal}
+                  aria-label="Close"
+                  className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[75vh]">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-semibold">Email</label>
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-semibold">Full name</label>
+                  <input
+                    type="text"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-700 text-sm font-semibold">Temporary password</label>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      id="temp-password"
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition shadow-sm font-mono"
+                    />
+                    <button
+                      onClick={() => setInvitePassword(generatePassword())}
+                      className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold transition border border-slate-300 shadow-sm cursor-pointer"
+                    >
+                      Generate
+                    </button>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-0.5">At least 12 characters — shown once after creation, so save it.</p>
+                </div>
+
+                <div className="pt-2">
+                  <h3 className="text-slate-500 text-[11px] font-bold tracking-wider uppercase mb-3">What can they access?</h3>
+                  <PermissionPicker rules={inviteRules} onChange={setInviteRules} />
+                  {inviteRules.length === 0 && (
+                    <p className="text-slate-500 text-xs mt-2">
+                      Nothing selected — this user will be able to sign in but won&apos;t see any dashboard
+                      section yet. You can also assign them a role later.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                <button
+                  onClick={closeInviteModal}
+                  className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-semibold text-sm cursor-pointer shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateUser}
+                  disabled={isCreatingUser}
+                  className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold transition shadow-sm cursor-pointer disabled:opacity-70 flex items-center gap-2"
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : "Create user"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Success Modal */}
+        {createdUserDetails && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-[#0f172a] border border-slate-700/60 rounded-xl shadow-2xl w-[500px] flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="flex justify-between items-center p-5 border-b border-slate-700/60">
+                <h2 className="text-white text-lg font-bold">User created</h2>
+                <button
+                  onClick={() => setCreatedUserDetails(null)}
+                  aria-label="Close"
+                  className="text-slate-400 hover:text-white transition cursor-pointer"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 flex flex-col gap-5">
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  This is the only time the temporary password is shown. Copy it now and share it with them securely.
+                </p>
+
+                <div className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 font-mono text-[13px] text-slate-300 shadow-inner whitespace-pre-wrap">
+                  {buildInvite({
+                    label: "your account",
+                    tenantId: createdUserDetails.tenantId,
+                    email: createdUserDetails.email,
+                    password: createdUserDetails.password,
+                  })}
+                </div>
+
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(buildInvite({
+                      label: "your account",
+                      tenantId: createdUserDetails.tenantId,
+                      email: createdUserDetails.email,
+                      password: createdUserDetails.password,
+                    }));
+                    toast.success("Login details copied");
+                  }}
+                  className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white border border-slate-600 rounded-lg text-sm font-semibold transition cursor-pointer"
+                >
+                  Copy login details
+                </button>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 flex justify-end gap-3">
+                <button
+                  onClick={() => setCreatedUserDetails(null)}
+                  className="px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 rounded-lg text-sm font-bold transition shadow-sm cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// Config mappings for BSS cockpit API client
+/**
+ * Card id to the port of the service actually behind it.
+ *
+ * Several cards are views onto one service — rt-charging and rating-engine are
+ * both rating-charging (8085); esim, IoT and numbering are all
+ * order-management-provisioning (8083). The health probe de-duplicates on this,
+ * so those cards share one service's status instead of being counted separately.
+ */
+const SERVICE_ID_TO_PORT: Record<string, number> = {
+  "prod-catalog": 8082,
+  "rt-charging": 8085,
+  "rating-engine": 8085,
+  "billing-invoice": 8092,
+  "payments-collections": 8096,
+  "partner-settlement": 8086,
+  "cust-lifecycle": 8081,
+  "notifications-campaigns": 8097,
+  "esim-sim-mgmt": 8083,
+  "iot-connectivity": 8083,
+  "number-inventory": 8083,
+  "taxation-regulatory": 8089,
+  "compliance-kyc": 8091,
+  "evidence-ledger": 8093,
+  "ai-gov-controls": 8098,
+  "analytics-reporting": 8098,
+  "mediation-usage": 8094,
+  "api-gateway": 8097,
+};
+
+const selectedServicePort: Record<string, number> = {
+  "prod-catalog": 8082,
+  "rt-charging": 8085,
+  "rating-engine": 8085,
+  "billing-invoice": 8092,
+  "payments-collections": 8096,
+  "partner-settlement": 8086,
+  "cust-lifecycle": 8081,
+  "notifications-campaigns": 8097,
+  "esim-sim-mgmt": 8083,
+  "iot-connectivity": 8083,
+  "number-inventory": 8083,
+  "taxation-regulatory": 8089,
+  "compliance-kyc": 8091,
+  "evidence-ledger": 8093,
+  "ai-gov-controls": 8098,
+  "analytics-reporting": 8098,
+  "mediation-usage": 8094,
+  "api-gateway": 8097,
+};
+
+interface EndpointTemplate {
+  label: string;
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+  body: any;
+}
+
+const endpointTemplates: Record<string, EndpointTemplate[]> = {
+  "prod-catalog": [
+    {
+      label: "Step 3a: Create Product Specification (POST /v1/products)",
+      method: "POST",
+      path: "/v1/products",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        product_name: "Premium 5G Unlimited Plan",
+        product_type: "DATA",
+        charging_model: "RECURRING",
+        charge_structure: "FLAT",
+        currency_code: "USD",
+        tax_category: "TELECOM",
+        country_code: "US",
+        jurisdiction_code: "US-NY"
+      }
+    },
+    {
+      label: "Step 3b: Create Commercial Offer (POST /v1/offers)",
+      method: "POST",
+      path: "/v1/offers",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        product_id: "prod-1234",
+        offer_name: "Promo Offer June 2026",
+        description: "Discounted monthly recurring plan",
+        country_code: "US",
+        jurisdiction_code: "US-NY",
+        validity_days: 30
+      }
+    },
+    {
+      label: "Step 3c: Associate Price Rule (POST /v1/price-rules)",
+      method: "POST",
+      path: "/v1/price-rules",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        product_id: "prod-1234",
+        offer_id: "offer-1234",
+        country_code: "US",
+        jurisdiction_code: "US-NY",
+        amount_minor_units: 4500,
+        currency_code: "USD",
+        charge_structure: "FLAT",
+        billing_period: "MONTHLY",
+        rounding_policy_id: "ROUND_HALF_UP"
+      }
+    }
+  ],
+  "rt-charging": [
+    {
+      label: "Prepaid: Reserve Balance (POST /v1/prepaid/reserve)",
+      method: "POST",
+      path: "/v1/prepaid/reserve",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        subscriber_id: "sub-0987",
+        idempotency_key: "reserve-demo-0001",
+        currency_code: "GBP",
+        amount: 500
+      }
+    }
+  ],
+  "rating-engine": [
+    {
+      label: "Postpaid: Rate a Usage Record (POST /v1/postpaid/rate)",
+      method: "POST",
+      path: "/v1/postpaid/rate",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        subscriber_id: "sub-0987",
+        account_id: "acc-1234",
+        currency_code: "GBP",
+        usage_type: "DATA",
+        quantity: "1024",
+        quantity_unit: "BYTES",
+        usage_occurred_at: "2026-08-20T10:00:00Z"
+      }
+    }
+  ],
+  "billing-invoice": [
+    {
+      label: "Step 8: Create Draft Invoice (POST /v1/invoices)",
+      method: "POST",
+      path: "/v1/invoices",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        account_id: "acc-1234",
+        billing_period: "2026-06",
+        amount_minor_units: 4500,
+        currency_code: "USD"
+      }
+    },
+    {
+      label: "Open a Bill Cycle (POST /v1/bill-cycles)",
+      method: "POST",
+      path: "/v1/bill-cycles",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        account_id: "acc-1234",
+        customer_id: "cust-5678",
+        cycle_type: "MONTHLY",
+        jurisdiction_code: "GB",
+        cycle_start_at: "2026-08-01T00:00:00Z",
+        cycle_end_at: "2026-08-31T23:59:59Z"
+      }
+    }
+  ],
+  "payments-collections": [
+    {
+      label: "Step 9: Create Payment Intent (POST /v1/payment-intents)",
+      method: "POST",
+      path: "/v1/payment-intents",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        amount_minor_units: 4500,
+        currency: "USD",
+        payment_method_token: "tok_visa_4242",
+        account_id: "acc-1234"
+      }
+    }
+  ],
+  "partner-settlement": [
+    {
+      label: "Open a Settlement Run (POST /v1/settlement-runs)",
+      method: "POST",
+      path: "/v1/settlement-runs",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        partner_id: "00000000-0000-0000-0000-000000000001",
+        partner_name: "Helios Net",
+        currency_code: "GBP",
+        period_start: "2026-08-01T00:00:00Z",
+        period_end: "2026-08-31T23:59:59Z",
+        created_by: "console"
+      }
+    }
+  ],
+  "cust-lifecycle": [
+    {
+      // This card is customer-account (8081). POST /v1/sessions lives on
+      // identity-tenancy (8080), so the original template was pointed at a
+      // service that does not serve it — a 404 that read as the login being
+      // broken. Replaced with this service's own create-customer route.
+      label: "Create a Customer (POST /v1/customers)",
+      method: "POST",
+      path: "/v1/customers",
+      headers: {
+        "X-Tenant-ID": portalTenantId(),
+        // Brand is per-tenant; left as a placeholder the operator replaces.
+        "X-Brand-ID": "<brand-id>"
+      },
+      // party_id and customer_type are the two the handler rejects without.
+      // A customer is created against an existing party, so run the party
+      // template below first and paste its id here.
+      body: {
+        party_id: "<party-id from POST /v1/parties>",
+        customer_type: "INDIVIDUAL",
+        segment: "CONSUMER"
+      }
+    },
+    {
+      label: "Step 2a: Create Party Profile (POST /v1/parties)",
+      method: "POST",
+      path: "/v1/parties",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        party_type: "INDIVIDUAL",
+        pii_token: "f2220099-0000-4000-8000-000000000099",
+        data_residency_region: "us-east-1",
+        jurisdiction_code: "US-CA"
+      }
+    },
+    {
+      label: "Step 2b: Create Customer Profile (POST /v1/customers)",
+      method: "POST",
+      path: "/v1/customers",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        party_id: "party-5678",
+        customer_type: "RETAIL",
+        status: "ACTIVE"
+      }
+    },
+    {
+      label: "Step 2c: Create Billing Account (POST /v1/accounts)",
+      method: "POST",
+      path: "/v1/accounts",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        customer_id: "cust-1234",
+        account_number: "ACC-54321",
+        account_type: "RETAIL",
+        currency_code: "USD",
+        credit_limit_minor_units: 100000,
+        credit_limit_currency_code: "USD"
+      }
+    }
+  ],
+  // No campaigns/notifications service exists among the 19 — this card is an
+  // alias onto integration-ecosystem. The template posted to /v1/campaigns/send,
+  // which nothing registers. Left empty so the picker offers only the health
+  // check and a custom request, rather than a call that always 404s.
+  "notifications-campaigns": [],
+  "esim-sim-mgmt": [
+    {
+      label: "Step 4: Place Product Order (POST /v1/orders)",
+      method: "POST",
+      path: "/v1/orders",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        customer_id: "cust-1234",
+        account_id: "acc-1234",
+        order_type: "NEW_SERVICE",
+        catalog_version_id: "CATALOG-2026-Q2",
+        currency_code: "USD",
+        country_code: "US",
+        jurisdiction_code: "US-CA"
+      }
+    },
+    {
+      label: "Step 5a: Provision eSIM Profile (POST /v1/provisioning)",
+      method: "POST",
+      path: "/v1/provisioning",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        order_id: "order-1234",
+        customer_id: "cust-1234",
+        account_id: "acc-1234",
+        product_id: "prod-1234",
+        service_type: "MOBILE_DATA",
+        jurisdiction_code: "US-CA"
+      }
+    },
+    {
+      label: "Step 5b: Register SIM (POST /v1/sims)",
+      method: "POST",
+      path: "/v1/sims",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        iccid: "8904903200000888990",
+        imsi: "310410123456789",
+        status: "INVENTORY"
+      }
+    },
+    {
+      label: "Step 5c: Activate SIM Profile (PATCH /v1/sims/{id})",
+      method: "PATCH",
+      path: "/v1/sims/8904903200000888990",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        action: "ACTIVATE"
+      }
+    }
+  ],
+  // No IoT service exists among the 19 — this card is an alias onto
+  // order-management-provisioning. /v1/iot/devices is registered nowhere. The
+  // nearest real capability is SIM provisioning, which the eSIM card above
+  // already covers, so nothing is duplicated here.
+  "iot-connectivity": [],
+  // No numbering/inventory service exists among the 19 — another
+  // order-management-provisioning alias. Nothing registers /v1/numbers/reserve,
+  // and there is no MSISDN reservation route to point at instead.
+  "number-inventory": [],
+  "taxation-regulatory": [
+    {
+      label: "Step 7a: Create Jurisdiction Policy (POST /v1/jurisdiction-policies)",
+      method: "POST",
+      path: "/v1/jurisdiction-policies",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        jurisdiction_code: "US-NY",
+        tax_rate: 0.0875,
+        status: "ACTIVE"
+      }
+    },
+    {
+      label: "Step 7b: Request Tax Decision (POST /v1/tax-decisions)",
+      method: "POST",
+      path: "/v1/tax-decisions",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        amount_minor_units: 5000,
+        tax_category: "TELECOM",
+        country_code: "US",
+        jurisdiction_code: "US-NY"
+      }
+    }
+  ],
+  "compliance-kyc": [
+    {
+      label: "Step 6a: Start KYC Verification (POST /v1/kyc/cases)",
+      method: "POST",
+      path: "/v1/kyc/cases",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        customer_id: "cust-1234",
+        document_type: "PASSPORT",
+        document_number: "US1234567"
+      }
+    },
+    {
+      // There is no /submit sub-route, and the id was hardcoded to a seed case.
+      // A KYC case is advanced with PATCH on the case itself.
+      label: "Step 6b: Advance a KYC Case (PATCH /v1/kyc/cases/{id})",
+      method: "PATCH",
+      path: "/v1/kyc/cases/<case-id from POST /v1/kyc/cases>",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: {
+        verification_status: "SUBMITTED"
+      }
+    }
+  ],
+  "evidence-ledger": [
+    {
+      label: "Step 10: Verify Audit/Evidence Chain (GET /v1/evidence/verify)",
+      method: "GET",
+      path: "/v1/evidence/verify",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: null
+    },
+    {
+      label: "Append Auditing Log Evidence (POST /v1/evidence)",
+      method: "POST",
+      path: "/v1/evidence",
+      headers: {},
+      body: {
+        subject_id: "<subject-id>", // sample payload - replace before sending
+        action: "BILL_CYCLE_COMPLETE",
+        payload_hash: "8f7d9a1b6c0e3a5f4d2c8b7a69f0e1d2c3b4a5d6e7f8",
+        signed_by: "billing-invoice-service"
+      }
+    }
+  ],
+  // No AI-governance service exists among the 19 — this card is an alias onto
+  // reporting-regulatory, and /v1/ai/controls is registered nowhere. AI
+  // boundaries are enforced inside fraud-risk and revenue-assurance (rules
+  // score and flag; a human makes every terminal call), not exposed as a
+  // control-plane endpoint, so there is nothing to point this at.
+  "ai-gov-controls": [],
+  "analytics-reporting": [
+    {
+      // /v1/reports/revenue does not exist. What reporting-regulatory actually
+      // serves is the signed regulatory export register, which is the real
+      // reporting surface on this port.
+      label: "List Regulatory Exports (GET /v1/exports)",
+      method: "GET",
+      path: "/v1/exports?limit=20",
+      headers: {
+        "X-Tenant-ID": portalTenantId(),
+        // reporting-regulatory is the one tenant-brand-idem service: it needs a
+        // brand on every call, not just a tenant.
+        "X-Brand-ID": "<brand-id>"
+      },
+      body: null
+    }
+  ],
+  "mediation-usage": [
+    {
+      label: "Ingest a Usage Batch (POST /v1/usage/ingest)",
+      method: "POST",
+      path: "/v1/usage/ingest",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      // The service takes a batch envelope, not a bare CDR: event_id and
+      // network_element identify the submission, and events[] carries the
+      // records. usage_type and unit are closed sets — see dto.RawEvent.
+      body: {
+        event_id: "00000000-0000-4000-8000-000000000001",
+        network_element: "MSC-LON-01",
+        occurred_at: "2026-08-20T10:00:00Z",
+        events: [
+          {
+            subscriber_id: "sub-0987",
+            usage_type: "VOICE",
+            quantity: 120,
+            unit: "SECONDS",
+            start_at: "2026-08-20T09:58:00Z",
+            end_at: "2026-08-20T10:00:00Z"
+          }
+        ]
+      }
+    }
+  ],
+  "api-gateway": [
+    {
+      // The label already said "webhook subscriptions" while the path asked for
+      // developer keys, which nothing registers. /v1/hub is the real webhook
+      // subscription register on integration-ecosystem.
+      label: "List Webhook Subscriptions (GET /v1/hub)",
+      method: "GET",
+      path: "/v1/hub",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: null
+    },
+    {
+      label: "List Registered Connectors (GET /v1/connectors)",
+      method: "GET",
+      path: "/v1/connectors",
+      headers: { "X-Tenant-ID": portalTenantId() },
+      body: null
+    }
+  ]
+};
